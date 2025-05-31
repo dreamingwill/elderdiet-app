@@ -26,17 +26,17 @@ export default function ApiTestScreen() {
     }
   };
 
-  const testSmsAPI = async () => {
-    setIsLoading(true);
-    try {
-      const response = await authAPI.sendSms('13800000001');
-      setAuthResult(JSON.stringify(response, null, 2));
-    } catch (error) {
-      setAuthResult(`错误: ${error}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+//   const testSmsAPI = async () => {
+//     setIsLoading(true);
+//     try {
+//       const response = await authAPI.sendSms('13800000001');
+//       setAuthResult(JSON.stringify(response, null, 2));
+//     } catch (error) {
+//       setAuthResult(`错误: ${error}`);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
 
   const testLoginAPI = async () => {
     setIsLoading(true);
@@ -73,13 +73,13 @@ export default function ApiTestScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>认证 API</Text>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={testSmsAPI}
             disabled={isLoading}
           >
             <Text style={styles.buttonText}>测试发送验证码</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
             onPress={testLoginAPI}
