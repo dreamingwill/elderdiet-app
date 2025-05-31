@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/database';
 import errorHandler from './middleware/error.middleware';
 import authRouter from './routes/auth.route';
+import profileRouter from './routes/profile.route';
 
 // 加载环境变量
 dotenv.config();
@@ -45,6 +46,7 @@ app.get('/health', (req, res) => {
 
 // API路由
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/profiles', profileRouter);
 
 // 404处理
 app.use('*', (req, res) => {
@@ -62,6 +64,7 @@ app.listen(PORT, () => {
   console.log(`🚀 服务器运行在端口 ${PORT}`);
   console.log(`📍 健康检查: http://localhost:${PORT}/health`);
   console.log(`🔐 认证接口: http://localhost:${PORT}/api/v1/auth`);
+  console.log(`👤 档案接口: http://localhost:${PORT}/api/v1/profiles`);
   console.log(`🌍 环境: ${process.env.NODE_ENV || 'development'}`);
 });
 

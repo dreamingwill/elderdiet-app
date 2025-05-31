@@ -68,7 +68,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="health-profile"
+        name="profile"
         options={{
           title: '我的',
           tabBarIcon: ({ color }) => (

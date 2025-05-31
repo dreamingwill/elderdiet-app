@@ -1,321 +1,449 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Text, View } from '@/components/Themed';
-import { TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-
-const STORAGE_KEY = '@health_profile';
-
-interface HealthProfile {
-  name: string;
-  age: string;
-  gender: string;
-  location: string;
-  height: string;
-  weight: string;
-  healthConditions: string[];
-  dietaryPreferences: string[];
-  activityLevel: string;
-}
+import { Stack } from 'expo-router';
+import { useProfile } from '../hooks/useProfile';
+import { ProfileData } from '../services/api';
 
 export default function EditProfileScreen() {
-  const [profile, setProfile] = useState<HealthProfile>({
-    name: 'XXX',
-    age: '60',
-    gender: '男性',
-    location: '湖南人',
-    height: '',
-    weight: '',
-    healthConditions: ['高血压', '糖尿病', '骨质疏松'],
-    dietaryPreferences: ['爱吃辣', '海鲜过敏'],
-    activityLevel: '久坐'
+  const { profile, chronicConditionsOptions, isLoading, isFirstTime, createProfile, updateProfile } = useProfile();
+  
+  // 表单状态
+  const [formData, setFormData] = useState<Partial<ProfileData>>({
+    name: '',
+    age: 0,
+    gender: 'male',
+    region: '',
+    height: 0,
+    weight: 0,
+    chronicConditions: [],
+    dietaryPreferences: [],
+    notes: '',
   });
 
-  const healthConditionOptions = ['高血压', '糖尿病', '骨质疏松', '心脏病', '关节炎', '高血脂'];
-  const dietaryOptions = ['爱吃辣', '海鲜过敏', '素食主义', '低盐饮食', '低糖饮食'];
-  const activityOptions = ['久坐', '轻度活动', '中度活动', '高强度活动'];
+  // UI状态
+  const [isSaving, setIsSaving] = useState(false);
+  const [showChronicModal, setShowChronicModal] = useState(false);
+  const [dietaryPreferenceInput, setDietaryPreferenceInput] = useState('');
 
+  // 错误状态
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // 性别选项
+  const genderOptions = [
+    { label: '男', value: 'male' },
+    { label: '女', value: 'female' },
+    { label: '其他', value: 'other' },
+  ];
+
+  // 初始化表单数据
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      const savedProfile = await AsyncStorage.getItem(STORAGE_KEY);
-      if (savedProfile) {
-        const parsedProfile = JSON.parse(savedProfile);
-        console.log('Loaded profile from storage:', parsedProfile);
-        
-        // Convert old object format to new array format for healthConditions
-        let healthConditions = ['高血压', '糖尿病', '骨质疏松'];
-        if (parsedProfile.healthConditions) {
-          if (Array.isArray(parsedProfile.healthConditions)) {
-            healthConditions = parsedProfile.healthConditions;
-          } else if (typeof parsedProfile.healthConditions === 'object') {
-            // Convert object format to array format
-            const conditionMap: { [key: string]: string } = {
-              'hypertension': '高血压',
-              'diabetes': '糖尿病',
-              'osteoporosis': '骨质疏松',
-              'heartDisease': '心脏病',
-              'arthritis': '关节炎',
-              'highCholesterol': '高血脂'
-            };
-            healthConditions = Object.entries(parsedProfile.healthConditions)
-              .filter(([key, value]) => value === true)
-              .map(([key]) => conditionMap[key] || key)
-              .filter(condition => condition);
-          }
-        }
-        
-        // Convert old object format to new array format for dietaryPreferences
-        let dietaryPreferences = ['爱吃辣', '海鲜过敏'];
-        if (parsedProfile.dietaryPreferences) {
-          if (Array.isArray(parsedProfile.dietaryPreferences)) {
-            dietaryPreferences = parsedProfile.dietaryPreferences;
-          } else if (parsedProfile.dietaryRestrictions && typeof parsedProfile.dietaryRestrictions === 'object') {
-            // Convert dietary restrictions object to preferences array
-            const restrictionMap: { [key: string]: string } = {
-              'lowSalt': '低盐饮食',
-              'lowSugar': '低糖饮食',
-              'lowFat': '低脂饮食',
-              'vegetarian': '素食主义',
-              'dairyFree': '无乳制品'
-            };
-            dietaryPreferences = Object.entries(parsedProfile.dietaryRestrictions)
-              .filter(([key, value]) => value === true)
-              .map(([key]) => restrictionMap[key] || key)
-              .filter(preference => preference);
-            
-            // Add default preferences if none found
-            if (dietaryPreferences.length === 0) {
-              dietaryPreferences = ['爱吃辣', '海鲜过敏'];
-            }
-          }
-        }
-        
-        setProfile({
-          name: parsedProfile.name || 'XXX',
-          age: parsedProfile.age || '60',
-          gender: parsedProfile.gender === '男' ? '男性' : (parsedProfile.gender === '女' ? '女性' : parsedProfile.gender || '男性'),
-          location: parsedProfile.location || '湖南人',
-          height: parsedProfile.height || '',
-          weight: parsedProfile.weight || '',
-          healthConditions,
-          dietaryPreferences,
-          activityLevel: parsedProfile.activityLevel || '久坐'
-        });
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      // Reset to default values on error
-      setProfile({
-        name: 'XXX',
-        age: '60',
-        gender: '男性',
-        location: '湖南人',
-        height: '',
-        weight: '',
-        healthConditions: ['高血压', '糖尿病', '骨质疏松'],
-        dietaryPreferences: ['爱吃辣', '海鲜过敏'],
-        activityLevel: '久坐'
+    if (profile) {
+      setFormData({
+        name: profile.name,
+        age: profile.age,
+        gender: profile.gender,
+        region: profile.region,
+        height: profile.height,
+        weight: profile.weight,
+        chronicConditions: profile.chronicConditions || [],
+        dietaryPreferences: profile.dietaryPreferences || [],
+        notes: profile.notes || '',
       });
     }
+  }, [profile]);
+
+  // 表单验证
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name?.trim()) {
+      newErrors.name = '请输入姓名';
+    } else if (formData.name.length > 50) {
+      newErrors.name = '姓名长度不能超过50字符';
+    }
+
+    if (!formData.age || formData.age < 0 || formData.age > 120) {
+      newErrors.age = '年龄必须在0-120之间';
+    }
+
+    if (!formData.region?.trim()) {
+      newErrors.region = '请输入居住地区';
+    } else if (formData.region.length > 100) {
+      newErrors.region = '地区名称不能超过100字符';
+    }
+
+    if (!formData.height || formData.height < 80 || formData.height > 250) {
+      newErrors.height = '身高必须在80-250cm之间';
+    }
+
+    if (!formData.weight || formData.weight < 30 || formData.weight > 200) {
+      newErrors.weight = '体重必须在30-200kg之间';
+    }
+
+    if (formData.notes && formData.notes.length > 500) {
+      newErrors.notes = '备注不能超过500字符';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const saveProfile = async () => {
+  // 保存档案
+  const handleSave = async () => {
+    if (!validateForm()) {
+      Alert.alert('表单错误', '请检查输入内容');
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-      Alert.alert('成功', '健康档案已保存');
-      router.back();
+      const profileData = {
+        name: formData.name!,
+        age: formData.age!,
+        gender: formData.gender as 'male' | 'female' | 'other',
+        region: formData.region!,
+        height: formData.height!,
+        weight: formData.weight!,
+        chronicConditions: formData.chronicConditions || [],
+        dietaryPreferences: formData.dietaryPreferences || [],
+        notes: formData.notes || '',
+      };
+
+      if (isFirstTime) {
+        await createProfile(profileData);
+        Alert.alert('成功', '健康档案创建成功！', [
+          { text: '确定', onPress: () => router.back() }
+        ]);
+      } else {
+        await updateProfile(profileData);
+        Alert.alert('成功', '健康档案更新成功！', [
+          { text: '确定', onPress: () => router.back() }
+        ]);
+      }
     } catch (error) {
-      console.error('Error saving profile:', error);
-      Alert.alert('错误', '保存失败，请重试');
+      console.error('保存失败:', error);
+      Alert.alert('保存失败', error instanceof Error ? error.message : '请稍后重试');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const toggleHealthCondition = (condition: string) => {
-    setProfile(prev => {
-      const healthConditions = Array.isArray(prev.healthConditions) ? prev.healthConditions : [];
-      return {
-        ...prev,
-        healthConditions: healthConditions.includes(condition)
-          ? healthConditions.filter(c => c !== condition)
-          : [...healthConditions, condition]
-      };
+  // 切换慢性疾病选择
+  const toggleChronicCondition = (condition: string) => {
+    const current = formData.chronicConditions || [];
+    const updated = current.includes(condition)
+      ? current.filter(c => c !== condition)
+      : [...current, condition];
+    
+    setFormData({ ...formData, chronicConditions: updated });
+  };
+
+  // 添加饮食偏好
+  const addDietaryPreference = () => {
+    const preference = dietaryPreferenceInput.trim();
+    if (preference && !(formData.dietaryPreferences || []).includes(preference)) {
+      setFormData({
+        ...formData,
+        dietaryPreferences: [...(formData.dietaryPreferences || []), preference],
+      });
+      setDietaryPreferenceInput('');
+    }
+  };
+
+  // 移除饮食偏好
+  const removeDietaryPreference = (preference: string) => {
+    setFormData({
+      ...formData,
+      dietaryPreferences: (formData.dietaryPreferences || []).filter(p => p !== preference),
     });
   };
 
-  const toggleDietaryPreference = (preference: string) => {
-    setProfile(prev => {
-      const dietaryPreferences = Array.isArray(prev.dietaryPreferences) ? prev.dietaryPreferences : [];
-      return {
-        ...prev,
-        dietaryPreferences: dietaryPreferences.includes(preference)
-          ? dietaryPreferences.filter(p => p !== preference)
-          : [...dietaryPreferences, preference]
-      };
-    });
+  // 性别选择
+  const selectGender = (gender: 'male' | 'female' | 'other') => {
+    setFormData({ ...formData, gender });
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <Stack.Screen options={{ title: '编辑健康档案' }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={styles.loadingText}>加载中...</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>编辑健康档案</Text>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>姓名</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.name}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
-            placeholder="请输入您的姓名"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>年龄</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.age}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, age: text }))}
-            keyboardType="numeric"
-            placeholder="请输入您的年龄"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>性别</Text>
-          <View style={styles.genderButtons}>
-            <TouchableOpacity
-              style={[styles.genderButton, profile.gender === '男性' && styles.genderButtonActive]}
-              onPress={() => setProfile(prev => ({ ...prev, gender: '男性' }))}
-            >
-              <Text style={[styles.genderButtonText, profile.gender === '男性' && styles.genderButtonTextActive]}>男性</Text>
+    <>
+      <Stack.Screen 
+        options={{ 
+          title: isFirstTime ? '创建健康档案' : '编辑健康档案',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#007AFF" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.genderButton, profile.gender === '女性' && styles.genderButtonActive]}
-              onPress={() => setProfile(prev => ({ ...prev, gender: '女性' }))}
-            >
-              <Text style={[styles.genderButtonText, profile.gender === '女性' && styles.genderButtonTextActive]}>女性</Text>
-            </TouchableOpacity>
+          ),
+        }} 
+      />
+      
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* 基本信息 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>基本信息</Text>
+          
+          {/* 姓名 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>姓名 *</Text>
+            <TextInput
+              style={[styles.input, errors.name && styles.inputError]}
+              value={formData.name}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              placeholder="请输入姓名"
+              maxLength={50}
+            />
+            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
           </View>
-        </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>地区</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.location}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, location: text }))}
-            placeholder="请输入您的地区"
-          />
-        </View>
+          {/* 年龄 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>年龄 *</Text>
+            <TextInput
+              style={[styles.input, errors.age && styles.inputError]}
+              value={formData.age?.toString() || ''}
+              onChangeText={(text) => setFormData({ ...formData, age: parseInt(text) || 0 })}
+              placeholder="请输入年龄"
+              keyboardType="numeric"
+              maxLength={3}
+            />
+            {errors.age && <Text style={styles.errorText}>{errors.age}</Text>}
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>身高 (cm)</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.height}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, height: text }))}
-            keyboardType="numeric"
-            placeholder="请输入您的身高"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>体重 (kg)</Text>
-          <TextInput
-            style={styles.input}
-            value={profile.weight}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, weight: text }))}
-            keyboardType="numeric"
-            placeholder="请输入您的体重"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>健康状况（可多选）</Text>
-          <View style={styles.optionsContainer}>
-            {healthConditionOptions.map((condition, index) => {
-              const healthConditions = Array.isArray(profile.healthConditions) ? profile.healthConditions : [];
-              return (
+          {/* 性别 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>性别 *</Text>
+            <View style={styles.genderSelector}>
+              {genderOptions.map((option) => (
                 <TouchableOpacity
-                  key={index}
+                  key={option.value}
                   style={[
-                    styles.optionButton,
-                    healthConditions.includes(condition) && styles.optionButtonActive
+                    styles.genderOption,
+                    formData.gender === option.value && styles.genderOptionSelected,
                   ]}
-                  onPress={() => toggleHealthCondition(condition)}
+                  onPress={() => selectGender(option.value as 'male' | 'female' | 'other')}
                 >
-                  <Text style={[
-                    styles.optionButtonText,
-                    healthConditions.includes(condition) && styles.optionButtonTextActive
-                  ]}>
-                    {condition}
+                  <Text
+                    style={[
+                      styles.genderText,
+                      formData.gender === option.value && styles.genderTextSelected,
+                    ]}
+                  >
+                    {option.label}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
+              ))}
+            </View>
+          </View>
+
+          {/* 居住地区 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>居住地区 *</Text>
+            <TextInput
+              style={[styles.input, errors.region && styles.inputError]}
+              value={formData.region}
+              onChangeText={(text) => setFormData({ ...formData, region: text })}
+              placeholder="如：上海市静安区"
+              maxLength={100}
+            />
+            {errors.region && <Text style={styles.errorText}>{errors.region}</Text>}
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>饮食偏好（可多选）</Text>
-          <View style={styles.optionsContainer}>
-            {dietaryOptions.map((preference, index) => {
-              const dietaryPreferences = Array.isArray(profile.dietaryPreferences) ? profile.dietaryPreferences : [];
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.optionButton,
-                    dietaryPreferences.includes(preference) && styles.optionButtonActive
-                  ]}
-                  onPress={() => toggleDietaryPreference(preference)}
-                >
-                  <Text style={[
-                    styles.optionButtonText,
-                    dietaryPreferences.includes(preference) && styles.optionButtonTextActive
-                  ]}>
-                    {preference}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* 身体指标 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>身体指标</Text>
+          
+          {/* 身高 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>身高 (cm) *</Text>
+            <TextInput
+              style={[styles.input, errors.height && styles.inputError]}
+              value={formData.height?.toString() || ''}
+              onChangeText={(text) => setFormData({ ...formData, height: parseFloat(text) || 0 })}
+              placeholder="请输入身高"
+              keyboardType="numeric"
+            />
+            {errors.height && <Text style={styles.errorText}>{errors.height}</Text>}
+          </View>
+
+          {/* 体重 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>体重 (kg) *</Text>
+            <TextInput
+              style={[styles.input, errors.weight && styles.inputError]}
+              value={formData.weight?.toString() || ''}
+              onChangeText={(text) => setFormData({ ...formData, weight: parseFloat(text) || 0 })}
+              placeholder="请输入体重"
+              keyboardType="numeric"
+            />
+            {errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>活动量</Text>
-          <View style={styles.optionsContainer}>
-            {activityOptions.map((activity, index) => (
+        {/* 健康状况 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>健康状况</Text>
+          
+          {/* 慢性疾病 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>慢性疾病</Text>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setShowChronicModal(true)}
+            >
+              <Text style={styles.selectButtonText}>
+                {formData.chronicConditions?.length 
+                  ? `已选择 ${formData.chronicConditions.length} 项`
+                  : '点击选择慢性疾病'
+                }
+              </Text>
+            </TouchableOpacity>
+            
+            {/* 显示已选择的慢性疾病 */}
+            {formData.chronicConditions && formData.chronicConditions.length > 0 && (
+              <View style={styles.selectedItems}>
+                {formData.chronicConditions.map((condition) => (
+                  <View key={condition} style={styles.selectedItem}>
+                    <Text style={styles.selectedItemText}>
+                      {chronicConditionsOptions.find(opt => opt.value === condition)?.label || condition}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* 饮食偏好 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>饮食偏好</Text>
+            <View style={styles.inputWithButton}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={dietaryPreferenceInput}
+                onChangeText={setDietaryPreferenceInput}
+                placeholder="如：低盐、素食、不吃辣"
+                maxLength={20}
+              />
               <TouchableOpacity
-                key={index}
-                style={[
-                  styles.optionButton,
-                  profile.activityLevel === activity && styles.optionButtonActive
-                ]}
-                onPress={() => setProfile(prev => ({ ...prev, activityLevel: activity }))}
+                style={styles.addButton}
+                onPress={addDietaryPreference}
+                disabled={!dietaryPreferenceInput.trim()}
               >
-                <Text style={[
-                  styles.optionButtonText,
-                  profile.activityLevel === activity && styles.optionButtonTextActive
-                ]}>
-                  {activity}
-                </Text>
+                <Text style={styles.addButtonText}>添加</Text>
               </TouchableOpacity>
-            ))}
+            </View>
+            
+            {/* 显示已添加的饮食偏好 */}
+            {formData.dietaryPreferences && formData.dietaryPreferences.length > 0 && (
+              <View style={styles.selectedItems}>
+                {formData.dietaryPreferences.map((preference, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.selectedItem}
+                    onPress={() => removeDietaryPreference(preference)}
+                  >
+                    <Text style={styles.selectedItemText}>{preference}</Text>
+                    <Text style={styles.removeIcon}>×</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* 备注 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>备注</Text>
+            <TextInput
+              style={[styles.input, styles.textArea, errors.notes && styles.inputError]}
+              value={formData.notes}
+              onChangeText={(text) => setFormData({ ...formData, notes: text })}
+              placeholder="其他需要说明的健康信息"
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+            />
+            {errors.notes && <Text style={styles.errorText}>{errors.notes}</Text>}
           </View>
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={saveProfile}>
-          <Text style={styles.submitButtonText}>保存信息</Text>
+        {/* 保存按钮 */}
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? '保存中...' : isFirstTime ? '创建档案' : '更新档案'}
+          </Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+        {/* 慢性疾病选择模态框 */}
+        <Modal
+          visible={showChronicModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>选择慢性疾病</Text>
+              <TouchableOpacity
+                onPress={() => setShowChronicModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>完成</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              {chronicConditionsOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.optionItem,
+                    formData.chronicConditions?.includes(option.value) && styles.optionItemSelected
+                  ]}
+                  onPress={() => toggleChronicCondition(option.value)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    formData.chronicConditions?.includes(option.value) && styles.optionTextSelected
+                  ]}>
+                    {option.label}
+                  </Text>
+                  {formData.chronicConditions?.includes(option.value) && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </Modal>
+      </ScrollView>
+    </>
   );
 }
 
@@ -324,23 +452,45 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  content: {
-    padding: 20,
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
+    marginBottom: 16,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
-    marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#333',
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
@@ -348,66 +498,165 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#fafafa',
   },
-  genderButtons: {
+  inputError: {
+    borderColor: '#e74c3c',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  genderSelector: {
     flexDirection: 'row',
     gap: 12,
   },
-  genderButton: {
+  genderOption: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#fafafa',
   },
-  genderButtonActive: {
-    backgroundColor: '#4CAF50',
+  genderOptionSelected: {
     borderColor: '#4CAF50',
+    backgroundColor: '#e8f5e8',
   },
-  genderButtonText: {
+  genderText: {
     fontSize: 16,
-    color: '#333',
+    color: '#666',
   },
-  genderButtonTextActive: {
+  genderTextSelected: {
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  selectButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fafafa',
+    alignItems: 'center',
+  },
+  selectButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  inputWithButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  addButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  addButtonText: {
     color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  optionsContainer: {
+  selectedItems: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 8,
   },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  optionButtonActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
-  },
-  optionButtonText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  optionButtonTextActive: {
-    color: 'white',
-  },
-  submitButton: {
-    backgroundColor: '#4CAF50',
-    padding: 16,
-    borderRadius: 8,
+  selectedItem: {
+    backgroundColor: '#e8f5e8',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    gap: 4,
   },
-  submitButtonText: {
+  selectedItemText: {
+    color: '#4CAF50',
+    fontSize: 14,
+  },
+  removeIcon: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#333',
+  },
+  modalCloseButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  modalCloseText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f8f8f8',
+  },
+  optionItemSelected: {
+    backgroundColor: '#e8f5e8',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  optionTextSelected: {
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  checkmark: {
+    color: '#4CAF50',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 }); 
