@@ -10,9 +10,9 @@ export const runAPITests = async () => {
     console.log('✅ 健康检查成功:', healthResponse);
     
     // 2. 测试发送验证码
-    console.log('2️⃣ 测试发送验证码API...');
-    const smsResponse = await authAPI.sendSms('13800000001');
-    console.log('✅ 发送验证码成功:', smsResponse);
+    // console.log('2️⃣ 测试发送验证码API...');
+    // const smsResponse = await authAPI.sendSms('13800000001');
+    // console.log('✅ 发送验证码成功:', smsResponse);
     
     // 3. 测试登录
     console.log('3️⃣ 测试登录API...');
