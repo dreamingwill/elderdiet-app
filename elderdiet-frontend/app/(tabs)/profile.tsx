@@ -243,13 +243,13 @@ export default function MeScreen() {
         </View>
 
         <View style={styles.achievementContent}>
-          <Text style={styles.achievementNumber}>1290</Text>
-          <Text style={styles.achievementDesc}>累计获得 12 枚勋章</Text>
+          <Text style={styles.achievementNumber}>35</Text>
+          <Text style={styles.achievementDesc}>累计获得 3 枚勋章</Text>
           <Text style={styles.achievementDetail}>
-            持续打卡 102 天获得"持之以恒奖"
+            持续打卡 10 天获得"持之以恒奖"
           </Text>
           <Text style={styles.achievementSummary}>
-            至今，您已经坚持打卡 1290 天，其中最长连续打卡 129 天
+            至今，您已经坚持打卡 35 天，其中最长连续打卡 6 天
           </Text>
         </View>
       </View>
@@ -258,7 +258,7 @@ export default function MeScreen() {
       <View style={styles.accountCard}>
         <Text style={styles.cardTitle}>账号管理</Text>
         <View style={styles.accountInfo}>
-          <Text style={styles.phoneText}>当前手机号：{phone}</Text>
+          <Text style={styles.phoneText}>当前手机号：{phone?.slice(0,3)}****{phone?.slice(-4)}</Text>
         </View>
       </View>
     </ScrollView>

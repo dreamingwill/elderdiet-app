@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Pressable, useColorScheme } from 'react-native';
 
 import Colors from '@/constants/Colors';
@@ -32,19 +32,25 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#4CAF50',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
-          height: 60,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#e0e0e0',
+          paddingTop: 5,
           paddingBottom: 5,
+          height: 60,
         },
         tabBarLabelStyle: {
           fontSize: 12,
         },
         headerShown: useClientOnlyValue(false, true),
+        tabBarHideOnKeyboard: true,
       }}>
       <Tabs.Screen
         name="meal-plan"
         options={{
           title: '今日膳食',
-          tabBarIcon: ({ color }) => (
+          headerShown: false,
+          tabBarIcon: ({ color }: { color: string }) => (
             <IonIcon name="restaurant" color={color} />
           ),
         }}
@@ -53,7 +59,8 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: '交流',
-          tabBarIcon: ({ color }) => (
+          headerShown: false,
+          tabBarIcon: ({ color }: { color: string }) => (
             <IonIcon name="chatbubble-ellipses" color={color} />
           ),
         }}
@@ -62,7 +69,8 @@ export default function TabLayout() {
         name="discovery"
         options={{
           title: '发现',
-          tabBarIcon: ({ color }) => (
+          headerShown: false,
+          tabBarIcon: ({ color }: { color: string }) => (
             <IonIcon name="search" color={color} />
           ),
         }}
@@ -71,7 +79,8 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: '我的',
-          tabBarIcon: ({ color }) => (
+          headerShown: false,
+          tabBarIcon: ({ color }: { color: string }) => (
             <IonIcon name="person" color={color} />
           ),
         }}

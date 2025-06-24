@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList, StatusBar } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -325,29 +325,56 @@ export default function MealPlanScreen() {
     }));
   };
 
-  // 一键打卡功能
-  const handleQuickCheckIn = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const newCheckIn: CheckInRecord = {
-      id: `checkin_${Date.now()}`,
-      date: today,
-      mealType: selectedMealType,
-      type: 'quick',
-      timestamp: Date.now(),
-      likes: [],
-      comments: []
-    };
-
-    setCheckInRecords(prev => [newCheckIn, ...prev]);
+  // AI膳食推荐功能 - 刷新当前餐次的所有菜品
+  const handleAIRecommendation = () => {
+    const mealType = selectedMealType;
+    const currentMeal = currentDishes[mealType];
+    const alternatives = alternativeDishes[mealType];
     
-    // 保存到本地存储
-    try {
-      const updatedRecords = [newCheckIn, ...checkInRecords];
-      await AsyncStorage.setItem('@check_in_records', JSON.stringify(updatedRecords));
-      console.log(`${selectedMealType} 打卡成功！`);
-    } catch (error) {
-      console.error('打卡保存失败:', error);
-    }
+    if (!alternatives) return;
+    
+    // 为当前餐次的每个菜品生成新的推荐
+    const newDishes = currentMeal.dishes.map((dish, index) => {
+      const category = dish.category;
+      let categoryKey = 'dish'; // 默认分类
+      
+      // 根据分类名称确定备选菜品的键
+      switch (category) {
+        case '主食':
+          categoryKey = 'staple';
+          break;
+        case '汤品':
+          categoryKey = 'soup';
+          break;
+        default:
+          categoryKey = 'dish';
+      }
+      
+      const categoryAlternatives = alternatives[categoryKey as keyof typeof alternatives];
+      if (!categoryAlternatives || categoryAlternatives.length === 0) {
+        return dish; // 如果没有备选菜品，保持原样
+      }
+      
+      // 随机选择一个备选菜品
+      const randomIndex = Math.floor(Math.random() * categoryAlternatives.length);
+      const newDish = {...categoryAlternatives[randomIndex]};
+      
+      // 为新菜品生成唯一的ID，避免key重复
+      newDish.id = `${newDish.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      return newDish;
+    });
+    
+    // 更新当前餐次的菜品
+    setCurrentDishes(prev => ({
+      ...prev,
+      [mealType]: {
+        ...prev[mealType],
+        dishes: newDishes
+      }
+    }));
+    
+    console.log(`AI为您重新推荐了${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}菜品！`);
   };
 
   // 拍照打卡功能
@@ -479,12 +506,14 @@ export default function MealPlanScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      {/* 固定Header */}
+      <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 44) + 16 }]}>
         <Text style={styles.currentDate}>{getCurrentDate()}</Text>
         <Text style={styles.title}>今日膳食</Text>
       </View>
+      
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
 
       {/* 三餐导航 */}
       <View style={styles.mealTabs}>
@@ -519,11 +548,11 @@ export default function MealPlanScreen() {
           )}
         </View>
 
-        {/* 打卡按钮 */}
+        {/* AI膳食推荐按钮 */}
         <View style={styles.checkInButtonsContainer}>
           <TouchableOpacity 
             style={[styles.checkInButton, styles.quickCheckInButton]}
-            onPress={handleQuickCheckIn}
+            onPress={handleAIRecommendation}
           >
             <Ionicons name="sparkles" size={24} color="#fff" />
             <Text style={styles.checkInButtonText}>AI膳食推荐</Text>
@@ -722,6 +751,7 @@ export default function MealPlanScreen() {
         })()}
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -730,12 +760,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20, // 移除paddingTop，因为header已经固定
+  },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingBottom: 20,
     backgroundColor: '#f8f9fa',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
   },
   currentDate: {
     fontSize: 20,

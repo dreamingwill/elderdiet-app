@@ -10,7 +10,8 @@ import {
   Image,
   FlatList,
   View as RNView,
-  Dimensions
+  Dimensions,
+  StatusBar
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +49,7 @@ export default function ChatScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showInputOptions, setShowInputOptions] = useState(false);
   const flatListRef = useRef<FlatList<Message>>(null);
   const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -320,6 +322,15 @@ export default function ChatScreen() {
         styles.messageBubble,
         isAI ? styles.aiMessage : styles.userMessage,
       ]}>
+        {/* AI头像 */}
+        {isAI && (
+          <View style={styles.avatarContainer}>
+            <View style={styles.aiAvatar}>
+              <Ionicons name="medical" size={20} color="#fff" />
+            </View>
+          </View>
+        )}
+        
         <View style={[
           styles.messageContent,
           isAI ? styles.aiMessageContent : styles.userMessageContent
@@ -343,7 +354,7 @@ export default function ChatScreen() {
           
           {item.type === 'audio' && (
             <RNView style={styles.audioContainer}>
-              <Ionicons name="mic" size={20} color={isAI ? "#4CAF50" : "#fff"} />
+              <Ionicons name="mic" size={20} color={isAI ? "#28a745" : "#fff"} />
               <RNView style={styles.audioWave}>
                 {[...Array(5)].map((_, i) => (
                   <RNView 
@@ -372,6 +383,15 @@ export default function ChatScreen() {
             {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
+        
+        {/* 用户头像 */}
+        {!isAI && (
+          <View style={styles.avatarContainer}>
+            <View style={styles.userAvatar}>
+              <Ionicons name="person" size={20} color="#fff" />
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -382,10 +402,18 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>营养师交流</Text>
+      {/* 渐变背景 */}
+      <View style={styles.backgroundGradient} />
+      
+      <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 44) + 16 }]}>
+        <View style={styles.headerLeft}>
+          {/* <View style={styles.headerIcon}>
+            <Ionicons name="chatbubbles" size={24} color="#28a745" />
+          </View> */}
+          <Text style={styles.headerTitle}>营养师小助手</Text>
+        </View>
         <TouchableOpacity style={styles.clearButton} onPress={clearChat}>
-          <Ionicons name="trash-outline" size={24} color="#999" />
+          <Ionicons name="refresh-outline" size={24} color="#666" />
         </TouchableOpacity>
       </View>
       
@@ -397,22 +425,30 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messagesContainer}
         ref={flatListRef}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        showsVerticalScrollIndicator={false}
       />
       
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#4CAF50" />
-          <Text style={styles.loadingText}>正在思考...</Text>
+          <View style={styles.loadingBubble}>
+            <ActivityIndicator size="small" color="#28a745" />
+            <Text style={styles.loadingText}>营养师正在思考...</Text>
+          </View>
         </View>
       )}
       
       <View style={styles.inputContainer}>
         {isRecording ? (
           <View style={styles.recordingContainer}>
-            <RNView style={styles.recordingIndicator}>
-              <RNView style={styles.recordingDot} />
+            <View style={styles.recordingIndicator}>
+              <View style={styles.recordingDot} />
               <Text style={styles.recordingText}>录音中 {recordingDuration}s</Text>
-            </RNView>
+              <View style={styles.recordingWaves}>
+                {[...Array(3)].map((_, i) => (
+                  <View key={i} style={[styles.recordingWave, { animationDelay: `${i * 0.2}s` }]} />
+                ))}
+              </View>
+            </View>
             <TouchableOpacity 
               style={styles.recordingStopButton}
               onPress={stopRecording}
@@ -421,37 +457,55 @@ export default function ChatScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="请输入您的问题..."
-              placeholderTextColor="#999"
-              multiline
-            />
-            <View style={styles.inputButtons}>
-              <TouchableOpacity style={styles.inputButton} onPress={pickImage}>
-                <Ionicons name="image" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.inputButton} onPress={takePhoto}>
-                <Ionicons name="camera" size={24} color="#4CAF50" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.inputButton}
-                onPress={startRecording}
-              >
-                <Ionicons name="mic" size={24} color="#4CAF50" />
-              </TouchableOpacity>
+          <View style={styles.inputWrapper}>
+            {/* 输入框和功能按钮在同一行 */}
+            <View style={styles.inputRow}>
+              {/* 功能按钮 */}
+              <View style={styles.inputActions}>
+                <TouchableOpacity 
+                  style={styles.actionButton} 
+                  onPress={() => setShowInputOptions(!showInputOptions)}
+                >
+                  <Ionicons name="add" size={24} color="#28a745" />
+                </TouchableOpacity>
+                
+                {showInputOptions && (
+                  <View style={styles.optionsContainer}>
+                    <TouchableOpacity style={styles.optionButton} onPress={pickImage}>
+                      <Ionicons name="images" size={20} color="#fff" />
+                      <Text style={styles.optionText}>相册</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.optionButton} onPress={takePhoto}>
+                      <Ionicons name="camera" size={20} color="#fff" />
+                      <Text style={styles.optionText}>拍照</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.optionButton} onPress={startRecording}>
+                      <Ionicons name="mic" size={20} color="#fff" />
+                      <Text style={styles.optionText}>语音</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="请输入您的健康饮食问题..."
+                placeholderTextColor="#999"
+                multiline
+                maxLength={500}
+                onFocus={() => setShowInputOptions(false)}
+              />
               <TouchableOpacity 
                 style={[styles.sendButton, !inputText.trim() && styles.disabledButton]} 
                 onPress={sendTextMessage}
                 disabled={!inputText.trim()}
               >
-                <Ionicons name="send" size={24} color="white" />
+                <Ionicons name="send" size={20} color="white" />
               </TouchableOpacity>
             </View>
-          </>
+          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -461,85 +515,156 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fffe',
+  },
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'linear-gradient(180deg, #f8fffe 0%, #f0f9f4 100%)',
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e8f5e8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e8f5e8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
+    color: '#2d3748',
   },
   clearButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f7fafc',
   },
   messagesList: {
     flex: 1,
   },
   messagesContainer: {
-    padding: 16,
+    padding: 20,
+    paddingTop: (StatusBar.currentHeight || 44) + 80, // 为固定header留出空间
     paddingBottom: 20,
   },
   messageBubble: {
     flexDirection: 'row',
-    marginBottom: 16,
-    maxWidth: '80%',
+    marginBottom: 20,
+    alignItems: 'flex-end',
   },
   aiMessage: {
     alignSelf: 'flex-start',
   },
   userMessage: {
     alignSelf: 'flex-end',
-    flexDirection: 'row-reverse',
+  },
+  avatarContainer: {
+    marginHorizontal: 8,
+  },
+  aiAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#28a745',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#28a745',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  userAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#007bff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#007bff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   messageContent: {
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    paddingBottom: 20,
+    paddingVertical: 12,
+    paddingBottom: 22,
     position: 'relative',
+    maxWidth: width * 0.7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   aiMessageContent: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e8f5e8',
+    borderBottomLeftRadius: 4,
   },
   userMessageContent: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#007bff',
+    borderBottomRightRadius: 4,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
   },
   aiMessageText: {
-    color: '#333',
+    color: '#2d3748',
   },
   userMessageText: {
-    color: '#fff',
+    color: '#ffffff',
   },
   messageImage: {
     width: 200,
     height: 150,
-    borderRadius: 10,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   audioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    minWidth: 100,
+    paddingVertical: 8,
+    minWidth: 120,
   },
   audioWave: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 10,
     height: 20,
   },
   audioWaveBar: {
@@ -548,107 +673,193 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   aiAudioWaveBar: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#28a745',
   },
   userAudioWaveBar: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
   },
   audioDuration: {
     fontSize: 12,
-    marginLeft: 5,
+    marginLeft: 8,
   },
   aiAudioDuration: {
-    color: '#666',
+    color: '#718096',
   },
   userAudioDuration: {
-    color: '#fff',
+    color: '#ffffff',
   },
   timestamp: {
     fontSize: 10,
     position: 'absolute',
-    bottom: 5,
+    bottom: 6,
     right: 12,
   },
   aiTimestamp: {
-    color: '#999',
+    color: '#a0aec0',
   },
   userTimestamp: {
     color: 'rgba(255, 255, 255, 0.7)',
   },
   loadingContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  loadingBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   loadingText: {
-    marginLeft: 8,
+    marginLeft: 10,
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
   },
   inputContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#e8f5e8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  input: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
+  inputWrapper: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 100,
-    color: '#333',
-    margin: 8,
+    paddingVertical: 12,
   },
-  inputButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingBottom: 8,
+  inputActions: {
+    position: 'relative',
+    marginRight: 12,
   },
-  inputButton: {
-    padding: 8,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#4CAF50',
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f9f4',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  optionsContainer: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    flexDirection: 'row',
+    backgroundColor: '#2d3748',
+    borderRadius: 25,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  optionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#4a5568',
+    marginHorizontal: 4,
+  },
+  optionText: {
+    color: '#ffffff',
+    fontSize: 10,
+    marginTop: 4,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#f7fafc',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    fontSize: 16,
+    maxHeight: 100,
+    color: '#2d3748',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginRight: 12,
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#28a745',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#28a745',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   disabledButton: {
-    backgroundColor: '#a5d6a7',
+    backgroundColor: '#a0aec0',
+    shadowOpacity: 0.1,
   },
   recordingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff8f0',
   },
   recordingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   recordingDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: 'red',
-    marginRight: 8,
+    backgroundColor: '#ff4757',
+    marginRight: 12,
   },
   recordingText: {
     fontSize: 16,
-    color: '#333',
+    color: '#2d3748',
+    fontWeight: '500',
+    marginRight: 12,
+  },
+  recordingWaves: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recordingWave: {
+    width: 4,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: '#ff4757',
+    marginHorizontal: 2,
   },
   recordingStopButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF5722',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ff4757',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#ff4757',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
 }); 
