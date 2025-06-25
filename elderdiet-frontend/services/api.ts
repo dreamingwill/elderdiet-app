@@ -1,5 +1,5 @@
 // API基础配置
-const API_BASE_URL = 'http://localhost:3001/api/v1';
+const API_BASE_URL = 'http://192.168.1.100:3001/api/v1';
 
 // 请求配置
 const defaultHeaders = {

@@ -3,98 +3,9 @@ import { StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList, 
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildMealPlan, getAlternativeDishes, getDishById, type MealPlan, type Dish } from '@/data/dishes';
 
 const { width } = Dimensions.get('window');
-
-// 膳食方案数据
-const dietData = {
-  breakfast: {
-    mealType: '早餐',
-    dishes: [
-      { id: 'b_staple_001', name: '全麦面包', imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'b_dish_001', name: '牛奶燕麦粥', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'b_dish_002', name: '水煮蛋', imageUrl: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' }
-    ],
-    recommendation: {
-      title: "开启元气满满的一天",
-      details: {
-        nutrition: "提供均衡的碳水化合物、优质蛋白质和膳食纤维，确保血糖平稳上升，为大脑和身体提供持久能量。",
-        healthBenefit: "燕麦中的β-葡聚糖有助于降低胆固醇，全麦面包富含纤维，促进肠道健康。鸡蛋是优质蛋白质的绝佳来源，有助维持肌肉量。",
-        wellness: "温热的燕麦粥有暖胃效果，易于消化，非常适合作为一天的开始，为脾胃提供温和的滋养。"
-      }
-    }
-  },
-  lunch: {
-    mealType: '午餐',
-    dishes: [
-      { id: 'l_staple_001', name: '糙米饭', imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'l_dish_001', name: '西芹炒虾仁', imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'l_soup_001', name: '冬瓜排骨汤', imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '汤品' }
-    ],
-    recommendation: {
-      title: "活力满满的控压午餐",
-      details: {
-        nutrition: "本方案通过糙米饭提供优质复合碳水和B族维生素；虾仁富含优质蛋白质和锌元素，西芹则补充了膳食纤维和钾，共同维持肌肉与神经功能。这是一套高蛋白、高纤维、低脂肪的组合。",
-        healthBenefit: "西芹和冬瓜均有利尿、降血压的食疗效果，适合血压偏高的长者。虾仁中的虾青素是强大的抗氧化剂，有助于延缓衰老。整体搭配清淡少油，易于消化，能有效减轻肠胃负担。",
-        wellness: "冬瓜性凉，可清热解暑；排骨汤补气养血。此搭配在补充营养的同时，兼顾了清热与滋养的平衡，适合夏季或体内有虚热的长者。"
-      }
-    }
-  },
-  dinner: {
-    mealType: '晚餐',
-    dishes: [
-      { id: 'd_staple_001', name: '小米粥', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'd_dish_001', name: '清蒸鲈鱼', imageUrl: 'https://images.unsplash.com/photo-1544943150-4c4c5c853c9b?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'd_dish_002', name: '凉拌黄瓜', imageUrl: 'https://images.unsplash.com/photo-1573246123716-6b1782bfc499?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' }
-    ],
-    recommendation: {
-      title: "安神助眠的轻盈晚餐",
-      details: {
-        nutrition: "以易消化的小米粥作为主食，搭配富含Omega-3的鲈鱼和清爽的黄瓜。此组合热量较低，蛋白质优质，不会给夜间休息带来负担。",
-        healthBenefit: "鲈鱼中的DHA对大脑健康有益，且易于消化吸收。小米含有色氨酸，能在体内转化为褪黑素，有助改善睡眠质量。黄瓜补充水分和维生素。",
-        wellness: "小米有安神健胃的功效，是中医推荐的晚间食疗佳品。清蒸的烹饪方式保留了食材原味，避免了油腻，符合夜间阳气内收的养生之道。"
-      }
-    }
-  }
-};
-
-// 备选菜品数据
-const alternativeDishes = {
-  breakfast: {
-    staple: [
-      { id: 'b_staple_002', name: '燕麦粥', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'b_staple_003', name: '紫薯', imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' }
-    ],
-    dish: [
-      { id: 'b_dish_003', name: '蒸蛋羹', imageUrl: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'b_dish_004', name: '豆浆', imageUrl: 'https://images.unsplash.com/photo-1423483641154-5411ec9c0ddf?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' }
-    ]
-  },
-  lunch: {
-    staple: [
-      { id: 'l_staple_002', name: '五谷杂粮饭', imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'l_staple_003', name: '玉米', imageUrl: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' }
-    ],
-    dish: [
-      { id: 'l_dish_002', name: '清炒菠菜', imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'l_dish_003', name: '蒸蛋', imageUrl: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' }
-    ],
-    soup: [
-      { id: 'l_soup_002', name: '紫菜蛋花汤', imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '汤品' },
-      { id: 'l_soup_003', name: '银耳莲子汤', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '汤品' }
-    ]
-  },
-  dinner: {
-    staple: [
-      { id: 'd_staple_002', name: '山药粥', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' },
-      { id: 'd_staple_003', name: '白粥', imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '主食' }
-    ],
-    dish: [
-      { id: 'd_dish_003', name: '蒸蛋羹', imageUrl: 'https://images.unsplash.com/photo-1506084868230-bb9d95c24759?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' },
-      { id: 'd_dish_004', name: '清炒时蔬', imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60', category: '菜肴' }
-    ]
-  }
-};
 
 // 日历数据
 const calendarData = [
@@ -181,7 +92,11 @@ export default function MealPlanScreen() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
   const [selectedDay, setSelectedDay] = useState(30); // 默认选中今天
   const [mealRecords, setMealRecords] = useState<any[]>([]);
-  const [currentDishes, setCurrentDishes] = useState(dietData); // 当前选中的膳食方案
+  const [currentDishes, setCurrentDishes] = useState<Record<'breakfast' | 'lunch' | 'dinner', MealPlan>>({
+    breakfast: buildMealPlan('breakfast'),
+    lunch: buildMealPlan('lunch'),
+    dinner: buildMealPlan('dinner')
+  }); // 当前选中的膳食方案
   const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([
     // 今天的打卡记录
     {
@@ -300,25 +215,30 @@ export default function MealPlanScreen() {
   };
 
   // 更换菜品函数
-  const handleDishChange = (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number, category: string) => {
-    const alternatives = alternativeDishes[mealType];
-    if (!alternatives || !alternatives[category as keyof typeof alternatives]) return;
+  const handleDishChange = (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number, categoryKey: string) => {
+    // 将categoryKey转换为中文分类名
+    const categoryMap: Record<string, '主食' | '菜肴' | '汤品'> = {
+      'staple': '主食',
+      'dish': '菜肴',
+      'soup': '汤品'
+    };
+    const category = categoryMap[categoryKey] || '菜肴';
     
-    const categoryAlternatives = alternatives[category as keyof typeof alternatives];
-    if (!categoryAlternatives || categoryAlternatives.length === 0) return;
+    const alternatives = getAlternativeDishes(mealType, category);
+    if (!alternatives || alternatives.length === 0) return;
     
     // 随机选择一个备选菜品
-    const randomIndex = Math.floor(Math.random() * categoryAlternatives.length);
-    const newDish = {...categoryAlternatives[randomIndex]};
+    const randomIndex = Math.floor(Math.random() * alternatives.length);
+    const newDish = {...alternatives[randomIndex]};
     
     // 为新菜品生成唯一的ID，避免key重复
     newDish.id = `${newDish.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    setCurrentDishes(prev => ({
+    setCurrentDishes((prev: Record<'breakfast' | 'lunch' | 'dinner', MealPlan>) => ({
       ...prev,
       [mealType]: {
         ...prev[mealType],
-        dishes: prev[mealType].dishes.map((dish, index) => 
+        dishes: prev[mealType].dishes.map((dish: Dish, index: number) => 
           index === dishIndex ? newDish : dish
         )
       }
@@ -329,35 +249,19 @@ export default function MealPlanScreen() {
   const handleAIRecommendation = () => {
     const mealType = selectedMealType;
     const currentMeal = currentDishes[mealType];
-    const alternatives = alternativeDishes[mealType];
-    
-    if (!alternatives) return;
     
     // 为当前餐次的每个菜品生成新的推荐
-    const newDishes = currentMeal.dishes.map((dish, index) => {
+    const newDishes = currentMeal.dishes.map((dish: Dish, index: number) => {
       const category = dish.category;
-      let categoryKey = 'dish'; // 默认分类
       
-      // 根据分类名称确定备选菜品的键
-      switch (category) {
-        case '主食':
-          categoryKey = 'staple';
-          break;
-        case '汤品':
-          categoryKey = 'soup';
-          break;
-        default:
-          categoryKey = 'dish';
-      }
-      
-      const categoryAlternatives = alternatives[categoryKey as keyof typeof alternatives];
-      if (!categoryAlternatives || categoryAlternatives.length === 0) {
+      const alternatives = getAlternativeDishes(mealType, category);
+      if (!alternatives || alternatives.length === 0) {
         return dish; // 如果没有备选菜品，保持原样
       }
       
       // 随机选择一个备选菜品
-      const randomIndex = Math.floor(Math.random() * categoryAlternatives.length);
-      const newDish = {...categoryAlternatives[randomIndex]};
+      const randomIndex = Math.floor(Math.random() * alternatives.length);
+      const newDish = {...alternatives[randomIndex]};
       
       // 为新菜品生成唯一的ID，避免key重复
       newDish.id = `${newDish.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -366,7 +270,7 @@ export default function MealPlanScreen() {
     });
     
     // 更新当前餐次的菜品
-    setCurrentDishes(prev => ({
+    setCurrentDishes((prev: Record<'breakfast' | 'lunch' | 'dinner', MealPlan>) => ({
       ...prev,
       [mealType]: {
         ...prev[mealType],
@@ -462,7 +366,7 @@ export default function MealPlanScreen() {
   };
 
   // 渲染单个菜品
-  const renderDish = (dish: any, index: number, mealType: 'breakfast' | 'lunch' | 'dinner') => {
+  const renderDish = (dish: Dish, index: number, mealType: 'breakfast' | 'lunch' | 'dinner') => {
     const getCategoryColor = (category: string) => {
       switch (category) {
         case '主食': return '#F3EADF';
