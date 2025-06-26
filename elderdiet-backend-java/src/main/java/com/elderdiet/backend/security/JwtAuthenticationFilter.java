@@ -40,22 +40,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
             String phone = jwtUtil.getPhoneFromToken(jwt);
+            String uid = jwtUtil.getUidFromToken(jwt);
+            String role = jwtUtil.getRoleFromToken(jwt);
             
-            if (phone != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (phone != null && uid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 try {
                     UserDetails userDetails = userService.loadUserByUsername(phone);
                     
                     if (userDetails != null) {
-                        UsernamePasswordAuthenticationToken authentication = 
-                                new UsernamePasswordAuthenticationToken(
-                                        userDetails, 
-                                        null, 
+                        // 创建自定义的Authentication对象，将用户ID作为principal
+                        JwtAuthenticationToken authentication = 
+                                new JwtAuthenticationToken(
+                                        uid, // 使用用户ID作为principal
+                                        userDetails,
+                                        phone,
+                                        role,
                                         userDetails.getAuthorities()
                                 );
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                         
-                        log.debug("用户认证成功: {}", phone);
+                        log.debug("用户认证成功: phone={}, uid={}, role={}", phone, uid, role);
                     }
                 } catch (Exception e) {
                     log.error("用户认证失败: {}", e.getMessage());
