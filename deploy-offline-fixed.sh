@@ -41,6 +41,12 @@ load_environment() {
 configure_system_repos() {
     log_info "配置系统镜像源..."
     
+    # 检测系统信息
+    if [ -f /etc/os-release ]; then
+        source /etc/os-release
+        log_info "检测到系统: $PRETTY_NAME"
+    fi
+    
     # 备份原有配置
     cp -r /etc/yum.repos.d /etc/yum.repos.d.backup 2>/dev/null || true
     
@@ -48,20 +54,33 @@ configure_system_repos() {
     if curl -s --connect-timeout 5 http://100.100.100.200/latest/meta-data/instance-id > /dev/null 2>&1; then
         log_info "检测到阿里云ECS，配置阿里云镜像源..."
         
-        # 安装阿里云ECS源
-        yum install -y wget curl
+        # 确保基础工具已安装（忽略警告）
+        yum install -y wget curl 2>/dev/null || true
         
-        # 备份并更换CentOS源为阿里云源
-        if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+        # 检测系统类型并配置相应镜像源
+        if grep -qi "alibaba" /etc/os-release 2>/dev/null; then
+            log_info "检测到Alibaba Cloud Linux，使用专用镜像源..."
+            # Alibaba Cloud Linux 通常已经配置了最优镜像源
+        elif [ -f /etc/centos-release ] || grep -qi "centos\|rhel" /etc/os-release 2>/dev/null; then
+            log_info "配置CentOS/RHEL阿里云镜像源..."
             wget -O /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-8.repo 2>/dev/null || true
         fi
         
-        # 添加EPEL阿里云源
+        # 添加EPEL阿里云源（适用于大多数系统）
+        log_info "配置EPEL阿里云镜像源..."
+        yum install -y epel-release 2>/dev/null || true
         wget -O /etc/yum.repos.d/epel.repo https://mirrors.aliyun.com/repo/epel-8.repo 2>/dev/null || true
         
-        # 清理并更新缓存
-        yum clean all
-        yum makecache fast
+        # 清理缓存
+        log_info "清理并更新包管理器缓存..."
+        yum clean all >/dev/null 2>&1 || true
+        
+        # 兼容不同版本的makecache命令
+        if yum makecache --help 2>&1 | grep -q "fast"; then
+            yum makecache fast >/dev/null 2>&1 || yum makecache >/dev/null 2>&1 || true
+        else
+            yum makecache >/dev/null 2>&1 || true
+        fi
         
         log_success "阿里云镜像源配置完成"
     else
