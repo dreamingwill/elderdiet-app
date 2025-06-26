@@ -37,6 +37,38 @@ load_environment() {
     log_success "环境变量加载完成"
 }
 
+# 0. 配置系统镜像源
+configure_system_repos() {
+    log_info "配置系统镜像源..."
+    
+    # 备份原有配置
+    cp -r /etc/yum.repos.d /etc/yum.repos.d.backup 2>/dev/null || true
+    
+    # 如果是阿里云ECS，配置阿里云镜像源
+    if curl -s --connect-timeout 5 http://100.100.100.200/latest/meta-data/instance-id > /dev/null 2>&1; then
+        log_info "检测到阿里云ECS，配置阿里云镜像源..."
+        
+        # 安装阿里云ECS源
+        yum install -y wget curl
+        
+        # 备份并更换CentOS源为阿里云源
+        if [ -f /etc/centos-release ] || [ -f /etc/redhat-release ]; then
+            wget -O /etc/yum.repos.d/CentOS-Base.repo https://mirrors.aliyun.com/repo/Centos-8.repo 2>/dev/null || true
+        fi
+        
+        # 添加EPEL阿里云源
+        wget -O /etc/yum.repos.d/epel.repo https://mirrors.aliyun.com/repo/epel-8.repo 2>/dev/null || true
+        
+        # 清理并更新缓存
+        yum clean all
+        yum makecache fast
+        
+        log_success "阿里云镜像源配置完成"
+    else
+        log_info "非阿里云环境，跳过镜像源配置"
+    fi
+}
+
 # 1. 安装Java 17
 install_java() {
     log_info "安装Java 17..."
@@ -48,7 +80,10 @@ install_java() {
     fi
     
     # 安装OpenJDK 17
+    log_info "更新系统包..."
     yum update -y
+    
+    log_info "安装Java 17..."
     yum install -y java-17-openjdk java-17-openjdk-devel
     
     # 设置JAVA_HOME
@@ -153,8 +188,29 @@ install_mongodb_manual() {
     # 下载MongoDB二进制包
     cd /tmp
     
-    # MongoDB 5.0 for RHEL 8
-    if curl -L -o mongodb.tgz "https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-rhel80-5.0.14.tgz"; then
+    # 尝试多个下载源
+    log_info "尝试从多个镜像源下载MongoDB..."
+    
+    # 下载源列表（按速度优先级排序）
+    download_sources=(
+        "https://mirrors.aliyun.com/mongodb/linux/mongodb-linux-x86_64-rhel80-5.0.14.tgz"
+        "https://mirrors.tuna.tsinghua.edu.cn/mongodb/linux/mongodb-linux-x86_64-rhel80-5.0.14.tgz"
+        "https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-rhel80-5.0.14.tgz"
+    )
+    
+    download_success=false
+    for source in "${download_sources[@]}"; do
+        log_info "尝试从 $source 下载..."
+        if curl -L --connect-timeout 30 --max-time 300 -o mongodb.tgz "$source"; then
+            download_success=true
+            log_success "从 $source 下载成功"
+            break
+        else
+            log_warning "从 $source 下载失败，尝试下一个源..."
+        fi
+    done
+    
+    if [ "$download_success" = true ]; then
         tar -xzf mongodb.tgz
         
         # 安装到系统目录
@@ -266,7 +322,131 @@ configure_mongodb() {
     log_success "MongoDB 配置完成"
 }
 
-# 4. 构建Spring Boot应用
+# 4. 安装和配置Maven
+install_maven() {
+    log_info "安装和配置Maven..."
+    
+    if command -v mvn &> /dev/null; then
+        log_success "Maven 已安装"
+    else
+        log_info "安装Maven..."
+        # 尝试从阿里云镜像安装
+        yum install -y maven || {
+            log_warning "系统仓库安装失败，尝试手动安装Maven..."
+            install_maven_manual
+        }
+    fi
+    
+    # 配置Maven使用阿里云镜像源
+    configure_maven_mirrors
+    
+    log_success "Maven 安装和配置完成"
+}
+
+# 手动安装Maven
+install_maven_manual() {
+    log_info "手动安装Maven..."
+    
+    cd /tmp
+    
+    # 下载Maven 3.8.6，显示进度
+    log_info "从阿里云镜像下载Maven 3.8.6..."
+    if curl -L --progress-bar -o apache-maven-3.8.6-bin.tar.gz "https://mirrors.aliyun.com/apache/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.tar.gz"; then
+        tar -xzf apache-maven-3.8.6-bin.tar.gz
+        
+        # 安装到系统目录
+        mv apache-maven-3.8.6 /opt/maven
+        
+        # 创建符号链接
+        ln -sf /opt/maven/bin/mvn /usr/local/bin/mvn
+        
+        # 设置环境变量
+        echo 'export M2_HOME=/opt/maven' >> /etc/profile
+        echo 'export PATH=$M2_HOME/bin:$PATH' >> /etc/profile
+        
+        source /etc/profile
+        
+        log_success "Maven 手动安装完成"
+    else
+        log_error "Maven 手动安装失败"
+        exit 1
+    fi
+}
+
+# 配置Maven镜像源
+configure_maven_mirrors() {
+    log_info "配置Maven阿里云镜像源..."
+    
+    # 创建Maven配置目录
+    mkdir -p ~/.m2
+    
+    # 配置settings.xml使用阿里云镜像
+    cat > ~/.m2/settings.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  
+  <mirrors>
+    <!-- 阿里云Maven镜像源 -->
+    <mirror>
+      <id>aliyun-maven</id>
+      <name>Aliyun Maven Mirror</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+    
+    <!-- 华为云Maven镜像源 -->
+    <mirror>
+      <id>huawei-maven</id>
+      <name>Huawei Maven Mirror</name>
+      <url>https://mirrors.huaweicloud.com/repository/maven/</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+    
+    <!-- 腾讯云Maven镜像源 -->
+    <mirror>
+      <id>tencent-maven</id>
+      <name>Tencent Maven Mirror</name>
+      <url>https://mirrors.cloud.tencent.com/nexus/repository/maven-public/</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+  
+  <profiles>
+    <profile>
+      <id>aliyun</id>
+      <repositories>
+        <repository>
+          <id>aliyun-maven</id>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>aliyun-maven</id>
+          <url>https://maven.aliyun.com/repository/public</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  
+  <activeProfiles>
+    <activeProfile>aliyun</activeProfile>
+  </activeProfiles>
+  
+</settings>
+EOF
+    
+    log_success "Maven镜像源配置完成"
+}
+
+# 5. 构建Spring Boot应用
 build_application() {
     log_info "构建Spring Boot应用..."
     
@@ -279,15 +459,38 @@ build_application() {
         return 0
     fi
     
-    # 使用Maven构建
-    if command -v mvn &> /dev/null; then
-        log_info "使用Maven构建..."
-        mvn clean package -DskipTests
-    else
-        log_info "Maven未安装，尝试安装..."
-        yum install -y maven
-        mvn clean package -DskipTests
-    fi
+    log_info "使用Maven构建应用（使用阿里云镜像源和并行构建）..."
+    
+    # 显示构建配置信息
+    log_info "Maven构建优化配置："
+    log_info "  - 使用阿里云镜像源"
+    log_info "  - 并行构建 (线程数: $(nproc))"
+    log_info "  - 本地仓库: /tmp/.m2/repository"
+    log_info "  - 跳过测试以加快构建"
+    
+    # 使用阿里云镜像源构建，并行构建，显示进度
+    mvn clean package -DskipTests \
+        -Dmaven.repo.local=/tmp/.m2/repository \
+        -T $(nproc)C \
+        --batch-mode \
+        --show-version \
+        -Dmaven.compile.fork=true \
+        -Dmaven.javadoc.skip=true \
+        -Dspring-boot.repackage.skip=false || {
+        
+        log_error "Maven构建失败，尝试故障排除..."
+        log_info "检查Maven配置..."
+        mvn -version
+        
+        log_info "尝试清理并重新构建（单线程模式）..."
+        mvn clean -q
+        
+        log_info "重新构建（详细日志）..."
+        mvn package -DskipTests \
+            -Dmaven.repo.local=/tmp/.m2/repository \
+            --batch-mode \
+            -X
+    }
     
     cd ..
     log_success "应用构建完成"
@@ -411,7 +614,9 @@ main() {
     log_info "开始离线部署ElderDiet（修复版）..."
     
     load_environment
+    configure_system_repos
     install_java
+    install_maven
     install_mongodb
     configure_mongodb
     build_application
