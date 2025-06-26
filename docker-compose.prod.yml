@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # MongoDB数据库 - 内存优化配置
+  mongodb:
+    image: mongo:6.0-focal
+    container_name: elderdiet-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-elderdiet123}
+      MONGO_INITDB_DATABASE: elderdiet
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - elderdiet-network
+    # 内存限制优化
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    command: mongod --wiredTigerCacheSizeGB 0.25
+
+  # Spring Boot后端服务 - 内存优化
+  backend:
+    build:
+      context: ./elderdiet-backend-java
+      dockerfile: Dockerfile
+    container_name: elderdiet-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      MONGODB_URI: mongodb://admin:${MONGO_PASSWORD:-elderdiet123}@mongodb:27017/elderdiet?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production-environment}
+      JWT_EXPIRES_IN: 604800
+      # JVM内存优化
+      JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+    depends_on:
+      - mongodb
+    networks:
+      - elderdiet-network
+    volumes:
+      - ./logs:/app/logs
+    # 内存限制
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 512M
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  elderdiet-network:
+    driver: bridge 
