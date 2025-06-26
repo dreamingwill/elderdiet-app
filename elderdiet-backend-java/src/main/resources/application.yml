@@ -1,0 +1,91 @@
+server:
+  port: 3001
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+
+spring:
+  application:
+    name: elderdiet-backend-java
+  
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/elderdiet
+      auto-index-creation: true
+  
+  profiles:
+    active: dev
+    
+  security:
+    user:
+      name: admin
+      password: admin
+      roles: ADMIN
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-jwt-key-change-this-in-production}
+  expiration: ${JWT_EXPIRES_IN:604800} # 7天 (秒)
+
+# 日志配置
+logging:
+  level:
+    com.elderdiet: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/elderdiet-backend.log
+
+# Actuator监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# 应用信息
+info:
+  app:
+    name: ElderDiet Backend Java
+    description: 老年人膳食助手后端服务
+    version: 1.0.0
+    developer: ElderDiet Team
+
+---
+# 开发环境配置
+spring:
+  config:
+    activate:
+      on-profile: dev
+  
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/elderdiet_dev
+
+logging:
+  level:
+    root: INFO
+    com.elderdiet: DEBUG
+
+---
+# 生产环境配置
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/elderdiet}
+
+logging:
+  level:
+    root: WARN
+    com.elderdiet: INFO 
