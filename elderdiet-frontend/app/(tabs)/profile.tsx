@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,7 +15,7 @@ import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
 
 export default function MeScreen() {
-  const { phone, role } = useUser();
+  const { phone, role, signOut } = useUser();
   const { profile, isLoading, error, refreshProfile } = useProfile();
 
   // 获取性别显示文本
@@ -123,6 +124,32 @@ export default function MeScreen() {
   // 跳转到编辑页面
   const handleEdit = () => {
     router.push('/edit-profile');
+  };
+
+  // 退出登录处理
+  const handleSignOut = () => {
+    Alert.alert(
+      '退出登录',
+      '确定要退出当前账号吗？',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('开始退出登录...');
+              await signOut();
+              console.log('退出登录成功，准备跳转...');
+              // 不需要手动跳转，主layout的useEffect会自动处理
+            } catch (error) {
+              console.error('退出登录失败:', error);
+              Alert.alert('错误', '退出登录失败，请重试');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -254,12 +281,18 @@ export default function MeScreen() {
         </View>
       </View>
 
-      {/* 账号管理（占位，后续扩展） */}
+      {/* 账号管理 */}
       <View style={styles.accountCard}>
         <Text style={styles.cardTitle}>账号管理</Text>
         <View style={styles.accountInfo}>
           <Text style={styles.phoneText}>当前手机号：{phone?.slice(0,3)}****{phone?.slice(-4)}</Text>
         </View>
+        
+        {/* 退出登录按钮 */}
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text style={styles.signOutText}>退出登录</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -485,5 +518,20 @@ const styles = StyleSheet.create({
   phoneText: {
     fontSize: 14,
     color: '#666',
+  },
+  signOutButton: {
+    backgroundColor: '#ff4757',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  signOutText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
 }); 

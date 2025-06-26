@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
+import { profileAPI } from '@/services/api';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
@@ -36,6 +37,21 @@ export default function LoginScreen() {
     if (errorMessage) setErrorMessage('');
   };
 
+  // 检查用户是否有健康档案
+  const checkUserProfile = async (token: string, userId: string) => {
+    try {
+      const response = await profileAPI.getProfile(userId, token);
+      return response.data !== null; // 有档案返回true，无档案返回false
+    } catch (error) {
+      // 如果是404错误，说明档案不存在
+      if (error instanceof Error && (error.message.includes('404') || error.message.includes('不存在'))) {
+        return false;
+      }
+      // 其他错误抛出
+      throw error;
+    }
+  };
+
   // 登录处理
   const handleLogin = async () => {
     if (phone.length !== 11) {
@@ -52,14 +68,51 @@ export default function LoginScreen() {
     setErrorMessage('');
 
     try {
+      // 执行登录
       await signIn(phone, password);
       
-      Alert.alert('登录成功', '欢迎使用养老膳食助手', [
-        {
-          text: '确定',
-          onPress: () => router.replace('/(tabs)/meal-plan')
+      // 登录成功后，检查用户是否有健康档案
+      // 获取当前用户信息
+      const userToken = await import('@/utils/authStorage').then(module => 
+        module.authStorage.getItem('userToken')
+      );
+      const userId = await import('@/utils/authStorage').then(module => 
+        module.authStorage.getItem('userUid')
+      );
+
+      if (userToken && userId) {
+        const hasProfile = await checkUserProfile(userToken, userId);
+        
+        if (hasProfile) {
+          // 有档案，正常跳转到主页面
+          Alert.alert('登录成功', '欢迎使用养老膳食助手', [
+            {
+              text: '确定',
+              onPress: () => router.replace('/(tabs)/meal-plan')
+            }
+          ]);
+        } else {
+          // 没有档案，提示创建档案
+          Alert.alert(
+            '完善健康档案', 
+            '为了给您提供更好的膳食建议，请先完善您的健康档案。',
+            [
+              {
+                text: '稍后完善',
+                style: 'cancel',
+                onPress: () => router.replace('/(tabs)/meal-plan')
+              },
+              {
+                text: '立即完善',
+                onPress: () => router.replace('/edit-profile')
+              }
+            ]
+          );
         }
-      ]);
+      } else {
+        // 获取用户信息失败，跳转到主页面
+        router.replace('/(tabs)/meal-plan');
+      }
     } catch (error) {
       console.error('登录错误:', error);
       setErrorMessage(error instanceof Error ? error.message : '登录失败，请重试');

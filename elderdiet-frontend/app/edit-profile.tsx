@@ -125,7 +125,7 @@ export default function EditProfileScreen() {
       if (isFirstTime) {
         await createProfile(profileData);
         Alert.alert('成功', '健康档案创建成功！', [
-          { text: '确定', onPress: () => router.back() }
+          { text: '确定', onPress: () => router.replace('/(tabs)/meal-plan') }
         ]);
       } else {
         await updateProfile(profileData);
