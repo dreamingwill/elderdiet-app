@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { authStorage } from '../utils/authStorage';
 import { authAPI } from '../services/api';
 
 type UserRole = 'elder' | 'child';
@@ -38,10 +38,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 从安全存储加载用户数据
     const loadUserData = async () => {
       try {
-        const savedToken = await SecureStore.getItemAsync('userToken');
-        const savedRole = await SecureStore.getItemAsync('userRole');
-        const savedUid = await SecureStore.getItemAsync('userUid');
-        const savedPhone = await SecureStore.getItemAsync('userPhone');
+        const savedToken = await authStorage.getItem('userToken');
+        const savedRole = await authStorage.getItem('userRole');
+        const savedUid = await authStorage.getItem('userUid');
+        const savedPhone = await authStorage.getItem('userPhone');
 
         if (savedToken && savedRole && savedUid && savedPhone) {
           // 验证token是否仍然有效
@@ -68,17 +68,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const saveUserData = async (userData: UserData) => {
-    await SecureStore.setItemAsync('userToken', userData.token);
-    await SecureStore.setItemAsync('userRole', userData.role);
-    await SecureStore.setItemAsync('userUid', userData.uid);
-    await SecureStore.setItemAsync('userPhone', userData.phone);
+    await authStorage.setItem('userToken', userData.token);
+    await authStorage.setItem('userRole', userData.role);
+    await authStorage.setItem('userUid', userData.uid);
+    await authStorage.setItem('userPhone', userData.phone);
   };
 
   const clearUserData = async () => {
-    await SecureStore.deleteItemAsync('userToken');
-    await SecureStore.deleteItemAsync('userRole');
-    await SecureStore.deleteItemAsync('userUid');
-    await SecureStore.deleteItemAsync('userPhone');
+    await authStorage.clearAuthData();
   };
 
   const signUp = async (phone: string, password: string, role: UserRole) => {
