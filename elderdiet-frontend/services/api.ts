@@ -1,6 +1,6 @@
 // API基础配置
-const API_BASE_URL = 'http://30.71.181.219:3001/api/v1';
-
+//const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
+const API_BASE_URL = 'http://30.71.181.219:3001/api/v1'; // 云服务器地址
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',

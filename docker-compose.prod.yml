@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # MongoDB数据库 - 内存优化配置
@@ -6,8 +6,9 @@ services:
     image: mongo:6.0-focal
     container_name: elderdiet-mongodb
     restart: always
-    ports:
-      - "27017:27017"
+    # 生产环境安全：不暴露MongoDB端口到主机
+    # ports:
+    #   - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-elderdiet123}
@@ -69,4 +70,4 @@ volumes:
 
 networks:
   elderdiet-network:
-    driver: bridge 
+    driver: bridge
