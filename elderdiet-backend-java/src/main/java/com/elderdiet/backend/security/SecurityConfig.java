@@ -30,10 +30,10 @@ import java.util.Arrays;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserService userService;
-    
+
     /**
      * 安全过滤链配置
      */
@@ -42,15 +42,13 @@ public class SecurityConfig {
         http
                 // 禁用CSRF
                 .csrf(AbstractHttpConfigurer::disable)
-                
+
                 // 配置CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                
+
                 // 配置会话管理
-                .sessionManagement(session -> 
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
                 // 配置授权规则
                 .authorizeHttpRequests(authz -> authz
                         // 公开端点
@@ -59,33 +57,32 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/health",
                                 "/api/v1/profiles/options/**",
+                                "/api/v1/health-articles/**",
                                 "/actuator/**",
-                                "/error"
-                        ).permitAll()
-                        
+                                "/error")
+                        .permitAll()
+
                         // 需要认证的端点
                         .requestMatchers("/api/v1/**").authenticated()
-                        
+
                         // 其他请求需要认证
-                        .anyRequest().authenticated()
-                )
-                
+                        .anyRequest().authenticated())
+
                 // 添加JWT认证过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
+
         return http.build();
     }
-    
+
     /**
      * 认证管理器
      */
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
+            AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
-    
+
     /**
      * 认证提供者
      */
@@ -96,7 +93,7 @@ public class SecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
-    
+
     /**
      * 密码编码器
      */
@@ -104,34 +101,33 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return PasswordUtil.getEncoder();
     }
-    
+
     /**
      * CORS配置
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
+
         // 允许的源
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-        
+
         // 允许的HTTP方法
         configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
-        ));
-        
+                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
         // 允许的请求头
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
+
         // 允许发送Cookie
         configuration.setAllowCredentials(true);
-        
+
         // 预检请求的缓存时间
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
-} 
+}

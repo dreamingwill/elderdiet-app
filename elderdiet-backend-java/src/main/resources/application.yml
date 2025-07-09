@@ -8,15 +8,18 @@ server:
 spring:
   application:
     name: elderdiet-backend-java
-  
+
   data:
     mongodb:
-      uri: mongodb://localhost:27017/elderdiet
+      uri: mongodb://elderdiet_app:elderdiet_app_password@localhost:27017/elderdiet
       auto-index-creation: true
-  
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
   profiles:
     active: dev
-    
+
   security:
     user:
       name: admin
@@ -64,10 +67,10 @@ spring:
   config:
     activate:
       on-profile: dev
-  
+
   data:
     mongodb:
-      uri: mongodb://localhost:27017/elderdiet_dev
+      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
 
 logging:
   level:
@@ -80,7 +83,7 @@ spring:
   config:
     activate:
       on-profile: prod
-  
+
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/elderdiet}
@@ -88,4 +91,4 @@ spring:
 logging:
   level:
     root: WARN
-    com.elderdiet: INFO 
+    com.elderdiet: INFO

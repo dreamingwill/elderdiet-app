@@ -1,6 +1,7 @@
 // API基础配置
-//const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
-const API_BASE_URL = 'http://30.71.181.219:3001/api/v1'; // 云服务器地址
+const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
+//const API_BASE_URL = 'http://30.71.181.219:3001/api/v1'; // 云服务器地址
+//const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // 云服务器地址
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -183,6 +184,40 @@ export const profileAPI = {
   },
 };
 
+// 养生文章相关类型定义
+export interface HealthArticle {
+  _id: string;
+  title: string;
+  subtitle?: string;
+  category: string;
+  content: {
+    paragraphs: Array<{
+      type: 'text' | 'image';
+      content?: string;
+      url?: string;
+      caption?: string;
+      alt_text?: string;
+      order: number;
+    }>;
+  };
+  read_time: number;
+  tags: string[];
+  cover_image?: string;
+  status: number;
+  is_featured: number;
+  is_carousel: number;
+  carousel_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HealthArticlesResponse {
+  articles: HealthArticle[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 // 健康检查API
 export const healthAPI = {
   check: async (): Promise<ApiResponse> => {
@@ -191,8 +226,69 @@ export const healthAPI = {
   },
 };
 
+// 养生文章API
+export const healthArticlesAPI = {
+  // 获取文章列表
+  getArticles: async (params?: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    is_featured?: number;
+    is_carousel?: number;
+  }): Promise<ApiResponse<HealthArticlesResponse>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.is_featured !== undefined) queryParams.append('is_featured', params.is_featured.toString());
+    if (params?.is_carousel !== undefined) queryParams.append('is_carousel', params.is_carousel.toString());
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/health-articles${queryString ? `?${queryString}` : ''}`;
+    
+    return request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // 获取单篇文章详情
+  getArticle: async (articleId: string): Promise<ApiResponse<HealthArticle>> => {
+    return request(`/health-articles/${articleId}`, {
+      method: 'GET',
+    });
+  },
+
+  // 获取轮播图文章
+  getCarouselArticles: async (): Promise<ApiResponse<HealthArticle[]>> => {
+    return request('/health-articles/carousel', {
+      method: 'GET',
+    });
+  },
+
+  // 获取推荐文章
+  getFeaturedArticles: async (limit?: number): Promise<ApiResponse<HealthArticle[]>> => {
+    const queryParams = new URLSearchParams();
+    if (limit) queryParams.append('limit', limit.toString());
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/health-articles/featured${queryString ? `?${queryString}` : ''}`;
+    
+    return request(endpoint, {
+      method: 'GET',
+    });
+  },
+
+  // 获取文章分类
+  getCategories: async (): Promise<ApiResponse<string[]>> => {
+    return request('/health-articles/categories', {
+      method: 'GET',
+    });
+  },
+};
+
 export default {
   authAPI,
   profileAPI,
   healthAPI,
+  healthArticlesAPI,
 }; 
