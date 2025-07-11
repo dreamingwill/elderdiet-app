@@ -373,6 +373,6 @@ public class ChatService {
      * 获取用户聊天记录
      */
     public List<ChatMessage> getChatMessages(String userId) {
-            return chatMessageRepository.findByUserIdOrderByTimestampAsc(userId);
+        return chatMessageRepository.findByUserIdOrderByTimestampAsc(userId);
     }
 }
