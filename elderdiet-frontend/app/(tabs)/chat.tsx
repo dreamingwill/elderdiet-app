@@ -11,24 +11,28 @@ import {
   FlatList,
   View as RNView,
   Dimensions,
-  StatusBar
+  StatusBar,
+  Alert
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
+import { chatAPI, ChatRequest, ChatResponse } from '@/services/api';
+import { authStorage } from '@/utils/authStorage';
+import { useUser } from '@/contexts/UserContext';
 
 const { width } = Dimensions.get('window');
 
 // 消息类型定义
 interface Message {
   id: string;
-  content: string;
+  content?: string;
   type: 'text' | 'image' | 'audio';
-  sender: 'user' | 'ai';
+  sender: 'user' | 'assistant';
   timestamp: number;
-  imageUri?: string;
+  imageUrls?: string[];
   audioDuration?: number;
 }
 
@@ -50,19 +54,37 @@ export default function ChatScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showInputOptions, setShowInputOptions] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const flatListRef = useRef<FlatList<Message>>(null);
   const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { uid, isAuthenticated } = useUser();
+
+  // 获取用户专属的存储key
+  const getChatStorageKey = (userId: string) => `@chat_messages_${userId}`;
 
   // 从存储加载历史消息
   useEffect(() => {
-    loadMessages();
+    if (isAuthenticated && uid) {
+      // 如果用户ID发生变化，清理之前的数据并重新加载
+      if (currentUserId !== uid) {
+        setCurrentUserId(uid);
+        setMessages([]); // 清空当前显示的消息
+        loadMessages(uid);
+      }
+    } else {
+      // 用户未登录，清空所有数据
+      setMessages([]);
+      setCurrentUserId(null);
+    }
+    
     requestPermissions();
     return () => {
       if (recordingTimer.current) {
         clearInterval(recordingTimer.current);
       }
     };
-  }, []);
+  }, [uid, isAuthenticated]);
 
   // 滚动到底部
   useEffect(() => {
@@ -81,80 +103,147 @@ export default function ChatScreen() {
   };
 
   // 加载历史消息
-  const loadMessages = async () => {
+  const loadMessages = async (userId: string) => {
     try {
-      const savedMessages = await AsyncStorage.getItem('@chat_messages');
+      const token = await authStorage.getItem('userToken');
+      if (!token) {
+        console.warn('No token found, cannot load chat history');
+        await loadWelcomeMessage(userId);
+        return;
+      }
+
+      // 优先从后端获取聊天历史
+      try {
+        const response = await chatAPI.getChatHistory(token);
+        if (response.success && response.data && response.data.length > 0) {
+          // 转换后端消息格式为前端格式
+          const convertedMessages = response.data.map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            type: msg.type as 'text' | 'image' | 'audio',
+            sender: msg.role === 'user' ? 'user' : 'assistant' as 'user' | 'assistant',
+            timestamp: msg.timestamp,
+            imageUrls: msg.imageUrls
+          }));
+          
+          setMessages(convertedMessages);
+          await saveMessagesToLocal(convertedMessages, userId);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to load chat history from backend:', error);
+      }
+
+      // 如果后端获取失败，尝试从本地加载
+      const storageKey = getChatStorageKey(userId);
+      const savedMessages = await AsyncStorage.getItem(storageKey);
       if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
+        const parsedMessages = JSON.parse(savedMessages);
+        setMessages(parsedMessages);
       } else {
-        // 添加欢迎消息
-        const welcomeMessage: Message = {
-          id: Date.now().toString(),
-          content: "您好！我是您的专属营养师小助手。请问您今天想了解什么饮食健康问题呢？",
-          type: 'text',
-          sender: 'ai',
-          timestamp: Date.now()
-        };
-        setMessages([welcomeMessage]);
-        await AsyncStorage.setItem('@chat_messages', JSON.stringify([welcomeMessage]));
+        // 如果本地也没有，显示欢迎消息
+        await loadWelcomeMessage(userId);
       }
     } catch (error) {
       console.error('Failed to load messages:', error);
+      await loadWelcomeMessage(userId);
     }
   };
 
-  // 保存消息到存储
-  const saveMessages = async (newMessages: Message[]) => {
+  // 加载欢迎消息
+  const loadWelcomeMessage = async (userId: string) => {
+    const welcomeMessage: Message = {
+      id: Date.now().toString(),
+      content: "您好！我是您的专属营养师小助手。请问您今天想了解什么饮食健康问题呢？",
+      type: 'text',
+      sender: 'assistant',
+      timestamp: Date.now()
+    };
+    
+    setMessages([welcomeMessage]);
+    await saveMessagesToLocal([welcomeMessage], userId);
+  };
+
+  // 保存消息到本地存储
+  const saveMessagesToLocal = async (newMessages: Message[], userId: string) => {
     try {
-      await AsyncStorage.setItem('@chat_messages', JSON.stringify(newMessages));
+      const storageKey = getChatStorageKey(userId);
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newMessages));
     } catch (error) {
-      console.error('Failed to save messages:', error);
+      console.error('Failed to save messages to local storage:', error);
     }
   };
 
   // 发送文本消息
   const sendTextMessage = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !pendingImage) return;
+    
+    if (!isAuthenticated || !uid) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+    
+    // 确定消息类型和内容
+    const messageType = pendingImage ? 'image' : 'text';
+    const messageContent = inputText.trim() || (pendingImage ? '发送了一张图片' : '');
     
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputText.trim(),
-      type: 'text',
+      content: messageContent,
+      type: messageType,
       sender: 'user',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      ...(pendingImage && { imageUrls: [pendingImage] })
     };
     
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    setInputText('');
-    saveMessages(updatedMessages);
     
-    // 模拟AI回复
+    // 清空输入和暂存的图片
+    setInputText('');
+    const currentPendingImage = pendingImage;
+    setPendingImage(null);
+    await saveMessagesToLocal(updatedMessages, uid);
+    
+    // 调用真实API
     setIsLoading(true);
-    setTimeout(() => {
-      let aiResponse = "我想了解一下，您可以吃小米粥吗？";
-      
-      // 如果用户问了关于小米粥的问题，给出相应回答
-      if (inputText.toLowerCase().includes('小米') || inputText.toLowerCase().includes('粥')) {
-        aiResponse = AI_RESPONSES[5];
-      } else {
-        // 随机选择一个回复
-        aiResponse = AI_RESPONSES[Math.floor(Math.random() * 5)];
+    try {
+      const token = await authStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('错误', '请先登录');
+        setIsLoading(false);
+        return;
       }
       
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: aiResponse,
-        type: 'text',
-        sender: 'ai',
-        timestamp: Date.now()
+      const chatRequest: ChatRequest = {
+        type: messageType,
+        content: messageContent,
+        ...(currentPendingImage && { image_urls: [currentPendingImage] })
       };
       
-      const newMessages = [...updatedMessages, aiMessage];
-      setMessages(newMessages);
-      saveMessages(newMessages);
+      const response = await chatAPI.sendMessage(chatRequest, token);
+      
+      if (response.success && response.data) {
+        const aiMessage: Message = {
+          id: response.data.messageId,
+          content: response.data.response,
+          type: 'text',
+          sender: 'assistant',
+          timestamp: response.data.timestamp
+        };
+        
+        const newMessages = [...updatedMessages, aiMessage];
+        setMessages(newMessages);
+        await saveMessagesToLocal(newMessages, uid);
+      } else {
+        Alert.alert('错误', response.message || '发送消息失败');
+      }
+    } catch (error) {
+      console.error('发送消息失败:', error);
+      Alert.alert('错误', '发送消息失败，请重试');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   // 选择图片
@@ -168,7 +257,8 @@ export default function ChatScreen() {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
-      sendImageMessage(imageUri);
+      setPendingImage(imageUri);
+      setShowInputOptions(false);
     }
   };
 
@@ -182,42 +272,12 @@ export default function ChatScreen() {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
-      sendImageMessage(imageUri);
+      setPendingImage(imageUri);
+      setShowInputOptions(false);
     }
   };
 
-  // 发送图片消息
-  const sendImageMessage = async (imageUri: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: '图片消息',
-      type: 'image',
-      sender: 'user',
-      timestamp: Date.now(),
-      imageUri
-    };
-    
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-    saveMessages(updatedMessages);
-    
-    // 模拟AI回复
-    setIsLoading(true);
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "我看到您发送了一张图片。请问这是您想了解的食物吗？",
-        type: 'text',
-        sender: 'ai',
-        timestamp: Date.now()
-      };
-      
-      const newMessages = [...updatedMessages, aiMessage];
-      setMessages(newMessages);
-      saveMessages(newMessages);
-      setIsLoading(false);
-    }, 1000);
-  };
+
 
   // 开始录音
   const startRecording = async () => {
@@ -268,6 +328,11 @@ export default function ChatScreen() {
 
   // 发送语音消息
   const sendAudioMessage = async (audioUri: string, duration: number) => {
+    if (!isAuthenticated || !uid) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: '语音消息',
@@ -279,58 +344,62 @@ export default function ChatScreen() {
     
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    saveMessages(updatedMessages);
+    await saveMessagesToLocal(updatedMessages, uid);
     
     // 模拟AI回复
     setIsLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "我收到了您的语音消息。请问您想了解什么饮食健康问题呢？",
         type: 'text',
-        sender: 'ai',
+        sender: 'assistant',
         timestamp: Date.now()
       };
       
       const newMessages = [...updatedMessages, aiMessage];
       setMessages(newMessages);
-      saveMessages(newMessages);
+      await saveMessagesToLocal(newMessages, uid);
       setIsLoading(false);
     }, 1000);
   };
 
   // 清空聊天记录
   const clearChat = async () => {
-    const welcomeMessage: Message = {
-      id: Date.now().toString(),
-      content: "您好！我是您的专属营养师小助手。请问您今天想了解什么饮食健康问题呢？",
-      type: 'text',
-      sender: 'ai',
-      timestamp: Date.now()
-    };
-    
-    setMessages([welcomeMessage]);
-    await AsyncStorage.setItem('@chat_messages', JSON.stringify([welcomeMessage]));
+    if (!isAuthenticated || !uid) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+
+    try {
+      const token = await authStorage.getItem('userToken');
+      if (token) {
+        // 调用后端API清空聊天记录
+        await chatAPI.clearChatHistory(token);
+      }
+      
+      // 清空本地存储
+      const storageKey = getChatStorageKey(uid);
+      await AsyncStorage.removeItem(storageKey);
+      
+      // 重新加载欢迎消息
+      await loadWelcomeMessage(uid);
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+      Alert.alert('错误', '清空聊天记录失败，请重试');
+    }
   };
 
   // 渲染消息气泡
   const renderMessage = ({ item }: { item: Message }) => {
-    const isAI = item.sender === 'ai';
+    const isAI = item.sender === 'assistant';
     
     return (
       <View style={[
         styles.messageBubble,
         isAI ? styles.aiMessage : styles.userMessage,
       ]}>
-        {/* AI头像 */}
-        {isAI && (
-          <View style={styles.avatarContainer}>
-            <View style={styles.aiAvatar}>
-              <Ionicons name="medical" size={20} color="#fff" />
-            </View>
-          </View>
-        )}
-        
+        {/* 移除AI和用户头像，仅保留消息内容 */}
         <View style={[
           styles.messageContent,
           isAI ? styles.aiMessageContent : styles.userMessageContent
@@ -344,9 +413,9 @@ export default function ChatScreen() {
             </Text>
           )}
           
-          {item.type === 'image' && item.imageUri && (
+          {item.type === 'image' && item.imageUrls && item.imageUrls.length > 0 && (
             <Image 
-              source={{ uri: item.imageUri }}
+              source={{ uri: item.imageUrls[0] }}
               style={styles.messageImage}
               resizeMode="cover"
             />
@@ -383,18 +452,21 @@ export default function ChatScreen() {
             {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
-        
-        {/* 用户头像 */}
-        {!isAI && (
-          <View style={styles.avatarContainer}>
-            <View style={styles.userAvatar}>
-              <Ionicons name="person" size={20} color="#fff" />
-            </View>
-          </View>
-        )}
       </View>
     );
   };
+
+  // 如果用户未登录，显示登录提示
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loginPrompt}>
+          <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+          <Text style={styles.loginPromptText}>请先登录以使用聊天功能</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -434,6 +506,26 @@ export default function ChatScreen() {
             <ActivityIndicator size="small" color="#28a745" />
             <Text style={styles.loadingText}>营养师正在思考...</Text>
           </View>
+        </View>
+      )}
+      
+      {/* 图片预览区域 */}
+      {pendingImage && (
+        <View style={styles.imagePreviewContainer}>
+          <View style={styles.imagePreviewWrapper}>
+            <Image 
+              source={{ uri: pendingImage }}
+              style={styles.previewImage}
+              resizeMode="cover"
+            />
+            <TouchableOpacity 
+              style={styles.removeImageButton}
+              onPress={() => setPendingImage(null)}
+            >
+              <Ionicons name="close" size={16} color="white" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.imagePreviewText}>图片已选择，输入文字后一起发送</Text>
         </View>
       )}
       
@@ -498,9 +590,9 @@ export default function ChatScreen() {
                 onFocus={() => setShowInputOptions(false)}
               />
               <TouchableOpacity 
-                style={[styles.sendButton, !inputText.trim() && styles.disabledButton]} 
+                style={[styles.sendButton, (!inputText.trim() && !pendingImage) && styles.disabledButton]} 
                 onPress={sendTextMessage}
-                disabled={!inputText.trim()}
+                disabled={!inputText.trim() && !pendingImage}
               >
                 <Ionicons name="send" size={20} color="white" />
               </TouchableOpacity>
@@ -524,6 +616,18 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'linear-gradient(180deg, #f8fffe 0%, #f0f9f4 100%)',
+  },
+  loginPrompt: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  loginPromptText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 20,
+    textAlign: 'center',
   },
   header: {
     position: 'absolute',
@@ -861,5 +965,44 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+  },
+  imagePreviewContainer: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e8f5e8',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  previewImage: {
+    width: 120,
+    height: 90,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ff4757',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  imagePreviewText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
   },
 }); 

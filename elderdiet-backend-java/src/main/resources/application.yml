@@ -53,6 +53,14 @@ management:
     health:
       show-details: when-authorized
 
+# AI API配置
+ai:
+  api:
+    url: https://api2.aigcbest.top/v1/chat/completions
+    key: ${QIANDUODUO_API_KEY:your-api-key-here}
+    model: gpt-4o
+    temperature: 0.7
+
 # 应用信息
 info:
   app:

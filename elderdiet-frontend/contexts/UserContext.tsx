@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authStorage } from '../utils/authStorage';
 import { authAPI } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type UserRole = 'elder' | 'child';
 
@@ -75,7 +76,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearUserData = async () => {
+    try {
+      // 清除认证数据
     await authStorage.clearAuthData();
+      
+      // 清除聊天记录（所有用户的聊天记录）
+      const allKeys = await AsyncStorage.getAllKeys();
+      const chatKeys = allKeys.filter(key => key.startsWith('@chat_messages_'));
+      
+      if (chatKeys.length > 0) {
+        await AsyncStorage.multiRemove(chatKeys);
+        console.log('Cleared chat messages for all users');
+      }
+    } catch (error) {
+      console.error('Failed to clear user data:', error);
+    }
   };
 
   const signUp = async (phone: string, password: string, role: UserRole) => {
@@ -139,7 +154,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // 清除本地存储
+      // 清除本地存储（包括聊天记录）
       await clearUserData();
       setTokenState(null);
       setRoleState(null);

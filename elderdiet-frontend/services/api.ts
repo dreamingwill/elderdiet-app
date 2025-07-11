@@ -89,6 +89,30 @@ export interface ChronicConditionOption {
   label: string;
 }
 
+// 聊天相关类型定义
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  role: 'user' | 'assistant';
+  type: 'text' | 'image';
+  content?: string;
+  imageUrls?: string[];
+  timestamp: number;
+}
+
+export interface ChatRequest {
+  type: 'text' | 'image';
+  content?: string;
+  image_urls?: string[];
+}
+
+export interface ChatResponse {
+  response: string;
+  messageId: string;
+  timestamp: number;
+}
+
+
 // 认证相关API
 export const authAPI = {
   // 用户注册
@@ -286,9 +310,45 @@ export const healthArticlesAPI = {
   },
 };
 
+
+// 聊天相关API
+export const chatAPI = {
+  // 发送聊天消息
+  sendMessage: async (chatRequest: ChatRequest, token: string): Promise<ApiResponse<ChatResponse>> => {
+    return request('/chat', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(chatRequest),
+    });
+  },
+
+  // 获取聊天历史记录
+  getChatHistory: async (token: string): Promise<ApiResponse<ChatMessage[]>> => {
+    return request('/chat/history', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 清空聊天历史记录
+  clearChatHistory: async (token: string): Promise<ApiResponse<void>> => {
+    return request('/chat/history', {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 export default {
   authAPI,
   profileAPI,
   healthAPI,
   healthArticlesAPI,
+  chatAPI,
 }; 
