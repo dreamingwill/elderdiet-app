@@ -18,6 +18,7 @@ import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Audio } from 'expo-av';
 import { chatAPI, ChatRequest, ChatResponse } from '@/services/api';
 import { authStorage } from '@/utils/authStorage';
@@ -35,6 +36,42 @@ interface Message {
   imageUrls?: string[];
   audioDuration?: number;
 }
+
+// 图片处理工具函数
+const processImageToBase64 = async (imageUri: string, index: number): Promise<string> => {
+  try {
+    console.log(`Processing image ${index}: ${imageUri}`);
+    
+    // 先缩略图片
+    const manipulatedImage = await ImageManipulator.manipulateAsync(
+      imageUri,
+      [
+        {
+          resize: {
+            width: 240, // 最大宽度240px
+            height: 180, // 最大高度180px
+          },
+        },
+      ],
+      {
+        compress: 0.6, // 压缩质量
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: true, // 返回base64
+      }
+    );
+    
+    if (manipulatedImage.base64) {
+      const base64Result = `data:image/jpeg;base64,${manipulatedImage.base64}`;
+      console.log(`Image ${index} processed successfully, base64 length: ${base64Result.length}`);
+      return base64Result;
+    } else {
+      throw new Error('Failed to convert image to base64');
+    }
+  } catch (error) {
+    console.error(`Error processing image ${index}:`, error);
+    throw error;
+  }
+};
 
 // 预设的AI回复
 const AI_RESPONSES = [
@@ -55,7 +92,7 @@ export default function ChatScreen() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [showInputOptions, setShowInputOptions] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const flatListRef = useRef<FlatList<Message>>(null);
   const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const { uid, isAuthenticated } = useUser();
@@ -176,7 +213,7 @@ export default function ChatScreen() {
 
   // 发送文本消息
   const sendTextMessage = async () => {
-    if (!inputText.trim() && !pendingImage) return;
+    if (!inputText.trim() && pendingImages.length === 0) return;
     
     if (!isAuthenticated || !uid) {
       Alert.alert('错误', '请先登录');
@@ -184,26 +221,13 @@ export default function ChatScreen() {
     }
     
     // 确定消息类型和内容
-    const messageType = pendingImage ? 'image' : 'text';
-    const messageContent = inputText.trim() || (pendingImage ? '发送了一张图片' : '');
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: messageContent,
-      type: messageType,
-      sender: 'user',
-      timestamp: Date.now(),
-      ...(pendingImage && { imageUrls: [pendingImage] })
-    };
-    
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    const messageType = pendingImages.length > 0 ? 'image' : 'text';
+    const messageContent = inputText.trim() || (pendingImages.length > 0 ? `发送了${pendingImages.length}张图片` : '');
     
     // 清空输入和暂存的图片
     setInputText('');
-    const currentPendingImage = pendingImage;
-    setPendingImage(null);
-    await saveMessagesToLocal(updatedMessages, uid);
+    const currentPendingImages = [...pendingImages];
+    setPendingImages([]);
     
     // 调用真实API
     setIsLoading(true);
@@ -215,11 +239,49 @@ export default function ChatScreen() {
         return;
       }
       
+      // 如果有图片，需要先转换为base64
+      let processedImageUrls: string[] = [];
+      if (currentPendingImages.length > 0) {
+        try {
+          console.log('Processing images:', currentPendingImages);
+          processedImageUrls = await Promise.all(
+            currentPendingImages.map((imageUri, index) => processImageToBase64(imageUri, index))
+          );
+          console.log('All images processed:', processedImageUrls.map(url => ({ length: url.length, preview: url.substring(0, 50) + '...' })));
+        } catch (error) {
+          console.error('图片处理失败:', error);
+          Alert.alert('错误', '图片处理失败，请重试');
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // 创建用户消息（使用处理后的图片）
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: messageContent,
+        type: messageType,
+        sender: 'user',
+        timestamp: Date.now(),
+        ...(processedImageUrls.length > 0 && { imageUrls: processedImageUrls })
+      };
+      
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      await saveMessagesToLocal(updatedMessages, uid);
+      
       const chatRequest: ChatRequest = {
         type: messageType,
         content: messageContent,
-        ...(currentPendingImage && { image_urls: [currentPendingImage] })
+        ...(processedImageUrls.length > 0 && { image_urls: processedImageUrls })
       };
+      
+      console.log('Sending message:', { 
+        type: chatRequest.type, 
+        content: chatRequest.content,
+        image_urls_count: chatRequest.image_urls?.length,
+        image_previews: chatRequest.image_urls?.map((url, i) => `Image ${i + 1}: ${url.substring(0, 50)}...`)
+      });
       
       const response = await chatAPI.sendMessage(chatRequest, token);
       
@@ -248,22 +310,45 @@ export default function ChatScreen() {
 
   // 选择图片
   const pickImage = async () => {
+    if (pendingImages.length >= 3) {
+      Alert.alert('提示', '最多只能选择3张图片');
+      return;
+    }
+    
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      allowsMultipleSelection: false, // 确保单选
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
-      setPendingImage(imageUri);
+      console.log('Selected image:', imageUri);
+      
+      // 检查是否已经选择了相同的图片
+      if (pendingImages.includes(imageUri)) {
+        Alert.alert('提示', '该图片已经选择过了');
+        return;
+      }
+      
+      setPendingImages(prev => {
+        const newImages = [...prev, imageUri];
+        console.log('Updated pending images:', newImages);
+        return newImages;
+      });
       setShowInputOptions(false);
     }
   };
 
   // 拍照
   const takePhoto = async () => {
+    if (pendingImages.length >= 3) {
+      Alert.alert('提示', '最多只能选择3张图片');
+      return;
+    }
+    
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
@@ -272,7 +357,13 @@ export default function ChatScreen() {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const imageUri = result.assets[0].uri;
-      setPendingImage(imageUri);
+      console.log('Captured image:', imageUri);
+      
+      setPendingImages(prev => {
+        const newImages = [...prev, imageUri];
+        console.log('Updated pending images after capture:', newImages);
+        return newImages;
+      });
       setShowInputOptions(false);
     }
   };
@@ -402,9 +493,29 @@ export default function ChatScreen() {
         {/* 移除AI和用户头像，仅保留消息内容 */}
         <View style={[
           styles.messageContent,
-          isAI ? styles.aiMessageContent : styles.userMessageContent
+          isAI ? styles.aiMessageContent : styles.userMessageContent,
+          item.imageUrls && item.imageUrls.length > 0 && styles.imageMessageContent
         ]}>
-          {item.type === 'text' && (
+          {/* 显示图片（如果有） */}
+          {item.imageUrls && item.imageUrls.length > 0 && (
+            <View style={styles.messageImagesContainer}>
+              {item.imageUrls.map((imageUri, index) => (
+                <View key={index} style={styles.imageWrapper}>
+                  <Image 
+                    source={{ uri: imageUri }}
+                    style={[
+                      styles.messageImage,
+                      item.imageUrls!.length > 1 && styles.messageImageMultiple
+                    ]}
+                    resizeMode="cover"
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+          
+          {/* 显示文字内容（如果有） */}
+          {item.content && item.content.trim() && (
             <Text style={[
               styles.messageText,
               isAI ? styles.aiMessageText : styles.userMessageText
@@ -413,17 +524,9 @@ export default function ChatScreen() {
             </Text>
           )}
           
-          {item.type === 'image' && item.imageUrls && item.imageUrls.length > 0 && (
-            <Image 
-              source={{ uri: item.imageUrls[0] }}
-              style={styles.messageImage}
-              resizeMode="cover"
-            />
-          )}
-          
           {item.type === 'audio' && (
             <RNView style={styles.audioContainer}>
-              <Ionicons name="mic" size={20} color={isAI ? "#28a745" : "#fff"} />
+              <Ionicons name="mic" size={20} color="#28a745" />
               <RNView style={styles.audioWave}>
                 {[...Array(5)].map((_, i) => (
                   <RNView 
@@ -510,22 +613,31 @@ export default function ChatScreen() {
       )}
       
       {/* 图片预览区域 */}
-      {pendingImage && (
+      {pendingImages.length > 0 && (
         <View style={styles.imagePreviewContainer}>
-          <View style={styles.imagePreviewWrapper}>
-            <Image 
-              source={{ uri: pendingImage }}
-              style={styles.previewImage}
-              resizeMode="cover"
-            />
-            <TouchableOpacity 
-              style={styles.removeImageButton}
-              onPress={() => setPendingImage(null)}
-            >
-              <Ionicons name="close" size={16} color="white" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.imagePreviewText}>图片已选择，输入文字后一起发送</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {pendingImages.map((imageUri, index) => (
+              <View key={index} style={styles.imagePreviewWrapper}>
+                <Image 
+                  source={{ uri: imageUri }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity 
+                  style={styles.removeImageButton}
+                  onPress={() => setPendingImages(prev => prev.filter((_, i) => i !== index))}
+                >
+                  <Ionicons name="close" size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+                  <Text style={styles.imagePreviewText}>
+          已选择{pendingImages.length}张图片，输入文字后一起发送 (最多3张)
+        </Text>
+        <Text style={styles.imageDebugText}>
+          图片路径: {pendingImages.map((uri, i) => `${i + 1}. ${uri.split('/').pop()}`).join(', ')}
+        </Text>
         </View>
       )}
       
@@ -590,9 +702,9 @@ export default function ChatScreen() {
                 onFocus={() => setShowInputOptions(false)}
               />
               <TouchableOpacity 
-                style={[styles.sendButton, (!inputText.trim() && !pendingImage) && styles.disabledButton]} 
+                style={[styles.sendButton, (!inputText.trim() && pendingImages.length === 0) && styles.disabledButton]} 
                 onPress={sendTextMessage}
-                disabled={!inputText.trim() && !pendingImage}
+                disabled={!inputText.trim() && pendingImages.length === 0}
               >
                 <Ionicons name="send" size={20} color="white" />
               </TouchableOpacity>
@@ -722,11 +834,11 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 22,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingBottom: 24,
     position: 'relative',
-    maxWidth: width * 0.7,
+    maxWidth: width * 0.75,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -740,24 +852,52 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   userMessageContent: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e8f5e8',
     borderBottomRightRadius: 4,
+  },
+  imageMessageContent: {
+    padding: 4,
+    backgroundColor: 'transparent',
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
+    marginTop: 4,
   },
   aiMessageText: {
     color: '#2d3748',
   },
   userMessageText: {
-    color: '#ffffff',
+    color: '#2d3748',
+  },
+  messageImagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 6,
+  },
+  imageWrapper: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   messageImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-    marginBottom: 8,
+    width: 140,
+    height: 105,
+    marginBottom: 4,
+  },
+  messageImageMultiple: {
+    width: 80,
+    height: 60,
+    marginBottom: 2,
+    marginRight: 4,
   },
   audioContainer: {
     flexDirection: 'row',
@@ -780,7 +920,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#28a745',
   },
   userAudioWaveBar: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#28a745',
   },
   audioDuration: {
     fontSize: 12,
@@ -790,19 +930,19 @@ const styles = StyleSheet.create({
     color: '#718096',
   },
   userAudioDuration: {
-    color: '#ffffff',
+    color: '#2d3748',
   },
   timestamp: {
     fontSize: 10,
     position: 'absolute',
-    bottom: 6,
-    right: 12,
+    bottom: 4,
+    right: 10,
   },
   aiTimestamp: {
     color: '#a0aec0',
   },
   userTimestamp: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#a0aec0',
   },
   loadingContainer: {
     paddingHorizontal: 20,
@@ -976,6 +1116,7 @@ const styles = StyleSheet.create({
   imagePreviewWrapper: {
     position: 'relative',
     alignSelf: 'flex-start',
+    marginRight: 12,
   },
   previewImage: {
     width: 120,
@@ -985,11 +1126,11 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: -6,
+    right: -6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: '#ff4757',
     alignItems: 'center',
     justifyContent: 'center',
@@ -997,12 +1138,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 8,
+    zIndex: 10,
   },
   imagePreviewText: {
     fontSize: 12,
     color: '#666',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  imageDebugText: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
     textAlign: 'center',
   },
 }); 
