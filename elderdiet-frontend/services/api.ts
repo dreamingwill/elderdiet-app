@@ -325,8 +325,16 @@ export const chatAPI = {
   },
 
   // 获取聊天历史记录
-  getChatHistory: async (token: string): Promise<ApiResponse<ChatMessage[]>> => {
-    return request('/chat/history', {
+  getChatHistory: async (token: string, sinceTimestamp?: number): Promise<ApiResponse<ChatMessage[]>> => {
+    const params = new URLSearchParams();
+    if (sinceTimestamp) {
+      params.append('since_timestamp', sinceTimestamp.toString());
+    }
+    
+    const queryString = params.toString();
+    const endpoint = `/chat/history${queryString ? `?${queryString}` : ''}`;
+    
+    return request(endpoint, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

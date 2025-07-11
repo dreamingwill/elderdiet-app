@@ -119,6 +119,7 @@ public class ChatController {
          */
         @GetMapping("/history")
         public ResponseEntity<ApiResponse<List<ChatMessage>>> getChatHistory(
+                        @RequestParam(value = "since_timestamp", required = false) Long sinceTimestamp,
                         HttpServletRequest httpRequest) {
 
                 try {
@@ -144,7 +145,13 @@ public class ChatController {
                         String userId = jwtUtil.getUidFromToken(token);
 
                         // 获取聊天历史记录
-                        List<ChatMessage> messages = chatService.getChatMessages(userId);
+                        List<ChatMessage> messages;
+                        if (sinceTimestamp != null) {
+                                java.time.Instant instant = java.time.Instant.ofEpochMilli(sinceTimestamp);
+                                messages = chatService.getChatMessages(userId, instant);
+                        } else {
+                                messages = chatService.getChatMessages(userId);
+                        }
 
                         return ResponseEntity.ok(ApiResponse.<List<ChatMessage>>builder()
                                         .success(true)

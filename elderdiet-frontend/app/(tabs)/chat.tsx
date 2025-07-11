@@ -635,9 +635,9 @@ export default function ChatScreen() {
                   <Text style={styles.imagePreviewText}>
           已选择{pendingImages.length}张图片，输入文字后一起发送 (最多3张)
         </Text>
-        <Text style={styles.imageDebugText}>
+        {/* <Text style={styles.imageDebugText}>
           图片路径: {pendingImages.map((uri, i) => `${i + 1}. ${uri.split('/').pop()}`).join(', ')}
-        </Text>
+        </Text> */}
         </View>
       )}
       

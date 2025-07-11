@@ -43,4 +43,13 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
      * @param userId 用户ID
      */
     void deleteByUserId(String userId);
+
+    /**
+     * 根据用户ID和时间戳查询消息记录（按时间正序）
+     * 
+     * @param userId    用户ID
+     * @param timestamp 时间戳，查询这个时间之后的消息
+     * @return 消息列表
+     */
+    List<ChatMessage> findByUserIdAndTimestampAfterOrderByTimestampAsc(String userId, java.time.Instant timestamp);
 }
