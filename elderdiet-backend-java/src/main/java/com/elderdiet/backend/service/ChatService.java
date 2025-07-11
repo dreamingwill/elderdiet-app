@@ -138,18 +138,6 @@ public class ChatService {
     }
 
     /**
-     * 获取聊天历史记录（带时间戳过滤）
-     */
-    private List<ChatMessage> getChatHistory(String userId, Instant sinceTimestamp) {
-        if (sinceTimestamp == null) {
-            return getChatHistory(userId);
-        }
-
-        // 获取指定时间之后的消息
-        return chatMessageRepository.findByUserIdAndTimestampAfterOrderByTimestampAsc(userId, sinceTimestamp);
-    }
-
-    /**
      * 构建AI API请求
      */
     private AiApiRequest buildAiRequest(ChatRequest request, Profile userProfile, List<ChatMessage> chatHistory) {
@@ -375,43 +363,16 @@ public class ChatService {
     }
 
     /**
-     * 清空用户聊天记录（不删除数据，只更新清空时间戳）
+     * 清空用户聊天记录
      */
     public void clearChatHistory(String userId) {
-        // 更新用户的聊天清空时间戳
-        Profile profile = profileRepository.findByUserId(userId).orElse(null);
-        if (profile != null) {
-            profile.setChatClearedAt(Instant.now());
-            profileRepository.save(profile);
-            log.info("用户 {} 的聊天记录清空时间戳已更新", userId);
-        } else {
-            log.warn("用户 {} 的健康档案不存在，无法更新聊天清空时间戳", userId);
-        }
+        chatMessageRepository.deleteByUserId(userId);
     }
 
     /**
      * 获取用户聊天记录
      */
     public List<ChatMessage> getChatMessages(String userId) {
-        return getChatMessages(userId, null);
-    }
-
-    /**
-     * 获取用户聊天记录（带时间戳过滤）
-     */
-    public List<ChatMessage> getChatMessages(String userId, Instant sinceTimestamp) {
-        if (sinceTimestamp == null) {
-            // 检查用户是否设置了聊天清空时间戳
-            Profile profile = profileRepository.findByUserId(userId).orElse(null);
-            if (profile != null && profile.getChatClearedAt() != null) {
-                sinceTimestamp = profile.getChatClearedAt();
-            }
-        }
-
-        if (sinceTimestamp == null) {
             return chatMessageRepository.findByUserIdOrderByTimestampAsc(userId);
-        } else {
-            return chatMessageRepository.findByUserIdAndTimestampAfterOrderByTimestampAsc(userId, sinceTimestamp);
-        }
     }
 }
