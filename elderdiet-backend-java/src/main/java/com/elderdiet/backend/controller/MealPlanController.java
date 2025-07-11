@@ -22,7 +22,7 @@ import java.util.Map;
  * 膳食计划控制器
  */
 @RestController
-@RequestMapping("/api/meal-plans")
+@RequestMapping("/api/v1/meal-plans")
 @RequiredArgsConstructor
 @Slf4j
 public class MealPlanController {

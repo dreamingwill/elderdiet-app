@@ -209,6 +209,62 @@ export const profileAPI = {
 };
 
 // 养生文章相关类型定义
+// 膳食计划相关类型定义
+export interface Dish {
+  name: string;
+  ingredients: string[];
+  recommendation_reason: string;
+  preparation_notes: string;
+  tags: string[];
+}
+
+export interface MealInfo {
+  meal_type: string;
+  dishes: Dish[];
+  nutrition_summary: string;
+  meal_tips: string;
+  dish_count: number;
+  meal_type_label: string;
+}
+
+export interface MealPlan {
+  id: string;
+  user_id: string;
+  plan_date: string;
+  breakfast: MealInfo;
+  lunch: MealInfo;
+  dinner: MealInfo;
+  generated_reason: string;
+  health_tips: string;
+  status: string;
+  liked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealPlanGenerateRequest {
+  plan_date: string;
+  preferred_ingredients?: string[];
+  avoid_ingredients?: string[];
+  special_requirements?: string;
+}
+
+export interface ReplaceDishRequest {
+  meal_plan_id: string;
+  meal_type: 'BREAKFAST' | 'LUNCH' | 'DINNER';
+  dish_index: number;
+}
+
+export interface LikeMealPlanRequest {
+  meal_plan_id: string;
+  liked: boolean;
+}
+
+export interface MealPlanStatsResponse {
+  total: number;
+  liked: number;
+}
+
 export interface HealthArticle {
   _id: string;
   title: string;
@@ -353,10 +409,157 @@ export const chatAPI = {
   },
 };
 
+// 膳食计划相关API
+export const mealPlanAPI = {
+  // 获取今日最新膳食计划
+  getTodayMealPlan: async (token: string): Promise<ApiResponse<MealPlan>> => {
+    return request('/meal-plans/today', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 生成今日膳食计划
+  generateTodayMealPlan: async (token: string): Promise<ApiResponse<MealPlan>> => {
+    return request('/meal-plans/generate-today', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 生成指定日期的膳食计划
+  generateMealPlan: async (requestData: MealPlanGenerateRequest, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request('/meal-plans', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 获取指定日期的最新膳食计划
+  getLatestMealPlan: async (planDate: string, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request(`/meal-plans/latest?plan_date=${planDate}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 获取指定日期的所有膳食计划
+  getMealPlansByDate: async (planDate: string, token: string): Promise<ApiResponse<MealPlan[]>> => {
+    return request(`/meal-plans/by-date?plan_date=${planDate}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 获取膳食计划历史记录
+  getMealPlanHistory: async (token: string): Promise<ApiResponse<MealPlan[]>> => {
+    return request('/meal-plans/history', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 获取指定日期范围的膳食计划
+  getMealPlansByRange: async (startDate: string, endDate: string, token: string): Promise<ApiResponse<MealPlan[]>> => {
+    return request(`/meal-plans/range?start_date=${startDate}&end_date=${endDate}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 获取收藏的膳食计划
+  getLikedMealPlans: async (token: string): Promise<ApiResponse<MealPlan[]>> => {
+    return request('/meal-plans/liked', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 获取膳食计划统计信息
+  getMealPlanStats: async (token: string): Promise<ApiResponse<MealPlanStatsResponse>> => {
+    return request('/meal-plans/stats', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 更换菜品
+  replaceDish: async (requestData: ReplaceDishRequest, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request('/meal-plans/replace-dish', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 设置膳食计划喜欢状态
+  likeMealPlan: async (requestData: LikeMealPlanRequest, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request('/meal-plans/like', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 切换膳食计划喜欢状态
+  toggleLikeMealPlan: async (mealPlanId: string, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request(`/meal-plans/${mealPlanId}/toggle-like`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 归档膳食计划
+  archiveMealPlan: async (mealPlanId: string, token: string): Promise<ApiResponse<MealPlan>> => {
+    return request(`/meal-plans/${mealPlanId}/archive`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 删除膳食计划
+  deleteMealPlan: async (mealPlanId: string, token: string): Promise<ApiResponse<void>> => {
+    return request(`/meal-plans/${mealPlanId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 export default {
   authAPI,
   profileAPI,
   healthAPI,
   healthArticlesAPI,
   chatAPI,
+  mealPlanAPI,
 }; 
