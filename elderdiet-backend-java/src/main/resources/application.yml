@@ -61,6 +61,16 @@ ai:
     model: gpt-4o
     temperature: 0.7
 
+# 阿里云OSS配置
+aliyun:
+  oss:
+    endpoint: ${ALIYUN_OSS_ENDPOINT:oss-cn-shanghai.aliyuncs.com}
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:your-access-key-id}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:your-access-key-secret}
+    bucket-name: ${ALIYUN_OSS_BUCKET_NAME:elder-diet}
+    base-url: ${ALIYUN_OSS_BASE_URL:https://elder-diet.oss-cn-shanghai.aliyuncs.com}
+    upload-path: ${ALIYUN_OSS_UPLOAD_PATH:diet-images/}
+
 # 应用信息
 info:
   app:
