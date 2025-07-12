@@ -286,9 +286,11 @@ export default function MealPlanScreen() {
               style={styles.likeButton}
               onPress={toggleLike}
             >
-              <Text style={styles.likeIcon}>
-                {currentMealPlan.liked ? '🧡' : '🤍'}
-              </Text>
+              <Ionicons 
+                 name={currentMealPlan.liked ? 'heart' : 'heart-outline'} 
+                 size={28} 
+                 color={currentMealPlan.liked ? '#FF0000' : '#ccc'} 
+               />
             </TouchableOpacity>
           )}
         </View>
@@ -362,18 +364,18 @@ export default function MealPlanScreen() {
                 <Text style={styles.recommendationText}>
                   {getCurrentMealSummary()}
                 </Text>
-                <Text style={styles.healthLabel}>【膳食提示】</Text>
+                {/* <Text style={styles.healthLabel}>【膳食提示】</Text>
                 <Text style={styles.recommendationText}>
                   {getCurrentMealTips()}
-                </Text>
-                {currentMealPlan.health_tips && (
+                </Text> */}
+                {/* {currentMealPlan.health_tips && (
                   <>
                     <Text style={styles.wellnessLabel}>【健康建议】</Text>
                     <Text style={styles.recommendationText}>
                       {currentMealPlan.health_tips}
                     </Text>
                   </>
-                )}
+                )} */}
               </View>
             </>
           )}
@@ -615,10 +617,9 @@ const styles = StyleSheet.create({
     color: '#212529',
   },
   likeButton: {
-    padding: 8,
-  },
-  likeIcon: {
-    fontSize: 32,
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   loadingContainer: {
     flex: 1,
@@ -705,15 +706,15 @@ const styles = StyleSheet.create({
 
   // 菜品列表样式
   dishesContainer: {
-    marginTop: 20,
+    marginTop: 16,
   },
 
   // 打卡按钮容器
   checkInButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 12,
     paddingHorizontal: 4,
   },
   checkInButton: {
@@ -747,38 +748,41 @@ const styles = StyleSheet.create({
 
   // 推荐说明卡片
   recommendationCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    backgroundColor: '#f8fffe',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   nutritionLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#28a745',
     marginBottom: 8,
   },
   healthLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#17a2b8',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 6,
   },
   wellnessLabel: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#fd7e14',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 6,
   },
   recommendationText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#495057',
-    marginBottom: 4,
+    marginBottom: 6,
   },
 
   // 日历相关样式 - 保持原有样式

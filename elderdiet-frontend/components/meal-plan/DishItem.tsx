@@ -21,25 +21,26 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     onReplace(mealType, index);
   };
 
-  // 如果推荐理由超过80个字符，显示展开按钮
-  const shouldShowExpandButton = dish.recommendation_reason.length > 80;
+  // 如果推荐理由超过60个字符，显示展开按钮
+  const shouldShowExpandButton = dish.recommendation_reason.length > 32;
   const displayText = isExpanded || !shouldShowExpandButton 
     ? dish.recommendation_reason 
-    : dish.recommendation_reason.substring(0, 80) + '...';
+    : dish.recommendation_reason.substring(0, 32) + '...';
 
   return (
     <View style={styles.dishItem}>
-      <View style={styles.dishInfo}>
+      {/* 菜品名称和更换按钮 */}
+      <View style={styles.dishHeader}>
         <Text style={styles.dishName}>{dish.name}</Text>
         <TouchableOpacity 
           style={styles.changeButton}
           onPress={handleReplace}
         >
-          <Ionicons name="refresh" size={16} color="#666" />
-          <Text style={styles.changeButtonText}>更换</Text>
+          <Ionicons name="refresh" size={18} color="#666" />
         </TouchableOpacity>
       </View>
       
+      {/* 推荐理由 */}
       <View style={styles.recommendationContainer}>
         <Text style={styles.recommendationText}>{displayText}</Text>
         {shouldShowExpandButton && (
@@ -52,7 +53,7 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
             </Text>
             <Ionicons 
               name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
+              size={12} 
               color="#007bff" 
             />
           </TouchableOpacity>
@@ -65,63 +66,59 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
 const styles = StyleSheet.create({
   dishItem: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  dishInfo: {
+  dishHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   dishName: {
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#212529',
     flex: 1,
   },
   changeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f8f9fa',
-    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#dee2e6',
-  },
-  changeButtonText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
   },
   recommendationContainer: {
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 6,
+    padding: 10,
   },
   recommendationText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 18,
+    lineHeight: 22,
     color: '#495057',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   expandButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   expandButtonText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#007bff',
-    marginRight: 4,
+    marginRight: 3,
   },
 });
 
