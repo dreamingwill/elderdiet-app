@@ -1,5 +1,6 @@
 package com.elderdiet.backend.util;
 
+import com.elderdiet.backend.entity.UserRole;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -17,32 +18,32 @@ import java.util.Map;
 @Slf4j
 @Component
 public class JwtUtil {
-    
+
     @Value("${jwt.secret}")
     private String secret;
-    
+
     @Value("${jwt.expiration}")
     private Long expiration;
-    
+
     /**
      * 生成JWT令牌
      */
-    public String generateToken(String uid, String phone, String role) {
+    public String generateToken(String uid, String phone, UserRole role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("uid", uid);
         claims.put("phone", phone);
-        claims.put("role", role);
-        
+        claims.put("role", role.name());
+
         return createToken(claims, phone);
     }
-    
+
     /**
      * 创建令牌
      */
     private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + expiration * 1000);
-        
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
@@ -51,28 +52,28 @@ public class JwtUtil {
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
-    
+
     /**
      * 从令牌中获取用户ID
      */
     public String getUidFromToken(String token) {
         return getClaimFromToken(token, "uid");
     }
-    
+
     /**
      * 从令牌中获取手机号
      */
     public String getPhoneFromToken(String token) {
         return getClaimFromToken(token, "phone");
     }
-    
+
     /**
      * 从令牌中获取角色
      */
     public String getRoleFromToken(String token) {
         return getClaimFromToken(token, "role");
     }
-    
+
     /**
      * 从令牌中获取指定声明
      */
@@ -80,7 +81,7 @@ public class JwtUtil {
         final Claims claims = getAllClaimsFromToken(token);
         return claims.get(claimName, String.class);
     }
-    
+
     /**
      * 从令牌中获取所有声明
      */
@@ -91,7 +92,7 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
-    
+
     /**
      * 检查令牌是否过期
      */
@@ -103,14 +104,14 @@ public class JwtUtil {
             return true;
         }
     }
-    
+
     /**
      * 从令牌中获取过期时间
      */
     public Date getExpirationDateFromToken(String token) {
         return getAllClaimsFromToken(token).getExpiration();
     }
-    
+
     /**
      * 验证令牌
      */
@@ -134,7 +135,7 @@ public class JwtUtil {
         }
         return false;
     }
-    
+
     /**
      * 获取签名密钥
      */
@@ -142,4 +143,4 @@ public class JwtUtil {
         byte[] keyBytes = secret.getBytes();
         return Keys.hmacShaKeyFor(keyBytes);
     }
-} 
+}

@@ -3,7 +3,7 @@ import { authStorage } from '../utils/authStorage';
 import { authAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type UserRole = 'elder' | 'child';
+type UserRole = 'ELDER' | 'CHILD';
 
 interface UserData {
   uid: string;

@@ -29,8 +29,8 @@ export default function MeScreen() {
   };
 
   // 获取角色显示文本
-  const getRoleText = (role: 'elder' | 'child'): string => {
-    return role === 'elder' ? '老人' : '家属';
+  const getRoleText = (role: 'ELDER' | 'CHILD'): string => {
+    return role === 'ELDER' ? '老人' : '家属';
   };
 
   // 获取BMI状态文本

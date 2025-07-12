@@ -1,0 +1,113 @@
+package com.elderdiet.backend.controller;
+
+import com.elderdiet.backend.dto.ApiResponse;
+import com.elderdiet.backend.dto.FamilyLinkRequest;
+import com.elderdiet.backend.entity.FamilyLink;
+import com.elderdiet.backend.entity.User;
+import com.elderdiet.backend.security.JwtAuthenticationToken;
+import com.elderdiet.backend.service.FamilyService;
+import com.elderdiet.backend.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.List;
+
+/**
+ * 家庭控制器
+ */
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/family")
+@RequiredArgsConstructor
+public class FamilyController {
+
+    private final FamilyService familyService;
+    private final UserService userService;
+
+    private User getCurrentUser(Authentication authentication) {
+        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) authentication;
+        String userId = jwtAuth.getUserId();
+        return userService.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+    }
+
+    /**
+     * 链接子女用户（只有老人可以调用）
+     */
+    @PostMapping("/link")
+    @PreAuthorize("hasAuthority('ROLE_ELDER')")
+    public ResponseEntity<ApiResponse<FamilyLink>> linkChild(
+            @Valid @RequestBody FamilyLinkRequest request,
+            Authentication authentication) {
+
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 创建家庭链接
+            FamilyLink familyLink = familyService.linkChild(currentUser, request.getChildPhone());
+
+            return ResponseEntity.ok(ApiResponse.success("家庭链接创建成功", familyLink));
+        } catch (Exception e) {
+            log.error("链接子女用户失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取当前用户的家庭链接
+     */
+    @GetMapping("/links")
+    public ResponseEntity<ApiResponse<List<FamilyLink>>> getLinks(Authentication authentication) {
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            List<FamilyLink> links;
+            // 根据用户角色获取相应的链接
+            switch (currentUser.getRole()) {
+                case ELDER:
+                    links = familyService.getChildrenLinks(currentUser.getId());
+                    break;
+                case CHILD:
+                    links = familyService.getParentsLinks(currentUser.getId());
+                    break;
+                default:
+                    throw new RuntimeException("未知的用户角色");
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("获取家庭链接成功", links));
+        } catch (Exception e) {
+            log.error("获取家庭链接失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 删除家庭链接（只有老人可以调用）
+     */
+    @DeleteMapping("/link/{childId}")
+    @PreAuthorize("hasAuthority('ROLE_ELDER')")
+    public ResponseEntity<ApiResponse<Void>> unlinkChild(
+            @PathVariable String childId,
+            Authentication authentication) {
+
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 删除家庭链接
+            familyService.unlinkChild(currentUser.getId(), childId);
+
+            return ResponseEntity.ok(ApiResponse.success("家庭链接删除成功"));
+        } catch (Exception e) {
+            log.error("删除家庭链接失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+}

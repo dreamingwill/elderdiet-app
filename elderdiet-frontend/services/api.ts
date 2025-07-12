@@ -47,21 +47,21 @@ export interface ApiResponse<T = any> {
 export interface LoginResponse {
   token: string;
   uid: string;
-  role: 'elder' | 'child';
+  role: 'ELDER' | 'CHILD';
   phone: string;
 }
 
 export interface RegisterResponse {
   token: string;
   uid: string;
-  role: 'elder' | 'child';
+  role: 'ELDER' | 'CHILD';
   phone: string;
 }
 
 export interface UserInfo {
   uid: string;
   phone: string;
-  role: 'elder' | 'child';
+  role: 'ELDER' | 'CHILD';
   createdAt: string;
   updatedAt: string;
 }
@@ -119,7 +119,7 @@ export const authAPI = {
   register: async (
     phone: string, 
     password: string, 
-    role: 'elder' | 'child'
+    role: 'ELDER' | 'CHILD'
   ): Promise<ApiResponse<RegisterResponse>> => {
     return request('/auth/register', {
       method: 'POST',

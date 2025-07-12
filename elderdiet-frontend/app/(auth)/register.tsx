@@ -17,7 +17,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'elder' | 'child'>('elder');
+  const [selectedRole, setSelectedRole] = useState<'ELDER' | 'CHILD'>('ELDER');
   const [isLoading, setIsLoading] = useState(false);
   
   const { signUp } = useUser();
@@ -135,14 +135,14 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.roleOption,
-                  selectedRole === 'elder' && styles.roleOptionActive,
+                  selectedRole === 'ELDER' && styles.roleOptionActive,
                 ]}
-                onPress={() => setSelectedRole('elder')}
+                onPress={() => setSelectedRole('ELDER')}
               >
                 <Text
                   style={[
                     styles.roleText,
-                    selectedRole === 'elder' && styles.roleTextActive,
+                    selectedRole === 'ELDER' && styles.roleTextActive,
                   ]}
                 >
                   老人
@@ -152,14 +152,14 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.roleOption,
-                  selectedRole === 'child' && styles.roleOptionActive,
+                  selectedRole === 'CHILD' && styles.roleOptionActive,
                 ]}
-                onPress={() => setSelectedRole('child')}
+                onPress={() => setSelectedRole('CHILD')}
               >
                 <Text
                   style={[
                     styles.roleText,
-                    selectedRole === 'child' && styles.roleTextActive,
+                    selectedRole === 'CHILD' && styles.roleTextActive,
                   ]}
                 >
                   家属
