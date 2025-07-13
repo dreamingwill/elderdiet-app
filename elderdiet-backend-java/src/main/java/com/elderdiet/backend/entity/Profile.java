@@ -77,6 +77,16 @@ public class Profile {
     // 聊天记录清空时间戳，用于实现"清空"功能而不删除数据
     private Instant chatClearedAt;
 
+    // 小树成长游戏化字段
+    @Builder.Default
+    private Integer treeStage = 0; // 树的阶段，0-6
+
+    @Builder.Default
+    private Integer wateringProgress = 0; // 浇水进度，0或1
+
+    @Builder.Default
+    private Integer completedTrees = 0; // 已完成的树数量
+
     @CreatedDate
     private LocalDateTime createdAt;
 

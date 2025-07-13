@@ -22,81 +22,81 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
-    
+
     private final ProfileRepository profileRepository;
-    
+
     /**
      * 根据用户ID获取健康档案
      */
     public ProfileDTO getProfileByUserId(String userId) {
         log.info("获取用户健康档案, userId: {}", userId);
-        
+
         Profile profile = profileRepository.findByUserId(userId)
                 .orElse(null);
-        
+
         if (profile == null) {
             log.warn("用户健康档案不存在, userId: {}", userId);
             return null;
         }
-        
+
         return convertToDTO(profile);
     }
-    
+
     /**
      * 创建健康档案
      */
     @Transactional
     public ProfileDTO createProfile(String userId, ProfileDTO profileDTO) {
         log.info("创建用户健康档案, userId: {}", userId);
-        
+
         // 检查是否已存在档案
         if (profileRepository.existsByUserId(userId)) {
             throw new RuntimeException("健康档案已存在，请使用更新接口");
         }
-        
+
         Profile profile = convertToEntity(profileDTO);
         profile.setUserId(userId);
-        
+
         Profile savedProfile = profileRepository.save(profile);
         log.info("健康档案创建成功, userId: {}, profileId: {}", userId, savedProfile.getId());
-        
+
         return convertToDTO(savedProfile);
     }
-    
+
     /**
      * 更新健康档案
      */
     @Transactional
     public ProfileDTO updateProfile(String userId, ProfileDTO profileDTO) {
         log.info("更新用户健康档案, userId: {}", userId);
-        
+
         Profile existingProfile = profileRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("健康档案不存在"));
-        
+
         // 更新字段
         updateProfileFields(existingProfile, profileDTO);
-        
+
         Profile updatedProfile = profileRepository.save(existingProfile);
         log.info("健康档案更新成功, userId: {}, profileId: {}", userId, updatedProfile.getId());
-        
+
         return convertToDTO(updatedProfile);
     }
-    
+
     /**
      * 删除健康档案
      */
     @Transactional
     public void deleteProfile(String userId) {
         log.info("删除用户健康档案, userId: {}", userId);
-        
+
         if (!profileRepository.existsByUserId(userId)) {
             throw new RuntimeException("健康档案不存在");
         }
-        
+
         profileRepository.deleteByUserId(userId);
         log.info("健康档案删除成功, userId: {}", userId);
     }
-    
+
     /**
      * 获取慢性疾病选项
      */
@@ -108,7 +108,7 @@ public class ProfileService {
                         .build())
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * 将Entity转换为DTO
      */
@@ -122,11 +122,16 @@ public class ProfileService {
                 .region(profile.getRegion())
                 .height(profile.getHeight())
                 .weight(profile.getWeight())
-                .chronicConditions(profile.getChronicConditions() != null ? 
-                        new ArrayList<>(profile.getChronicConditions()) : new ArrayList<>())
-                .dietaryPreferences(profile.getDietaryPreferences() != null ? 
-                        new ArrayList<>(profile.getDietaryPreferences()) : new ArrayList<>())
+                .chronicConditions(
+                        profile.getChronicConditions() != null ? new ArrayList<>(profile.getChronicConditions())
+                                : new ArrayList<>())
+                .dietaryPreferences(
+                        profile.getDietaryPreferences() != null ? new ArrayList<>(profile.getDietaryPreferences())
+                                : new ArrayList<>())
                 .notes(profile.getNotes() != null ? profile.getNotes() : "")
+                .treeStage(profile.getTreeStage())
+                .wateringProgress(profile.getWateringProgress())
+                .completedTrees(profile.getCompletedTrees())
                 .bmi(profile.getBmi())
                 .bmiStatus(profile.getBmiStatus())
                 .bmiStatusLabel(profile.getBmiStatusLabel())
@@ -134,7 +139,7 @@ public class ProfileService {
                 .updatedAt(profile.getUpdatedAt())
                 .build();
     }
-    
+
     /**
      * 将DTO转换为Entity
      */
@@ -146,14 +151,14 @@ public class ProfileService {
                 .region(dto.getRegion())
                 .height(dto.getHeight())
                 .weight(dto.getWeight())
-                .chronicConditions(dto.getChronicConditions() != null ? 
-                        new ArrayList<>(dto.getChronicConditions()) : new ArrayList<>())
-                .dietaryPreferences(dto.getDietaryPreferences() != null ? 
-                        new ArrayList<>(dto.getDietaryPreferences()) : new ArrayList<>())
+                .chronicConditions(dto.getChronicConditions() != null ? new ArrayList<>(dto.getChronicConditions())
+                        : new ArrayList<>())
+                .dietaryPreferences(dto.getDietaryPreferences() != null ? new ArrayList<>(dto.getDietaryPreferences())
+                        : new ArrayList<>())
                 .notes(dto.getNotes() != null ? dto.getNotes() : "")
                 .build();
     }
-    
+
     /**
      * 更新Profile字段
      */
@@ -164,10 +169,45 @@ public class ProfileService {
         profile.setRegion(dto.getRegion());
         profile.setHeight(dto.getHeight());
         profile.setWeight(dto.getWeight());
-        profile.setChronicConditions(dto.getChronicConditions() != null ? 
-                new ArrayList<>(dto.getChronicConditions()) : new ArrayList<>());
-        profile.setDietaryPreferences(dto.getDietaryPreferences() != null ? 
-                new ArrayList<>(dto.getDietaryPreferences()) : new ArrayList<>());
+        profile.setChronicConditions(
+                dto.getChronicConditions() != null ? new ArrayList<>(dto.getChronicConditions()) : new ArrayList<>());
+        profile.setDietaryPreferences(
+                dto.getDietaryPreferences() != null ? new ArrayList<>(dto.getDietaryPreferences()) : new ArrayList<>());
         profile.setNotes(dto.getNotes() != null ? dto.getNotes() : "");
+        // 小树字段通常不由用户直接更新，而由游戏化服务更新
+        if (dto.getTreeStage() != null) {
+            profile.setTreeStage(dto.getTreeStage());
+        }
+        if (dto.getWateringProgress() != null) {
+            profile.setWateringProgress(dto.getWateringProgress());
+        }
+        if (dto.getCompletedTrees() != null) {
+            profile.setCompletedTrees(dto.getCompletedTrees());
+        }
     }
-} 
+
+    /**
+     * 更新小树状态（仅供GamificationService使用）
+     */
+    @Transactional
+    public void updateTreeStatus(String userId, Integer treeStage, Integer wateringProgress, Integer completedTrees) {
+        log.info("更新用户小树状态, userId: {}, stage: {}, progress: {}, completed: {}",
+                userId, treeStage, wateringProgress, completedTrees);
+
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("健康档案不存在"));
+
+        if (treeStage != null) {
+            profile.setTreeStage(treeStage);
+        }
+        if (wateringProgress != null) {
+            profile.setWateringProgress(wateringProgress);
+        }
+        if (completedTrees != null) {
+            profile.setCompletedTrees(completedTrees);
+        }
+
+        profileRepository.save(profile);
+        log.info("小树状态更新成功, userId: {}", userId);
+    }
+}
