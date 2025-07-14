@@ -11,7 +11,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://elderdiet_app:elderdiet_app_password@localhost:27017/elderdiet
+      uri: mongodb://localhost:27017/elderdiet
       auto-index-creation: true
 
   jackson:
@@ -88,7 +88,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
+      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@localhost:27017/elderdiet_dev
+      #uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
 
 logging:
   level:
@@ -104,7 +105,7 @@ spring:
 
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/elderdiet}
+      uri: mongodb://${MONGODB_USER:prodUser}:${MONGODB_PASSWORD}@localhost:27017/elderdiet_prod
 
 logging:
   level:

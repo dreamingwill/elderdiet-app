@@ -5,7 +5,19 @@
 
 set -e  # Exit on any error
 
+# Default environment
+ENVIRONMENT=${1:-dev}
+
+# Validate environment parameter
+if [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
+    echo "Error: Invalid environment. Use 'dev' or 'prod'"
+    echo "Usage: $0 [dev|prod]"
+    echo "Default: dev"
+    exit 1
+fi
+
 echo "=== Java Backend Restart Script ==="
+echo "Environment: $ENVIRONMENT"
 echo "Current time: $(date)"
 echo ""
 
@@ -58,11 +70,13 @@ echo "Build completed successfully"
 echo ""
 
 # Step 4: Start the Java backend
-echo "Step 4: Starting Java backend..."
+echo "Step 4: Starting Java backend with $ENVIRONMENT profile..."
 cd ..
 
-# Start the application in background
-nohup java -jar elderdiet-backend-java/target/elderdiet-backend-java-1.0.0.jar --server.address=0.0.0.0 > backend.log 2>&1 &
+# Start the application in background with specified profile
+nohup java -jar elderdiet-backend-java/target/elderdiet-backend-java-1.0.0.jar \
+    --spring.profiles.active=$ENVIRONMENT \
+    --server.address=0.0.0.0 > backend.log 2>&1 &
 
 # Get the new process ID
 NEW_PID=$!
