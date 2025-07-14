@@ -21,8 +21,8 @@ const { width } = Dimensions.get('window');
 
 // 营养分类
 const nutritionCategories = [
-  { id: '1', title: '血糖管理', icon: 'pulse-outline', color: '#FF6B6B', bgColor: '#FFE8E8' },
-  { id: '2', title: '心血管保护', icon: 'heart-outline', color: '#4ECDC4', bgColor: '#E8F8F7' },
+  // { id: '1', title: '血糖管理', icon: 'pulse-outline', color: '#FF6B6B', bgColor: '#FFE8E8' },
+  // { id: '2', title: '心血管保护', icon: 'heart-outline', color: '#4ECDC4', bgColor: '#E8F8F7' },
   { id: '3', title: '骨骼健康', icon: 'fitness-outline', color: '#45B7D1', bgColor: '#E8F4FD' },
   { id: '4', title: '消化养胃', icon: 'restaurant-outline', color: '#96CEB4', bgColor: '#F0F8F4' },
   { id: '5', title: '免疫增强', icon: 'shield-outline', color: '#FECA57', bgColor: '#FFF8E1' },

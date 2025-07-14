@@ -341,3 +341,7 @@ apache-maven-*/
 # OS specific files
 .DS_Store
 Thumbs.db 
+
+# Ignore all APK files
+*.apk
+**/*.apk
