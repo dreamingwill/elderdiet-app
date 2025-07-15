@@ -61,13 +61,6 @@ export default function CreatePostScreen() {
     setImages(prev => prev.filter((_, i) => i !== index));
   }, []);
 
-  // 将URI转换为File对象（用于上传）
-  const uriToFile = useCallback(async (uri: string, filename: string): Promise<File> => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    return new File([blob], filename, { type: blob.type });
-  }, []);
-
   // 发布分享
   const handleSubmit = useCallback(async () => {
     if (!token) {
@@ -75,10 +68,11 @@ export default function CreatePostScreen() {
       return;
     }
 
-    if (!caption.trim()) {
-      Alert.alert('提示', '请输入分享内容');
-      return;
-    }
+    // 移除caption校验，允许空内容
+    // if (!caption.trim()) {
+    //   Alert.alert('提示', '请输入分享内容');
+    //   return;
+    // }
 
     if (images.length === 0) {
       Alert.alert('提示', '请选择至少一张图片');
@@ -88,17 +82,13 @@ export default function CreatePostScreen() {
     setIsSubmitting(true);
 
     try {
-      // 转换图片为File对象
-      const imageFiles = await Promise.all(
-        images.map((uri, index) => uriToFile(uri, `image_${index}.jpg`))
-      );
-
       const requestData: CreateMealRecordRequest = {
         caption: caption.trim(),
         visibility: isPrivate ? 'PRIVATE' : 'FAMILY',
       };
 
-      const response = await mealRecordsAPI.createMealRecord(requestData, imageFiles, token);
+      // 直接传递URI数组，不再转换为File对象
+      const response = await mealRecordsAPI.createMealRecord(requestData, images, token);
 
       if (response.success) {
         Alert.alert('成功', '分享发布成功！', [
@@ -116,7 +106,7 @@ export default function CreatePostScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, caption, images, isPrivate, uriToFile]);
+  }, [token, caption, images, isPrivate]);
 
   return (
     <>

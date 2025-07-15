@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MealRecordResponse, mealRecordsAPI, CommentInfo } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import PostCard from './PostCard';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface FamilySharingWallProps {
   onCreatePost?: () => void;
@@ -43,6 +43,15 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
       loadFeed().finally(() => setIsLoading(false));
     }
   }, [token, authLoading, loadFeed]);
+
+  // 页面获得焦点时自动刷新
+  useFocusEffect(
+    useCallback(() => {
+      if (!authLoading && token) {
+        loadFeed();
+      }
+    }, [authLoading, token, loadFeed])
+  );
 
   // 下拉刷新
   const handleRefresh = useCallback(async () => {

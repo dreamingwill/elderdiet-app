@@ -1,7 +1,7 @@
 // API基础配置
 //const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
-//const API_BASE_URL = 'http://30.71.181.219:3001/api/v1'; // 云服务器地址
-const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
+//const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
+const API_BASE_URL = 'https://api.elderdiet.me/api/v1'; // https证书
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -80,6 +80,7 @@ export interface ProfileData {
   notes?: string;
   bmi?: number;
   bmiStatus?: string;
+  avatar_url?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -187,6 +188,34 @@ export const profileAPI = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(profileData),
+    });
+  },
+  
+  // 上传用户头像
+  uploadAvatar: async (imageUri: string, token: string): Promise<ApiResponse<ProfileData>> => {
+    const formData = new FormData();
+    
+    // 构建文件对象
+    const fileName = imageUri.split('/').pop() || 'avatar.jpg';
+    const fileType = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeType = fileType === 'png' ? 'image/png' : 
+                     fileType === 'gif' ? 'image/gif' : 
+                     fileType === 'webp' ? 'image/webp' : 
+                     'image/jpeg';
+    
+    formData.append('file', {
+      uri: imageUri,
+      name: fileName,
+      type: mimeType,
+    } as any);
+    
+    return request('/profiles/avatar', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      },
+      body: formData as any,
     });
   },
 
@@ -631,13 +660,12 @@ export interface FamilyMember {
   user_id: string;
   phone: string;
   role: 'ELDER' | 'CHILD';
-  profile?: {
-    name: string;
-    age: number;
-    gender: 'male' | 'female' | 'other';
-    avatar?: string;
-  };
-  relationship: 'parent' | 'child';
+  name: string;
+  age: number | null;
+  gender: 'male' | 'female' | 'other' | null;
+  region: string;
+  avatar_url: string | null;
+  relationship_type: 'parent' | 'child';
   created_at: string;
 }
 
@@ -676,22 +704,34 @@ export const mealRecordsAPI = {
   // 创建膳食记录
   createMealRecord: async (
     requestData: CreateMealRecordRequest,
-    images: File[],
+    imageUris: string[],
     token: string
   ): Promise<ApiResponse<MealRecord>> => {
     const formData = new FormData();
     formData.append('request', JSON.stringify(requestData));
     
-    images.forEach((image, index) => {
-      formData.append('images', image);
+    imageUris.forEach((uri, index) => {
+      const fileName = uri.split('/').pop() || `image_${index}.jpg`;
+      const fileType = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeType = fileType === 'png' ? 'image/png' : 
+                       fileType === 'gif' ? 'image/gif' : 
+                       fileType === 'webp' ? 'image/webp' : 
+                       'image/jpeg';
+
+      formData.append('images', {
+        uri: uri,
+        name: fileName,
+        type: mimeType,
+      } as any);
     });
 
     return request('/meal-records', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
       },
-      body: formData,
+      body: formData as any,
     });
   },
 

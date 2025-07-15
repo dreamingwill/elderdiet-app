@@ -14,9 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
-import { familyAPI, FamilyMember } from '../../services/api';
+import { familyAPI, FamilyMember, profileAPI } from '../../services/api';
 
 export default function MeScreen() {
   const { phone, role, signOut, token } = useUser();
@@ -26,6 +27,7 @@ export default function MeScreen() {
   const [isLinkingFamily, setIsLinkingFamily] = useState(false);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [isFamilyLoading, setIsFamilyLoading] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // 获取家庭成员信息
   const loadFamilyMembers = async () => {
@@ -154,6 +156,57 @@ export default function MeScreen() {
   const handleEdit = () => {
     router.push('/edit-profile');
   };
+  
+  // 选择并上传头像
+  const handleAvatarUpload = async () => {
+    if (!token) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+    
+    // 请求相册访问权限
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('权限不足', '需要相册访问权限才能选择头像');
+      return;
+    }
+    
+    try {
+      // 打开图片选择器
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0];
+        
+        // 开始上传
+        setIsUploadingAvatar(true);
+        try {
+          const response = await profileAPI.uploadAvatar(selectedImage.uri, token);
+          
+          if (response.success && response.data) {
+            // 更新个人资料（包括新头像URL）
+            refreshProfile();
+            Alert.alert('成功', '头像上传成功');
+          } else {
+            Alert.alert('失败', response.message || '头像上传失败');
+          }
+        } catch (error: any) {
+          console.error('Avatar upload error:', error);
+          Alert.alert('错误', error.message || '上传过程中发生错误');
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('错误', '选择图片时发生错误');
+    }
+  };
 
   // 渲染家庭成员信息
   const renderFamilyMembers = () => {
@@ -181,24 +234,24 @@ export default function MeScreen() {
         {familyMembers.map((member, index) => (
           <View key={member.user_id} style={styles.familyMemberCard}>
             <View style={styles.memberAvatar}>
-              {member.profile?.avatar ? (
-                <Image source={{ uri: member.profile.avatar }} style={styles.avatarImage} />
+              {member.avatar_url ? (
+                <Image source={{ uri: member.avatar_url }} style={styles.avatarImage} />
               ) : (
                 <Ionicons name="person" size={32} color="#999" />
               )}
             </View>
             <View style={styles.memberInfo}>
               <Text style={styles.memberName}>
-                {member.profile?.name || '未设置姓名'}
+                {member.name || '未设置姓名'}
               </Text>
               <Text style={styles.memberDetails}>
-                {member.profile?.age ? `${member.profile.age}岁` : '年龄未设置'} · {
-                  member.profile?.gender === 'male' ? '男' : 
-                  member.profile?.gender === 'female' ? '女' : '未设置'
+                {member.age ? `${member.age}岁` : '年龄未设置'} · {
+                  member.gender === 'male' ? '男' : 
+                  member.gender === 'female' ? '女' : '未设置'
                 }
               </Text>
               <Text style={styles.memberRole}>
-                {member.relationship === 'child' ? '子女' : '家长'}
+                {member.relationship_type === 'child' ? '子女' : '家长'}
               </Text>
             </View>
             <View style={styles.memberActions}>
@@ -293,10 +346,25 @@ export default function MeScreen() {
       {/* 头部用户信息 */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          {/* 头像 */}
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={40} color="#999" />
-          </View>
+          {/* 头像 - 可点击上传 */}
+          <TouchableOpacity 
+            style={styles.avatarContainer} 
+            onPress={handleAvatarUpload}
+            disabled={isUploadingAvatar}
+          >
+            <View style={styles.avatar}>
+              {isUploadingAvatar ? (
+                <ActivityIndicator size="large" color="#4CAF50" />
+              ) : profile?.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.userAvatarImage} />
+              ) : (
+                <Ionicons name="person" size={40} color="#999" />
+              )}
+            </View>
+            <View style={styles.editAvatarBadge}>
+              <Ionicons name="camera" size={14} color="#fff" />
+            </View>
+          </TouchableOpacity>
 
           {/* 基本信息 */}
           <View style={styles.basicInfo}>
@@ -906,6 +974,28 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  userAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#4CAF50',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   memberInfo: {
     flex: 1,

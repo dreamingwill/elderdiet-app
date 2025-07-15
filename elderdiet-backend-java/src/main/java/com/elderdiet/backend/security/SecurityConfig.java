@@ -53,8 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // 公开端点
                         .requestMatchers(
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/login",
+                                "/api/v1/auth/**",
                                 "/api/v1/health",
                                 "/api/v1/profiles/options/**",
                                 "/api/v1/health-articles/**",

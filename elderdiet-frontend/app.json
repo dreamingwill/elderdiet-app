@@ -15,7 +15,6 @@
     },
     "ios": {
       "supportsTablet": true ,
-      "usesCleartextTraffic": true,
       "bundleIdentifier": "com.zeroh12.ElderDiet"
     },
     "android": {

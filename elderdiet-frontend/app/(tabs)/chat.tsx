@@ -695,7 +695,7 @@ export default function ChatScreen() {
                 style={styles.input}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="请输入您的健康饮食问题..."
+                placeholder="可输入健康饮食问题..."
                 placeholderTextColor="#999"
                 multiline
                 maxLength={500}
