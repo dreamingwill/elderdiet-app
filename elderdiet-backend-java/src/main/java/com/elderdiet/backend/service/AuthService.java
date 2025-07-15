@@ -37,7 +37,7 @@ public class AuthService {
 
                 // 为新用户创建空的健康档案
                 try {
-                        profileService.createEmptyProfile(user.getId());
+                        profileService.createEmptyProfile(user.getId(), request.getPhone(), request.getRole());
                         log.info("为新用户创建空档案成功: {}", request.getPhone());
                 } catch (Exception e) {
                         log.error("为新用户创建空档案失败: {}, 错误: {}", request.getPhone(), e.getMessage());
