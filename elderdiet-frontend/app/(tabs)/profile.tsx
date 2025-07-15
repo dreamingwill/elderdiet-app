@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,46 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TextInput,
+  Modal,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
+import { familyAPI, FamilyMember } from '../../services/api';
 
 export default function MeScreen() {
-  const { phone, role, signOut } = useUser();
+  const { phone, role, signOut, token } = useUser();
   const { profile, isLoading, error, refreshProfile } = useProfile();
+  const [isAddChildModalVisible, setIsAddChildModalVisible] = useState(false);
+  const [childPhone, setChildPhone] = useState('');
+  const [isLinkingFamily, setIsLinkingFamily] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const [isFamilyLoading, setIsFamilyLoading] = useState(false);
+
+  // 获取家庭成员信息
+  const loadFamilyMembers = async () => {
+    if (!token || role !== 'ELDER') return;
+    
+    setIsFamilyLoading(true);
+    try {
+      const response = await familyAPI.getFamilyMembers(token);
+      if (response.success && response.data) {
+        setFamilyMembers(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load family members:', error);
+    } finally {
+      setIsFamilyLoading(false);
+    }
+  };
+
+  // 组件加载时获取家庭成员信息
+  useEffect(() => {
+    loadFamilyMembers();
+  }, [token, role]);
 
   // 获取性别显示文本
   const getGenderText = (gender?: string): string => {
@@ -55,19 +86,32 @@ export default function MeScreen() {
     }
   };
 
+  // 慢性疾病标签映射
+  const getConditionLabel = (condition: string): string => {
+    const labels: Record<string, string> = {
+      hypertension: '高血压',
+      diabetes: '糖尿病',
+      heart_disease: '心脏病',
+      asthma: '哮喘',
+      arthritis: '关节炎',
+      hyperlipidemia: '高血脂',
+      others: '其他',
+    };
+    return labels[condition] || condition;
+  };
+
   // 渲染慢性疾病标签
   const renderChronicConditions = () => {
     if (!profile?.chronicConditions || profile.chronicConditions.length === 0) {
       return <Text style={styles.placeholderText}>暂无慢性疾病记录</Text>;
     }
 
-    const conditions = profile.chronicConditions;
-    const displayed = conditions.slice(0, 3);
-    const remaining = conditions.length - 3;
+    const displayConditions = profile.chronicConditions.slice(0, 3);
+    const remaining = profile.chronicConditions.length - 3;
 
     return (
       <View style={styles.tagsContainer}>
-        {displayed.map((condition, index) => (
+        {displayConditions.map((condition, index) => (
           <View key={index} style={styles.tag}>
             <Text style={styles.tagText}>{getConditionLabel(condition)}</Text>
           </View>
@@ -84,16 +128,15 @@ export default function MeScreen() {
   // 渲染饮食偏好标签
   const renderDietaryPreferences = () => {
     if (!profile?.dietaryPreferences || profile.dietaryPreferences.length === 0) {
-      return <Text style={styles.placeholderText}>暂无饮食偏好记录</Text>;
+      return <Text style={styles.placeholderText}>暂无饮食偏好设置</Text>;
     }
 
-    const preferences = profile.dietaryPreferences;
-    const displayed = preferences.slice(0, 3);
-    const remaining = preferences.length - 3;
+    const displayPreferences = profile.dietaryPreferences.slice(0, 3);
+    const remaining = profile.dietaryPreferences.length - 3;
 
     return (
       <View style={styles.tagsContainer}>
-        {displayed.map((preference, index) => (
+        {displayPreferences.map((preference, index) => (
           <View key={index} style={styles.tag}>
             <Text style={styles.tagText}>{preference}</Text>
           </View>
@@ -107,23 +150,111 @@ export default function MeScreen() {
     );
   };
 
-  // 慢性疾病标签映射
-  const getConditionLabel = (condition: string): string => {
-    const labels: Record<string, string> = {
-      hypertension: '高血压',
-      diabetes: '糖尿病',
-      heart_disease: '心脏病',
-      asthma: '哮喘',
-      arthritis: '关节炎',
-      hyperlipidemia: '高血脂',
-      others: '其他',
-    };
-    return labels[condition] || condition;
-  };
-
   // 跳转到编辑页面
   const handleEdit = () => {
     router.push('/edit-profile');
+  };
+
+  // 渲染家庭成员信息
+  const renderFamilyMembers = () => {
+    if (isFamilyLoading) {
+      return (
+        <View style={styles.familyLoadingContainer}>
+          <ActivityIndicator size="small" color="#4CAF50" />
+          <Text style={styles.familyLoadingText}>加载中...</Text>
+        </View>
+      );
+    }
+
+    if (familyMembers.length === 0) {
+      return (
+        <View style={styles.emptyFamilyContainer}>
+          <Ionicons name="people-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyFamilyText}>还没有添加家庭成员</Text>
+          <Text style={styles.emptyFamilyDesc}>添加子女账号后，可以共享健康信息</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.familyMembersList}>
+        {familyMembers.map((member, index) => (
+          <View key={member.user_id} style={styles.familyMemberCard}>
+            <View style={styles.memberAvatar}>
+              {member.profile?.avatar ? (
+                <Image source={{ uri: member.profile.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={32} color="#999" />
+              )}
+            </View>
+            <View style={styles.memberInfo}>
+              <Text style={styles.memberName}>
+                {member.profile?.name || '未设置姓名'}
+              </Text>
+              <Text style={styles.memberDetails}>
+                {member.profile?.age ? `${member.profile.age}岁` : '年龄未设置'} · {
+                  member.profile?.gender === 'male' ? '男' : 
+                  member.profile?.gender === 'female' ? '女' : '未设置'
+                }
+              </Text>
+              <Text style={styles.memberRole}>
+                {member.relationship === 'child' ? '子女' : '家长'}
+              </Text>
+            </View>
+            <View style={styles.memberActions}>
+              <TouchableOpacity style={styles.memberActionButton}>
+                <Ionicons name="chatbubble-outline" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  // 添加子女账号
+  const handleAddChild = async () => {
+    if (!childPhone.trim()) {
+      Alert.alert('提示', '请输入子女手机号');
+      return;
+    }
+
+    // 简单的手机号验证
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    if (!phoneRegex.test(childPhone)) {
+      Alert.alert('提示', '请输入正确的手机号格式');
+      return;
+    }
+
+    if (childPhone === phone) {
+      Alert.alert('提示', '不能添加自己的手机号');
+      return;
+    }
+
+    setIsLinkingFamily(true);
+    try {
+      const response = await familyAPI.linkFamily({ child_phone: childPhone }, token!);
+      if (response.success) {
+        Alert.alert('成功', '家庭链接创建成功！', [
+          {
+            text: '确定',
+            onPress: () => {
+              setIsAddChildModalVisible(false);
+              setChildPhone('');
+              // 刷新家庭成员列表
+              loadFamilyMembers();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('失败', response.message || '链接失败，请重试');
+      }
+    } catch (error: any) {
+      console.error('Link family error:', error);
+      Alert.alert('错误', error.message || '网络错误，请重试');
+    } finally {
+      setIsLinkingFamily(false);
+    }
   };
 
   // 退出登录处理
@@ -250,15 +381,29 @@ export default function MeScreen() {
               <Text style={styles.sectionTitle}>饮食偏好</Text>
               {renderDietaryPreferences()}
             </View>
-
-            {/* 活动量（占位，后续扩展） */}
-            {/* <View style={styles.section}>
-              <Text style={styles.sectionTitle}>活动量</Text>
-              <Text style={styles.placeholderText}>久坐</Text>
-            </View> */}
           </>
         )}
       </View>
+
+      {/* 家庭管理卡片 - 仅老人角色显示 */}
+      {role === 'ELDER' && (
+        <View style={styles.familyCard}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>家庭管理</Text>
+            <TouchableOpacity 
+              style={styles.addButton} 
+              onPress={() => setIsAddChildModalVisible(true)}
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#4CAF50" />
+              <Text style={styles.addText}>添加子女</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.familyContent}>
+            {renderFamilyMembers()}
+          </View>
+        </View>
+      )}
 
       {/* 成就勋章卡片（占位，后续扩展） */}
       <View style={styles.achievementCard}>
@@ -281,19 +426,77 @@ export default function MeScreen() {
         </View>
       </View>
 
-      {/* 账号管理 */}
+      {/* 账户信息卡片 */}
       <View style={styles.accountCard}>
-        <Text style={styles.cardTitle}>账号管理</Text>
-        <View style={styles.accountInfo}>
-          <Text style={styles.phoneText}>当前手机号：{phone?.slice(0,3)}****{phone?.slice(-4)}</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>账户信息</Text>
         </View>
         
-        {/* 退出登录按钮 */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" />
-          <Text style={styles.signOutText}>退出登录</Text>
-        </TouchableOpacity>
+        <View style={styles.accountInfo}>
+          <Text style={styles.phoneText}>手机号: {phone}</Text>
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={20} color="#fff" />
+            <Text style={styles.signOutText}>退出登录</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* 添加子女模态框 */}
+      <Modal
+        visible={isAddChildModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsAddChildModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>添加子女账号</Text>
+              <TouchableOpacity 
+                onPress={() => setIsAddChildModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>子女手机号</Text>
+              <TextInput
+                style={styles.phoneInput}
+                value={childPhone}
+                onChangeText={setChildPhone}
+                placeholder="请输入子女的手机号码"
+                keyboardType="phone-pad"
+                maxLength={11}
+              />
+              <Text style={styles.inputHint}>
+                请确保输入的手机号已注册为子女账号
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setIsAddChildModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, isLinkingFamily && styles.disabledButton]}
+                onPress={handleAddChild}
+                disabled={isLinkingFamily}
+              >
+                {isLinkingFamily ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>确认添加</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -307,7 +510,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingTop: 60,
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   userInfo: {
     flexDirection: 'row',
@@ -318,8 +521,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 16,
   },
   basicInfo: {
@@ -327,7 +530,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
     marginBottom: 4,
   },
@@ -343,7 +546,8 @@ const styles = StyleSheet.create({
   },
   healthCard: {
     backgroundColor: 'white',
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 12,
     borderRadius: 12,
     padding: 16,
@@ -375,25 +579,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   errorContainer: {
-    padding: 12,
-    backgroundColor: '#ffebee',
-    borderRadius: 8,
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingVertical: 20,
   },
   errorText: {
-    color: '#c62828',
     fontSize: 14,
+    color: '#ff4757',
   },
   loadingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    paddingVertical: 20,
     gap: 8,
   },
   loadingText: {
-    color: '#666',
     fontSize: 14,
+    color: '#666',
   },
   bmiSection: {
     marginBottom: 20,
@@ -460,6 +660,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
+  },
+  familyCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  familyContent: {
+    marginTop: 12,
+  },
+  familyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  familyItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  familyDesc: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
   achievementCard: {
     backgroundColor: 'white',
@@ -533,5 +773,166 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
+  },
+  
+  // 模态框样式
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 400,
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  inputContainer: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  phoneInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 6,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  confirmButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  
+  // 家庭成员相关样式
+  familyLoadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  familyLoadingText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyFamilyContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyFamilyText: {
+    fontSize: 16,
+    color: '#999',
+    fontWeight: '500',
+  },
+  emptyFamilyDesc: {
+    fontSize: 14,
+    color: '#ccc',
+    textAlign: 'center',
+  },
+  familyMembersList: {
+    gap: 12,
+  },
+  familyMemberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    gap: 12,
+  },
+  memberAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e9ecef',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  memberDetails: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  memberRole: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  memberActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  memberActionButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#fff',
   },
 }); 

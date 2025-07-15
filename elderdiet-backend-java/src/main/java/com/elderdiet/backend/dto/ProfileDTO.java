@@ -66,6 +66,9 @@ public class ProfileDTO {
     @Builder.Default
     private String notes = "";
 
+    // 头像URL
+    private String avatarUrl;
+
     // 小树成长游戏化字段
     @Builder.Default
     private Integer treeStage = 0; // 树的阶段，0-6

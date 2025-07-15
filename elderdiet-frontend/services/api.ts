@@ -555,6 +555,222 @@ export const mealPlanAPI = {
   },
 };
 
+// 家庭分享墙相关类型定义
+export interface MealRecord {
+  id: string;
+  user_id: string;
+  caption: string;
+  image_urls: string[];
+  visibility: 'PRIVATE' | 'FAMILY';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MealRecordResponse {
+  id: string;
+  user_id: string;
+  caption: string;
+  image_urls: string[];
+  visibility: 'PRIVATE' | 'FAMILY';
+  created_at: string;
+  updated_at: string;
+  user_info: {
+    user_id: string;
+    username: string;
+    avatar?: string | null;
+    nickname: string;
+  };
+  likes_count: number;
+  comments_count: number;
+  liked_by_current_user: boolean;
+  comments: CommentInfo[];
+}
+
+export interface LikeInfo {
+  id: string;
+  user_id: string;
+  user: {
+    uid: string;
+    name: string;
+    avatar?: string;
+  };
+  created_at: string;
+}
+
+export interface CommentInfo {
+  id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  user_info: {
+    user_id: string;
+    username: string;
+    avatar?: string | null;
+    nickname: string;
+  };
+}
+
+export interface RecordComment {
+  id: string;
+  record_id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FamilyLink {
+  id: string;
+  parent_id: string;
+  child_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FamilyMember {
+  user_id: string;
+  phone: string;
+  role: 'ELDER' | 'CHILD';
+  profile?: {
+    name: string;
+    age: number;
+    gender: 'male' | 'female' | 'other';
+    avatar?: string;
+  };
+  relationship: 'parent' | 'child';
+  created_at: string;
+}
+
+export interface TreeStatus {
+  current_stage: number;
+  watering_count: number;
+  next_stage_threshold: number;
+  description: string;
+}
+
+export interface CreateMealRecordRequest {
+  caption: string;
+  visibility: 'PRIVATE' | 'FAMILY';
+}
+
+export interface CreateCommentRequest {
+  text: string;
+}
+
+export interface LinkFamilyRequest {
+  child_phone: string;
+}
+
+// 家庭分享墙相关API
+export const mealRecordsAPI = {
+  // 获取分享墙时间线
+  getFeed: async (token: string): Promise<ApiResponse<MealRecordResponse[]>> => {
+    return request('/meal-records/feed', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 创建膳食记录
+  createMealRecord: async (
+    requestData: CreateMealRecordRequest,
+    images: File[],
+    token: string
+  ): Promise<ApiResponse<MealRecord>> => {
+    const formData = new FormData();
+    formData.append('request', JSON.stringify(requestData));
+    
+    images.forEach((image, index) => {
+      formData.append('images', image);
+    });
+
+    return request('/meal-records', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  },
+
+  // 切换点赞状态
+  toggleLike: async (recordId: string, token: string): Promise<ApiResponse<void>> => {
+    return request(`/meal-records/${recordId}/toggle-like`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  // 添加评论
+  addComment: async (
+    recordId: string,
+    requestData: CreateCommentRequest,
+    token: string
+  ): Promise<ApiResponse<RecordComment>> => {
+    return request(`/meal-records/${recordId}/comments`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 获取评论列表
+  getComments: async (recordId: string, token: string): Promise<ApiResponse<CommentInfo[]>> => {
+    return request(`/meal-records/${recordId}/comments`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
+// 家庭关系相关API
+export const familyAPI = {
+  // 链接家庭成员
+  linkFamily: async (
+    requestData: LinkFamilyRequest,
+    token: string
+  ): Promise<ApiResponse<FamilyLink>> => {
+    return request('/family/link', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 获取家庭成员列表
+  getFamilyMembers: async (token: string): Promise<ApiResponse<FamilyMember[]>> => {
+    return request('/family/members', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
+// 游戏化相关API
+export const gamificationAPI = {
+  // 获取小树状态
+  getTreeStatus: async (token: string): Promise<ApiResponse<TreeStatus>> => {
+    return request('/profiles/tree-status', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 export default {
   authAPI,
   profileAPI,
@@ -562,4 +778,7 @@ export default {
   healthArticlesAPI,
   chatAPI,
   mealPlanAPI,
+  mealRecordsAPI,
+  familyAPI,
+  gamificationAPI,
 }; 

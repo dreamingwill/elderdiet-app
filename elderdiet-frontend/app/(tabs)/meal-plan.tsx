@@ -1,72 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, Dimensions, FlatList, StatusBar, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityIndicator, Dimensions } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/hooks/useAuth';
 import { mealPlanAPI, MealPlan as APIMealPlan, Dish } from '@/services/api';
 import DishItem from '@/components/meal-plan/DishItem';
+import FamilySharingWall from '@/components/family-sharing/FamilySharingWall';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
-// 打卡记录数据类型
-interface CheckInRecord {
-  id: string;
-  date: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner';
-  type: 'quick' | 'photo';
-  photo?: string;
-  timestamp: number;
-  likes: Array<{
-    id: string;
-    user: string;
-    avatar: string;
-    timestamp: number;
-  }>;
-  comments: Array<{
-    id: string;
-    user: string;
-    avatar: string;
-    message: string;
-    timestamp: number;
-  }>;
-}
+
 
 export default function MealPlanScreen() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
-  const [selectedDay, setSelectedDay] = useState(30); // 默认选中今天
   const [currentMealPlan, setCurrentMealPlan] = useState<APIMealPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token, isLoading: authLoading } = useAuth();
-  const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([
-    // 保留原有的打卡记录数据
-    {
-      id: 'checkin_today_breakfast',
-      date: new Date().toISOString().split('T')[0],
-      mealType: 'breakfast',
-      type: 'photo',
-      photo: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60',
-      timestamp: Date.now() - 3600000,
-      likes: [
-        { id: 'like_today_1', user: '女儿', avatar: '👧', timestamp: Date.now() - 3000000 }
-      ],
-      comments: [
-        { id: 'comm_today_1', user: '女儿', avatar: '👧', message: '早餐很丰富呢!', timestamp: Date.now() - 2500000 }
-      ]
-    },
-    {
-      id: 'checkin_today_lunch',
-      date: new Date().toISOString().split('T')[0],
-      mealType: 'lunch',
-      type: 'quick',
-      timestamp: Date.now() - 7200000,
-      likes: [],
-      comments: []
-    },
-    // 其他打卡记录...
-  ]);
 
   // 获取今日膳食计划
   const loadTodayMealPlan = async () => {
@@ -158,33 +110,9 @@ export default function MealPlanScreen() {
     }
   };
 
-  // 拍照打卡功能
-  const handlePhotoCheckIn = async () => {
-    // 模拟拍照上传
-    const mockPhotoUrl = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=60';
-    
-    const today = new Date().toISOString().split('T')[0];
-    const newCheckIn: CheckInRecord = {
-      id: `checkin_${Date.now()}`,
-      date: today,
-      mealType: selectedMealType,
-      type: 'photo',
-      photo: mockPhotoUrl,
-      timestamp: Date.now(),
-      likes: [],
-      comments: []
-    };
-
-    setCheckInRecords(prev => [newCheckIn, ...prev]);
-    
-    // 保存到本地存储
-    try {
-      const updatedRecords = [newCheckIn, ...checkInRecords];
-      await AsyncStorage.setItem('@check_in_records', JSON.stringify(updatedRecords));
-      Alert.alert('成功', `${selectedMealType === 'breakfast' ? '早餐' : selectedMealType === 'lunch' ? '午餐' : '晚餐'} 拍照打卡成功！`);
-    } catch (error) {
-      console.error('打卡保存失败:', error);
-    }
+  // 拍照打卡功能 - 跳转到创建分享页面
+  const handlePhotoCheckIn = () => {
+    router.push('/create-post' as any);
   };
 
   // 初始化
@@ -407,168 +335,8 @@ export default function MealPlanScreen() {
           </View>
         </View>
 
-        {/* 健康打卡日历 - 保持原有的打卡日历功能 */}
-        <View style={styles.calendarContainer}>
-          <View style={styles.calendarHeader}>
-            <Text style={styles.calendarTitle}>健康打卡日历</Text>
-            <Text style={styles.calendarSubtitle}>
-              本月已坚持健康饮食 {checkInRecords.length} 天，继续加油！
-            </Text>
-          </View>
-          
-          {/* 月份显示 */}
-          <View style={styles.monthHeader}>
-            <Text style={styles.monthText}>
-              {new Date().getFullYear()}年{new Date().getMonth() + 1}月
-            </Text>
-          </View>
-          
-          {/* 日历滑动窗口 */}
-          <FlatList
-            data={Array.from({ length: 21 }, (_, i) => {
-              const todayDate = new Date();
-              const targetDate = new Date(todayDate);
-              targetDate.setDate(todayDate.getDate() - 10 + i);
-              return targetDate;
-            })}
-            renderItem={({ item: targetDate }) => {
-              const day = targetDate.getDate();
-              const weekDay = ['日', '一', '二', '三', '四', '五', '六'][targetDate.getDay()];
-              const checkDate = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const dayCheckIns = checkInRecords.filter(record => record.date === checkDate);
-              const isToday = targetDate.toDateString() === new Date().toDateString();
-              
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.calendarDayCard,
-                    dayCheckIns.length > 0 && styles.calendarDayWithRecord,
-                    selectedDay === day && styles.calendarDaySelected,
-                    isToday && styles.calendarDayToday
-                  ]}
-                  onPress={() => setSelectedDay(day)}
-                >
-                  <Text style={[
-                    styles.weekDayText,
-                    selectedDay === day && styles.calendarDayTextSelected,
-                    isToday && styles.calendarDayTextToday
-                  ]}>
-                    {weekDay}
-                  </Text>
-                  <Text style={[
-                    styles.calendarDayText,
-                    dayCheckIns.length > 0 && styles.calendarDayTextWithRecord,
-                    selectedDay === day && styles.calendarDayTextSelected,
-                    isToday && styles.calendarDayTextToday
-                  ]}>
-                    {day}
-                  </Text>
-                  {dayCheckIns.length > 0 && (
-                    <View style={styles.checkInBadge}>
-                      <Ionicons name="checkmark" size={14} color="#28a745" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-            keyExtractor={(item) => item.getTime().toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.calendarScrollContainer}
-            initialScrollIndex={10}
-            getItemLayout={(data, index) => ({
-              length: 80,
-              offset: 80 * index,
-              index,
-            })}
-          />
-
-          {/* 打卡记录详情 - 保持原有的打卡记录显示逻辑 */}
-          {(() => {
-            const todayDate = new Date();
-            const selectedDate = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
-            const selectedDayRecords = checkInRecords.filter(record => record.date === selectedDate);
-            
-            if (selectedDayRecords.length === 0) {
-              return (
-                <View style={styles.noRecordsContainer}>
-                  <Text style={styles.noRecordsText}>
-                    {selectedDay}日 还没有打卡记录，开始今天的健康饮食吧！
-                  </Text>
-                </View>
-              );
-            }
-
-            return (
-              <View style={styles.checkInRecordsContainer}>
-                <Text style={styles.recordsTitle}>
-                  {selectedDay}日 的打卡记录 ({selectedDayRecords.length}条)
-                </Text>
-                
-                {/* 横向滑动的打卡记录 */}
-                <FlatList
-                  data={selectedDayRecords}
-                  renderItem={({ item: record }) => (
-                    <View style={styles.checkInRecordCard}>
-                      {/* 打卡信息头部 */}
-                      <View style={styles.recordHeader}>
-                        <Text style={styles.recordMealType}>
-                          {record.mealType === 'breakfast' ? '🌅 早餐' : 
-                           record.mealType === 'lunch' ? '☀️ 午餐' : '🌙 晚餐'}
-                        </Text>
-                        <Text style={styles.recordType}>
-                          {record.type === 'quick' ? '快速打卡' : '📷 拍照打卡'}
-                        </Text>
-                        <Text style={styles.recordTime}>
-                          {new Date(record.timestamp).toLocaleTimeString('zh-CN', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </Text>
-                      </View>
-
-                      {/* 打卡照片 */}
-                      {record.photo && (
-                        <View style={styles.recordPhotoContainer}>
-                          <Image source={{ uri: record.photo }} style={styles.recordPhoto} />
-                        </View>
-                      )}
-
-                      {/* 家庭互动 */}
-                      <View style={styles.familyInteractionContainer}>
-                        <View style={styles.interactionSummary}>
-                          {record.likes.length > 0 && (
-                            <View style={styles.interactionItem}>
-                              <Ionicons name="heart" size={14} color="#ff6b6b" />
-                              <Text style={styles.interactionText}>{record.likes.length}</Text>
-                            </View>
-                          )}
-                          {record.comments.length > 0 && (
-                            <View style={styles.interactionItem}>
-                              <Ionicons name="chatbubble-outline" size={14} color="#28a745" />
-                              <Text style={styles.interactionText}>{record.comments.length}</Text>
-                            </View>
-                          )}
-                        </View>
-                        
-                        {/* 最新评论 */}
-                        {record.comments.length > 0 && (
-                          <Text style={styles.latestComment}>
-                            {record.comments[0].user}: {record.comments[0].message}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  )}
-                  keyExtractor={(item) => item.id}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.recordsScrollContainer}
-                />
-              </View>
-            );
-          })()}
-        </View>
+        {/* 家庭分享墙 - 替换原有的健康打卡日历 */}
+        <FamilySharingWall onCreatePost={handlePhotoCheckIn} />
       </ScrollView>
     </View>
   );
@@ -785,204 +553,5 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  // 日历相关样式 - 保持原有样式
-  calendarContainer: {
-    padding: 20,
-    backgroundColor: '#f8f9fa',
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    marginBottom: 80,
-  },
-  calendarHeader: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  calendarTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 8,
-  },
-  calendarSubtitle: {
-    fontSize: 18,
-    color: '#28a745',
-    fontWeight: '600',
-  },
-  monthHeader: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  monthText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#495057',
-  },
-  calendarScrollContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  calendarDayCard: {
-    width: 70,
-    height: 80,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#e9ecef',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  weekDayText: {
-    fontSize: 12,
-    color: '#6c757d',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  calendarDayWithRecord: {
-    backgroundColor: '#f0f9ff',
-    borderColor: '#28a745',
-    borderWidth: 3,
-  },
-  calendarDaySelected: {
-    backgroundColor: '#2196f3',
-    borderColor: '#2196f3',
-  },
-  calendarDayText: {
-    fontSize: 18,
-    color: '#495057',
-    fontWeight: '600',
-  },
-  calendarDayTextWithRecord: {
-    color: '#2196f3',
-    fontWeight: '700',
-  },
-  calendarDayTextSelected: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  calendarDayToday: {
-    backgroundColor: '#fff3cd',
-    borderColor: '#ffc107',
-    borderWidth: 3,
-  },
-  calendarDayTextToday: {
-    color: '#856404',
-    fontWeight: 'bold',
-  },
-  checkInBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#28a745',
-  },
 
-  // 打卡记录详情样式
-  noRecordsContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-  },
-  noRecordsText: {
-    fontSize: 18,
-    color: '#6c757d',
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  checkInRecordsContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-  },
-  recordsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 16,
-  },
-  checkInRecordCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    width: 200,
-    minHeight: 160,
-  },
-  recordHeader: {
-    marginBottom: 8,
-  },
-  recordsScrollContainer: {
-    paddingHorizontal: 4,
-  },
-  recordMealType: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 4,
-  },
-  recordType: {
-    fontSize: 12,
-    color: '#6c757d',
-    backgroundColor: '#e9ecef',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
-  },
-  recordTime: {
-    fontSize: 12,
-    color: '#6c757d',
-    fontWeight: '500',
-  },
-  recordPhotoContainer: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  recordPhoto: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  interactionSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  interactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  interactionText: {
-    fontSize: 12,
-    color: '#6c757d',
-    marginLeft: 4,
-  },
-  latestComment: {
-    fontSize: 11,
-    color: '#495057',
-    fontStyle: 'italic',
-    lineHeight: 14,
-  },
-  familyInteractionContainer: {
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingTop: 8,
-  },
 }); 

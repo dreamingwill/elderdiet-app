@@ -2,6 +2,7 @@ package com.elderdiet.backend.controller;
 
 import com.elderdiet.backend.dto.ApiResponse;
 import com.elderdiet.backend.dto.FamilyLinkRequest;
+import com.elderdiet.backend.dto.FamilyMemberDTO;
 import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.security.JwtAuthenticationToken;
@@ -107,6 +108,26 @@ public class FamilyController {
             return ResponseEntity.ok(ApiResponse.success("家庭链接删除成功"));
         } catch (Exception e) {
             log.error("删除家庭链接失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取家庭成员列表
+     */
+    @GetMapping("/members")
+    public ResponseEntity<ApiResponse<List<FamilyMemberDTO>>> getFamilyMembers(
+            Authentication authentication) {
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 获取家庭成员信息
+            List<FamilyMemberDTO> familyMembers = familyService.getFamilyMembers(currentUser);
+
+            return ResponseEntity.ok(ApiResponse.success("获取家庭成员成功", familyMembers));
+        } catch (Exception e) {
+            log.error("获取家庭成员失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }

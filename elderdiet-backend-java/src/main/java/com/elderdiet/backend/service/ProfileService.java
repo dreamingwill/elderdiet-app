@@ -4,6 +4,7 @@ import com.elderdiet.backend.entity.Profile;
 import com.elderdiet.backend.entity.ChronicCondition;
 import com.elderdiet.backend.dto.ProfileDTO;
 import com.elderdiet.backend.dto.ChronicConditionOptionDTO;
+import com.elderdiet.backend.entity.UserRole;
 import com.elderdiet.backend.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -129,6 +130,7 @@ public class ProfileService {
                         profile.getDietaryPreferences() != null ? new ArrayList<>(profile.getDietaryPreferences())
                                 : new ArrayList<>())
                 .notes(profile.getNotes() != null ? profile.getNotes() : "")
+                .avatarUrl(profile.getAvatarUrl())
                 .treeStage(profile.getTreeStage())
                 .wateringProgress(profile.getWateringProgress())
                 .completedTrees(profile.getCompletedTrees())
@@ -156,6 +158,7 @@ public class ProfileService {
                 .dietaryPreferences(dto.getDietaryPreferences() != null ? new ArrayList<>(dto.getDietaryPreferences())
                         : new ArrayList<>())
                 .notes(dto.getNotes() != null ? dto.getNotes() : "")
+                .avatarUrl(dto.getAvatarUrl())
                 .build();
     }
 
@@ -174,6 +177,10 @@ public class ProfileService {
         profile.setDietaryPreferences(
                 dto.getDietaryPreferences() != null ? new ArrayList<>(dto.getDietaryPreferences()) : new ArrayList<>());
         profile.setNotes(dto.getNotes() != null ? dto.getNotes() : "");
+        // 头像URL字段可以通过普通更新或专门的头像上传接口更新
+        if (dto.getAvatarUrl() != null) {
+            profile.setAvatarUrl(dto.getAvatarUrl());
+        }
         // 小树字段通常不由用户直接更新，而由游戏化服务更新
         if (dto.getTreeStage() != null) {
             profile.setTreeStage(dto.getTreeStage());
@@ -209,5 +216,78 @@ public class ProfileService {
 
         profileRepository.save(profile);
         log.info("小树状态更新成功, userId: {}", userId);
+    }
+
+    /**
+     * 内部方法：获取用户档案，绕过权限检查（供FamilyService使用）
+     */
+    public ProfileDTO getProfileByUserIdInternal(String userId) {
+        log.info("内部调用：获取用户健康档案, userId: {}", userId);
+
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElse(null);
+
+        if (profile == null) {
+            log.warn("用户健康档案不存在, userId: {}", userId);
+            return null;
+        }
+
+        return convertToDTO(profile);
+    }
+
+    /**
+     * 更新用户头像
+     */
+    @Transactional
+    public ProfileDTO updateUserAvatar(String userId, String avatarUrl) {
+        log.info("更新用户头像, userId: {}, avatarUrl: {}", userId, avatarUrl);
+
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("健康档案不存在"));
+
+        profile.setAvatarUrl(avatarUrl);
+
+        Profile updatedProfile = profileRepository.save(profile);
+        log.info("头像更新成功, userId: {}", userId);
+
+        return convertToDTO(updatedProfile);
+    }
+
+    /**
+     * 创建空的默认档案（供注册时使用）
+     */
+    @Transactional
+    public void createEmptyProfile(String userId, String phone, UserRole role) {
+        log.info("为新用户创建空的健康档案, userId: {}", userId);
+
+        // 检查是否已存在档案
+        if (profileRepository.existsByUserId(userId)) {
+            log.warn("用户已有健康档案，跳过创建, userId: {}", userId);
+            return;
+        }
+
+        // 获取手机号后四位作为昵称后缀
+        String phoneLastFour = phone.substring(Math.max(0, phone.length() - 4));
+        String defaultName = (role == UserRole.ELDER ? "大树" : "小树") + phoneLastFour;
+
+        Profile profile = Profile.builder()
+                .userId(userId)
+                .name(defaultName)
+                .age(null)
+                .gender(null)
+                .region("")
+                .height(null)
+                .weight(null)
+                .chronicConditions(new ArrayList<>())
+                .dietaryPreferences(new ArrayList<>())
+                .notes("")
+                .avatarUrl(null)
+                .treeStage(0)
+                .wateringProgress(0)
+                .completedTrees(0)
+                .build();
+
+        profileRepository.save(profile);
+        log.info("空档案创建成功, userId: {}", userId);
     }
 }

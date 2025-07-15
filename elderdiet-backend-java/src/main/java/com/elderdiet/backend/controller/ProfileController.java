@@ -6,6 +6,7 @@ import com.elderdiet.backend.dto.ChronicConditionOptionDTO;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.security.JwtAuthenticationToken;
 import com.elderdiet.backend.service.GamificationService;
+import com.elderdiet.backend.service.OssService;
 import com.elderdiet.backend.service.ProfileService;
 import com.elderdiet.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -35,6 +37,7 @@ public class ProfileController {
     private final ProfileService profileService;
     private final GamificationService gamificationService;
     private final UserService userService;
+    private final OssService ossService;
 
     /**
      * 获取用户健康档案
@@ -268,6 +271,35 @@ public class ProfileController {
                             .message("获取小树状态失败")
                             .timestamp(LocalDateTime.now())
                             .build());
+        }
+    }
+
+    /**
+     * 上传用户头像
+     * POST /api/v1/profiles/avatar
+     */
+    @PostMapping("/avatar")
+    public ResponseEntity<ApiResponse<ProfileDTO>> uploadAvatar(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        try {
+            // 获取当前用户ID
+            String userId = getCurrentUserId();
+
+            log.info("用户 {} 上传头像", userId);
+
+            // 上传文件到OSS
+            String avatarUrl = ossService.uploadFile(file);
+
+            // 更新用户档案中的头像URL
+            ProfileDTO updatedProfile = profileService.updateUserAvatar(userId, avatarUrl);
+
+            return ResponseEntity.ok(ApiResponse.success("头像上传成功", updatedProfile));
+
+        } catch (Exception e) {
+            log.error("头像上传失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("头像上传失败: " + e.getMessage()));
         }
     }
 

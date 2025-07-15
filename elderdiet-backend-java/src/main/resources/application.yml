@@ -58,7 +58,8 @@ ai:
   api:
     url: https://api2.aigcbest.top/v1/chat/completions
     key: ${QIANDUODUO_API_KEY:your-api-key-here}
-    model: gpt-4o
+    #claude-3-5-haiku-latest，gpt-4o，gpt-4o-mini，gemini-1.5-flash
+    model: gemini-1.5-flash
     temperature: 0.7
 
 # 阿里云OSS配置
@@ -88,8 +89,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@localhost:27017/elderdiet_dev
-      #uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
+      #uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@localhost:27017/elderdiet_dev
+      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
 
 logging:
   level:

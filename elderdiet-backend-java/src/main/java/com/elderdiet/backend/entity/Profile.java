@@ -74,6 +74,9 @@ public class Profile {
     @Builder.Default
     private String notes = ""; // 备注
 
+    // 头像URL
+    private String avatarUrl;
+
     // 聊天记录清空时间戳，用于实现"清空"功能而不删除数据
     private Instant chatClearedAt;
 

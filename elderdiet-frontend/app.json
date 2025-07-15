@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": true ,
+      "usesCleartextTraffic": true,
       "bundleIdentifier": "com.zeroh12.ElderDiet"
     },
     "android": {
@@ -23,6 +24,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": true,
       "package": "com.zeroh12.ElderDiet"
     },
     "web": {

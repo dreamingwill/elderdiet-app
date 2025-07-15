@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
         private final UserService userService;
+        private final ProfileService profileService;
         private final JwtUtil jwtUtil;
 
         /**
@@ -33,6 +34,15 @@ public class AuthService {
                                 request.getPhone(),
                                 request.getPassword(),
                                 request.getRole());
+
+                // 为新用户创建空的健康档案
+                try {
+                        profileService.createEmptyProfile(user.getId());
+                        log.info("为新用户创建空档案成功: {}", request.getPhone());
+                } catch (Exception e) {
+                        log.error("为新用户创建空档案失败: {}, 错误: {}", request.getPhone(), e.getMessage());
+                        // 继续执行，不影响注册流程
+                }
 
                 // 生成JWT令牌
                 String token = jwtUtil.generateToken(

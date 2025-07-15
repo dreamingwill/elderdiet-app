@@ -1,5 +1,7 @@
 package com.elderdiet.backend.service;
 
+import com.elderdiet.backend.dto.FamilyMemberDTO;
+import com.elderdiet.backend.dto.ProfileDTO;
 import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.entity.UserRole;
@@ -9,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  * 家庭服务类
@@ -20,6 +24,7 @@ public class FamilyService {
 
     private final FamilyLinkRepository familyLinkRepository;
     private final UserService userService;
+    private final ProfileService profileService;
 
     /**
      * 链接子女用户
@@ -79,5 +84,76 @@ public class FamilyService {
         familyLinkRepository.findByParentIdAndChildId(parentId, childId)
                 .ifPresent(familyLinkRepository::delete);
         log.info("删除家庭链接: 老人 {} -> 子女 {}", parentId, childId);
+    }
+
+    /**
+     * 获取当前用户的所有家庭成员信息
+     */
+    public List<FamilyMemberDTO> getFamilyMembers(User currentUser) {
+        log.info("获取用户 {} 的家庭成员信息", currentUser.getPhone());
+
+        List<FamilyMemberDTO> familyMembers = new ArrayList<>();
+
+        // 根据用户角色获取相应的家庭成员
+        if (currentUser.getRole() == UserRole.ELDER) {
+            // 老人用户：获取所有子女
+            List<FamilyLink> childrenLinks = getChildrenLinks(currentUser.getId());
+
+            for (FamilyLink link : childrenLinks) {
+                User child = userService.findById(link.getChildId())
+                        .orElse(null);
+
+                if (child != null) {
+                    FamilyMemberDTO member = buildFamilyMemberDTO(child, "child");
+                    if (member != null) {
+                        familyMembers.add(member);
+                    }
+                }
+            }
+        } else if (currentUser.getRole() == UserRole.CHILD) {
+            // 子女用户：获取所有老人（父母）
+            List<FamilyLink> parentsLinks = getParentsLinks(currentUser.getId());
+
+            for (FamilyLink link : parentsLinks) {
+                User parent = userService.findById(link.getParentId())
+                        .orElse(null);
+
+                if (parent != null) {
+                    FamilyMemberDTO member = buildFamilyMemberDTO(parent, "parent");
+                    if (member != null) {
+                        familyMembers.add(member);
+                    }
+                }
+            }
+        }
+
+        log.info("为用户 {} 获取到 {} 个家庭成员", currentUser.getPhone(), familyMembers.size());
+        return familyMembers;
+    }
+
+    /**
+     * 构建家庭成员DTO
+     */
+    private FamilyMemberDTO buildFamilyMemberDTO(User user, String relationshipType) {
+        try {
+            // 获取用户的档案信息（绕过权限检查）
+            ProfileDTO profile = profileService.getProfileByUserIdInternal(user.getId());
+
+            return FamilyMemberDTO.builder()
+                    .userId(user.getId())
+                    .phone(user.getPhone())
+                    .role(user.getRole().name())
+                    .relationshipType(relationshipType)
+                    .name(profile != null ? profile.getName() : "")
+                    .age(profile != null ? profile.getAge() : null)
+                    .gender(profile != null ? profile.getGender() : null)
+                    .region(profile != null ? profile.getRegion() : null)
+                    .avatarUrl(profile != null ? profile.getAvatarUrl() : null)
+                    .createdAt(user.getCreatedAt())
+                    .build();
+        } catch (Exception e) {
+            log.warn("构建家庭成员DTO失败，用户: {}, 错误: {}", user.getPhone(), e.getMessage());
+            return null;
+        }
     }
 }
