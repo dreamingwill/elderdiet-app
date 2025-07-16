@@ -42,9 +42,9 @@ public class MealRecordResponse {
     @Builder
     public static class UserInfo {
         private String userId;
-        private String username; // 用户名（手机号）
-        private String avatar; // 头像URL
-        private String nickname; // 昵称
+        private String username; // 用户名（手机号）错误！ 应该用发布者的profile的name
+        private String avatar; // 头像URL 用profile的avatarUrl
+        private String nickname; // 昵称 暂时没用
     }
 
     /**
@@ -55,11 +55,11 @@ public class MealRecordResponse {
     @AllArgsConstructor
     @Builder
     public static class CommentInfo {
-        private String id;
-        private String userId;
-        private String username;
-        private String userAvatar;
-        private String text;
+        private String id; // 评论的id
+        private String userId; // 评论者的userId
+        private String username; // 评论者的profile的name
+        private String userAvatar; // 评论者的profile的avatarUrl
+        private String text; // 评论内容
         private LocalDateTime createdAt;
     }
 }

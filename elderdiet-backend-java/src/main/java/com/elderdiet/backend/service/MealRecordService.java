@@ -2,6 +2,7 @@ package com.elderdiet.backend.service;
 
 import com.elderdiet.backend.dto.MealRecordRequest;
 import com.elderdiet.backend.dto.MealRecordResponse;
+import com.elderdiet.backend.dto.ProfileDTO;
 import com.elderdiet.backend.entity.*;
 import com.elderdiet.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class MealRecordService {
     private final OssService ossService;
     private final FamilyLinkRepository familyLinkRepository;
     private final UserService userService;
+    private final ProfileService profileService;
     private final RecordLikeRepository recordLikeRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final GamificationService gamificationService;
@@ -161,12 +163,17 @@ public class MealRecordService {
         MealRecord record = mealRecordRepository.findById(recordId)
                 .orElseThrow(() -> new RuntimeException("膳食记录不存在"));
 
+        // 获取用户资料
+        ProfileDTO profile = profileService.getProfileByUserId(user.getId());
+        String username = (profile != null && profile.getName() != null) ? profile.getName() : user.getPhone();
+        String userAvatar = (profile != null) ? profile.getAvatarUrl() : null;
+
         // 创建评论
         RecordComment comment = RecordComment.builder()
                 .recordId(recordId)
                 .userId(user.getId())
-                .username(user.getPhone())
-                .userAvatar(null) // TODO: 添加用户头像
+                .username(username)
+                .userAvatar(userAvatar)
                 .text(text)
                 .build();
 
@@ -208,11 +215,16 @@ public class MealRecordService {
 
         MealRecordResponse.UserInfo userInfo = null;
         if (publisher != null) {
+            // 获取发布者资料
+            ProfileDTO profile = profileService.getProfileByUserId(publisher.getId());
+            String username = (profile != null && profile.getName() != null) ? profile.getName() : publisher.getPhone();
+            String avatar = (profile != null) ? profile.getAvatarUrl() : null;
+
             userInfo = MealRecordResponse.UserInfo.builder()
                     .userId(publisher.getId())
-                    .username(publisher.getPhone())
-                    .avatar(null) // TODO: 添加头像字段
-                    .nickname(publisher.getPhone()) // TODO: 添加昵称字段
+                    .username(username)
+                    .avatar(avatar)
+                    .nickname(publisher.getPhone()) // 仍然使用手机号作为昵称，暂时没用
                     .build();
         }
 

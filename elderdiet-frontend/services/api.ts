@@ -1,7 +1,7 @@
 // API基础配置
 //const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
 const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
-//const API_BASE_URL = 'http://api.elderdiet.me/api/v1'; // https证书，只有电脑浏览器可以访问，手机浏览器无法访问
+//const API_BASE_URL = 'https://api.elderdiet.me/api/v1'; // https证书，只有电脑浏览器可以访问，手机浏览器无法访问
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
