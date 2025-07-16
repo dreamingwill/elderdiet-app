@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityInd
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/contexts/UserContext';
 import { mealPlanAPI, MealPlan as APIMealPlan, Dish } from '@/services/api';
 import { gamificationAPI } from '@/services/api';
 import DishItem from '@/components/meal-plan/DishItem';
@@ -29,6 +30,7 @@ export default function MealPlanScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token, isLoading: authLoading } = useAuth();
+  const { role } = useUser();
   
   // 新增树状态相关状态
   const [treeStatus, setTreeStatus] = useState<TreeStatusData | null>(null);
@@ -376,7 +378,7 @@ export default function MealPlanScreen() {
                 <View style={styles.treeInfoBadge}>
                   <Ionicons name="leaf" size={16} color="#28a745" />
                   <Text style={styles.treeInfoText}>
-                    {treeStatus.stage_description} • 已完成{treeStatus.completed_trees}棵大树
+                    {treeStatus.stage_description} • 已种植{treeStatus.completed_trees}棵大树
                   </Text>
                 </View>
               )}
@@ -397,33 +399,37 @@ export default function MealPlanScreen() {
                   />
                 </View>
                 
-                <TouchableOpacity 
-                  style={styles.mealRecordButton}
-                  onPress={handlePhotoCheckIn}
-                >
-                  <View style={styles.buttonContent}>
-                    <Ionicons name="camera" size={24} color="#fff" />
-                    <Text style={styles.mealRecordButtonText}>
-                      记录今日美食
-                      {treeStatus.today_water_count === 0 ? " • 帮小树浇水" : 
-                       treeStatus.today_water_count === 1 ? "" : ""}
-                    </Text>
-                  </View>
-                  {treeStatus.today_water_count > 0 && (
-                    <View style={styles.waterStatusBadge}>
-                      <Ionicons name="water" size={16} color="#fff" />
-                      {treeStatus.today_water_count === 2 && (
-                        <Text style={styles.waterCountText}>2</Text>
+                {role !== 'CHILD' && (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.mealRecordButton}
+                      onPress={handlePhotoCheckIn}
+                    >
+                      <View style={styles.buttonContent}>
+                        <Ionicons name="camera" size={24} color="#fff" />
+                        <Text style={styles.mealRecordButtonText}>
+                          记录今日美食
+                          {treeStatus.today_water_count === 0 ? " • 帮小树浇水" : 
+                           treeStatus.today_water_count === 1 ? "" : ""}
+                        </Text>
+                      </View>
+                      {treeStatus.today_water_count > 0 && (
+                        <View style={styles.waterStatusBadge}>
+                          <Ionicons name="water" size={16} color="#fff" />
+                          {treeStatus.today_water_count === 2 && (
+                            <Text style={styles.waterCountText}>2</Text>
+                          )}
+                        </View>
                       )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-                {/* 浇水间隔提示 */}
-                {treeStatus.today_water_count === 1 && (
-                  <View style={styles.wateringTipContainer}>
-                    <Ionicons name="time-outline" size={16} color="#28a745" style={{marginRight: 4}} />
-                    <Text style={styles.wateringTipText}>当天首次浇水后3小时后可再次浇水</Text>
-                  </View>
+                    </TouchableOpacity>
+                    {/* 浇水间隔提示 */}
+                    {treeStatus.today_water_count === 1 && (
+                      <View style={styles.wateringTipContainer}>
+                        <Ionicons name="time-outline" size={16} color="#28a745" style={{marginRight: 4}} />
+                        <Text style={styles.wateringTipText}>当天首次浇水后3小时后可再次浇水</Text>
+                      </View>
+                    )}
+                  </>
                 )}
               </>
             ) : (
