@@ -160,7 +160,7 @@ export default function ChatScreen() {
             type: msg.type as 'text' | 'image' | 'audio',
             sender: msg.role === 'user' ? 'user' : 'assistant' as 'user' | 'assistant',
             timestamp: msg.timestamp,
-            imageUrls: msg.imageUrls
+            imageUrls: msg.imageUrls || (msg as any).image_urls
           }));
           
           setMessages(convertedMessages);
