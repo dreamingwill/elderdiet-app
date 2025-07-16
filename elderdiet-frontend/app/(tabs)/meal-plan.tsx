@@ -1,16 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, Alert, StatusBar, ActivityIndicator, Dimensions, Image } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { mealPlanAPI, MealPlan as APIMealPlan, Dish } from '@/services/api';
+import { gamificationAPI } from '@/services/api';
 import DishItem from '@/components/meal-plan/DishItem';
 import FamilySharingWall from '@/components/family-sharing/FamilySharingWall';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
-
+// 定义树的状态接口
+interface TreeStatusData {
+  tree_stage: number;
+  watering_progress: number;
+  completed_trees: number;
+  progress_to_next_stage: number;
+  is_max_stage: boolean;
+  stage_description: string;
+}
 
 export default function MealPlanScreen() {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
@@ -19,6 +28,10 @@ export default function MealPlanScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token, isLoading: authLoading } = useAuth();
+  
+  // 新增树状态相关状态
+  const [treeStatus, setTreeStatus] = useState<TreeStatusData | null>(null);
+  const [isLoadingTreeStatus, setIsLoadingTreeStatus] = useState(false);
 
   // 获取今日膳食计划
   const loadTodayMealPlan = async () => {
@@ -115,12 +128,49 @@ export default function MealPlanScreen() {
     router.push('/create-post' as any);
   };
 
+  // 获取树的状态
+  const loadTreeStatus = async () => {
+    if (!token) return;
+    
+    setIsLoadingTreeStatus(true);
+    
+    try {
+      const response = await gamificationAPI.getTreeStatus(token);
+      if (response.success && response.data) {
+        setTreeStatus(response.data as unknown as TreeStatusData);
+      }
+    } catch (error) {
+      console.error('Failed to load tree status:', error);
+    } finally {
+      setIsLoadingTreeStatus(false);
+    }
+  };
+
+  // 获取树图片的URL
+  const getTreeImageUrl = () => {
+    if (!treeStatus) return '';
+    // 根据树的阶段选择对应的图片
+    // 图片编号从14到26对应树的13个不同阶段
+    const imageNumber = 14 + treeStatus.tree_stage*2 + treeStatus.watering_progress;
+    return `https://elder-diet.oss-cn-shanghai.aliyuncs.com/tree-images/${imageNumber}%402x.png`;
+  };
+
   // 初始化
   useEffect(() => {
     if (!authLoading && token) {
       loadTodayMealPlan();
+      loadTreeStatus();
     }
   }, [token, authLoading]);
+  
+  // 页面重新获取焦点时刷新树状态（从拍照打卡页面返回时）
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        loadTreeStatus();
+      }
+    }, [token])
+  );
 
   // 获取当前日期
   const getCurrentDate = () => {
@@ -248,6 +298,22 @@ export default function MealPlanScreen() {
             <Text style={[styles.mealTabText, selectedMealType === 'dinner' && styles.activeTabText]}>晚餐</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* AI膳食推荐按钮 - 移动到三餐导航下方 */}
+        <TouchableOpacity 
+          style={styles.aiRecommendButton}
+          onPress={generateTodayMealPlan}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="sparkles" size={24} color="#fff" />
+          )}
+          <Text style={styles.aiRecommendButtonText}>
+            {isGenerating ? '生成中...' : 'AI膳食推荐'}
+          </Text>
+        </TouchableOpacity>
 
         {/* 膳食方案内容 */}
         <View style={styles.mealPlanContainer}>
@@ -269,7 +335,7 @@ export default function MealPlanScreen() {
           ) : !currentMealPlan ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>今日还没有膳食计划</Text>
-              <Text style={styles.emptySubtext}>点击下方"AI膳食推荐"按钮生成今日膳食计划</Text>
+              <Text style={styles.emptySubtext}>点击上方"AI膳食推荐"按钮生成今日膳食计划</Text>
             </View>
           ) : (
             <>
@@ -292,47 +358,68 @@ export default function MealPlanScreen() {
                 <Text style={styles.recommendationText}>
                   {getCurrentMealSummary()}
                 </Text>
-                {/* <Text style={styles.healthLabel}>【膳食提示】</Text>
-                <Text style={styles.recommendationText}>
-                  {getCurrentMealTips()}
-                </Text> */}
-                {/* {currentMealPlan.health_tips && (
-                  <>
-                    <Text style={styles.wellnessLabel}>【健康建议】</Text>
-                    <Text style={styles.recommendationText}>
-                      {currentMealPlan.health_tips}
-                    </Text>
-                  </>
-                )} */}
               </View>
             </>
           )}
 
-          {/* AI膳食推荐和拍照打卡按钮 */}
-          <View style={styles.checkInButtonsContainer}>
-            <TouchableOpacity 
-              style={[styles.checkInButton, styles.quickCheckInButton]}
-              onPress={generateTodayMealPlan}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="sparkles" size={24} color="#fff" />
+          {/* 小树浇水 */}
+          <View style={styles.treeContainer}>
+            <View style={styles.treeHeader}>
+              <Text style={styles.treeTitle}>健康小树</Text>
+              {treeStatus && (
+                <View style={styles.treeInfoBadge}>
+                  <Ionicons name="leaf" size={16} color="#28a745" />
+                  <Text style={styles.treeInfoText}>
+                    {treeStatus.stage_description} • 已完成{treeStatus.completed_trees}棵大树
+                  </Text>
+                </View>
               )}
-              <Text style={styles.checkInButtonText}>
-                {isGenerating ? '生成中...' : 'AI膳食推荐'}
-              </Text>
-            </TouchableOpacity>
+            </View>
             
-            <TouchableOpacity 
-              style={[styles.checkInButton, styles.photoCheckInButton]}
-              onPress={handlePhotoCheckIn}
-            >
-              <Ionicons name="camera" size={24} color="#fff" />
-              <Text style={styles.checkInButtonText}>拍照打卡</Text>
-            </TouchableOpacity>
+            {isLoadingTreeStatus ? (
+              <View style={styles.treeLoadingContainer}>
+                <ActivityIndicator size="small" color="#28a745" />
+                <Text style={styles.treeLoadingText}>正在加载小树状态...</Text>
+              </View>
+            ) : treeStatus ? (
+              <>
+                <View style={styles.treeContentContainer}>
+                  <Image 
+                    source={{ uri: getTreeImageUrl() }}
+                    style={styles.treeImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                
+                <TouchableOpacity 
+                  style={styles.mealRecordButton}
+                  onPress={handlePhotoCheckIn}
+                >
+                  <View style={styles.buttonContent}>
+                    <Ionicons name="camera" size={24} color="#fff" />
+                    <Text style={styles.mealRecordButtonText}>记录今日美食{treeStatus.watering_progress === 0 ? " • 帮小树浇水" : ""}</Text>
+                  </View>
+                  {treeStatus.watering_progress === 1 && (
+                    <View style={styles.waterStatusBadge}>
+                      <Ionicons name="water" size={16} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.treeErrorContainer}>
+                <Text style={styles.treeErrorText}>无法加载小树状态</Text>
+                <TouchableOpacity 
+                  style={styles.treeRetryButton}
+                  onPress={loadTreeStatus}
+                >
+                  <Text style={styles.treeRetryButtonText}>重试</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
+          
+          {/* 删除这里的AI膳食推荐按钮，已移至上方 */}
         </View>
 
         {/* 家庭分享墙 - 替换原有的健康打卡日历 */}
@@ -477,43 +564,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 
-  // 打卡按钮容器
-  checkInButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  checkInButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quickCheckInButton: {
-    backgroundColor: '#28a745',
-    marginRight: 8,
-  },
-  photoCheckInButton: {
-    backgroundColor: '#007bff',
-    marginLeft: 8,
-  },
-  checkInButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-
   // 推荐说明卡片
   recommendationCard: {
     backgroundColor: '#f8fffe',
@@ -553,5 +603,145 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-
+  // 小树浇水相关样式
+  treeContainer: {
+    marginBottom: 20,
+    backgroundColor: '#f8fff9',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  treeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  treeTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#28a745',
+  },
+  treeInfoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  treeInfoText: {
+    fontSize: 14,
+    color: '#28a745',
+    marginLeft: 4,
+  },
+  treeContentContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  treeImage: {
+    width: width * 0.6,
+    height: width * 0.6,
+  },
+  treeLoadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  treeLoadingText: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 8,
+  },
+  treeErrorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  treeErrorText: {
+    fontSize: 14,
+    color: '#dc3545',
+    marginBottom: 8,
+  },
+  treeRetryButton: {
+    backgroundColor: '#28a745',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  treeRetryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // 集成打卡按钮到树浇水组件
+  mealRecordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#28a745',
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent', // 确保背景是透明的
+  },
+  mealRecordButtonText: {
+    color: '#fff', // 确保文字是白色
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+    backgroundColor: 'transparent', // 确保背景是透明的
+  },
+  waterStatusBadge: {
+    position: 'absolute',
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // AI推荐按钮 - 更新样式
+  aiRecommendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007bff',
+    paddingVertical: 14,
+    paddingHorizontal: 24, // add horizontal padding for a pill shape
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignSelf: 'center', // center the button horizontally
+    marginTop: 16,
+    marginBottom: 16,
+    // remove marginHorizontal so it doesn't stretch
+  },
+  aiRecommendButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 }); 

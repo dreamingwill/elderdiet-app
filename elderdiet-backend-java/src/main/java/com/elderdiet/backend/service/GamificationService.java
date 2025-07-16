@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.Duration;
+
 /**
  * 游戏化服务类
  */
@@ -24,12 +27,18 @@ public class GamificationService {
     // 每次成长需要的浇水次数
     private static final int WATERING_REQUIRED = 2;
 
+    // 每日最大浇水次数
+    private static final int MAX_DAILY_WATERING = 2;
+
+    // 浇水间隔时间（小时）
+    private static final int WATERING_INTERVAL_HOURS = 3;
+
     /**
      * 给小树浇水
      */
     @Transactional
     public void waterTree(User user) {
-        log.info("用户 {} 给小树浇水", user.getPhone());
+        log.info("用户 {} 尝试给小树浇水", user.getPhone());
 
         try {
             // 获取用户的健康档案
@@ -39,18 +48,44 @@ public class GamificationService {
                 return;
             }
 
+            // 检查今日浇水次数是否已达上限
+            int todayWaterCount = profile.getTodayWaterCount() != null ? profile.getTodayWaterCount() : 0;
+            if (todayWaterCount >= MAX_DAILY_WATERING) {
+                log.info("用户 {} 今日浇水次数已达上限 ({}/{})", user.getPhone(), todayWaterCount, MAX_DAILY_WATERING);
+                return;
+            }
+
+            // 检查距离上次浇水是否已经过了规定的间隔时间
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime lastWaterTime = profile.getLastWaterTime();
+
+            if (lastWaterTime != null && todayWaterCount > 0) {
+                Duration timeSinceLastWater = Duration.between(lastWaterTime, now);
+                if (timeSinceLastWater.toHours() < WATERING_INTERVAL_HOURS) {
+                    log.info("用户 {} 距离上次浇水时间不足 {} 小时，跳过浇水",
+                            user.getPhone(), WATERING_INTERVAL_HOURS);
+                    return;
+                }
+            }
+
             // 增加浇水进度
             int currentProgress = profile.getWateringProgress();
             int newProgress = currentProgress + 1;
 
-            log.info("用户 {} 浇水进度: {} -> {}", user.getPhone(), currentProgress, newProgress);
+            // 更新今日浇水次数和最后浇水时间
+            todayWaterCount++;
+
+            log.info("用户 {} 浇水进度: {} -> {}, 今日浇水次数: {}/{}",
+                    user.getPhone(), currentProgress, newProgress, todayWaterCount, MAX_DAILY_WATERING);
 
             if (newProgress >= WATERING_REQUIRED) {
                 // 浇水次数足够，小树成长
                 growTree(profile, user);
+                // 重置浇水进度，但保留今日浇水次数和最后浇水时间
+                profileService.updateWateringStatus(user.getId(), 0, todayWaterCount, now);
             } else {
-                // 更新浇水进度
-                profileService.updateTreeStatus(user.getId(), null, newProgress, null);
+                // 更新浇水进度、今日浇水次数和最后浇水时间
+                profileService.updateWateringStatus(user.getId(), newProgress, todayWaterCount, now);
                 log.info("用户 {} 浇水进度更新为: {}", user.getPhone(), newProgress);
             }
 
@@ -109,10 +144,14 @@ public class GamificationService {
                 return getDefaultTreeStatus();
             }
 
+            // 检查是否需要重置每日浇水次数（这里只是为了显示，实际重置在ProfileService中）
+            int todayWaterCount = profile.getTodayWaterCount() != null ? profile.getTodayWaterCount() : 0;
+
             return TreeStatus.builder()
                     .treeStage(profile.getTreeStage())
                     .wateringProgress(profile.getWateringProgress())
                     .completedTrees(profile.getCompletedTrees())
+                    .todayWaterCount(todayWaterCount)
                     .progressToNextStage(calculateProgressToNextStage(profile))
                     .isMaxStage(profile.getTreeStage() >= MAX_TREE_STAGE)
                     .stageDescription(getStageDescription(profile.getTreeStage()))
@@ -132,6 +171,7 @@ public class GamificationService {
                 .treeStage(0)
                 .wateringProgress(0)
                 .completedTrees(0)
+                .todayWaterCount(0)
                 .progressToNextStage(0.0)
                 .isMaxStage(false)
                 .stageDescription("种子")
@@ -187,5 +227,6 @@ public class GamificationService {
         private Double progressToNextStage; // 到下一阶段的进度百分比
         private Boolean isMaxStage; // 是否已达到最大阶段
         private String stageDescription; // 阶段描述
+        private Integer todayWaterCount; // 今日浇水次数 0～2
     }
 }

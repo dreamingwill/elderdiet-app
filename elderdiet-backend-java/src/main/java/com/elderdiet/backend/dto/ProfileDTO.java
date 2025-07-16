@@ -79,6 +79,12 @@ public class ProfileDTO {
     @Builder.Default
     private Integer completedTrees = 0; // 已完成的树数量
 
+    @Builder.Default
+    private Integer todayWaterCount = 0; // 今日浇水次数，0-2
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    private LocalDateTime lastWaterTime; // 上次浇水时间
+
     // 计算字段（不需要验证）
     private Double bmi;
     private String bmiStatus;

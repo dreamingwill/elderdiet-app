@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -134,6 +135,8 @@ public class ProfileService {
                 .treeStage(profile.getTreeStage())
                 .wateringProgress(profile.getWateringProgress())
                 .completedTrees(profile.getCompletedTrees())
+                .todayWaterCount(profile.getTodayWaterCount())
+                .lastWaterTime(profile.getLastWaterTime())
                 .bmi(profile.getBmi())
                 .bmiStatus(profile.getBmiStatus())
                 .bmiStatusLabel(profile.getBmiStatusLabel())
@@ -216,6 +219,45 @@ public class ProfileService {
 
         profileRepository.save(profile);
         log.info("小树状态更新成功, userId: {}", userId);
+    }
+
+    /**
+     * 更新小树浇水状态（仅供GamificationService使用）
+     */
+    @Transactional
+    public void updateWateringStatus(String userId, Integer wateringProgress, Integer todayWaterCount,
+            LocalDateTime lastWaterTime) {
+        log.info("更新用户浇水状态, userId: {}, progress: {}, todayCount: {}, lastTime: {}",
+                userId, wateringProgress, todayWaterCount, lastWaterTime);
+
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("健康档案不存在"));
+
+        if (wateringProgress != null) {
+            profile.setWateringProgress(wateringProgress);
+        }
+        if (todayWaterCount != null) {
+            profile.setTodayWaterCount(todayWaterCount);
+        }
+        if (lastWaterTime != null) {
+            profile.setLastWaterTime(lastWaterTime);
+        }
+
+        // 检查是否需要重置每日浇水次数
+        LocalDateTime now = LocalDateTime.now();
+        if (profile.getWaterCountResetTime() == null || now.isAfter(profile.getWaterCountResetTime())) {
+            // 设置下一个重置时间为明天的0点
+            LocalDateTime tomorrow = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            profile.setWaterCountResetTime(tomorrow);
+
+            // 如果不是手动设置todayWaterCount，则重置为0
+            if (todayWaterCount == null) {
+                profile.setTodayWaterCount(0);
+            }
+        }
+
+        profileRepository.save(profile);
+        log.info("浇水状态更新成功, userId: {}", userId);
     }
 
     /**
