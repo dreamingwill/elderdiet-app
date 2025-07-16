@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dishName: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: 'bold',
     color: '#212529',
     flex: 1,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   recommendationText: {
-    fontSize: 18,
+    fontSize: 16,
     lineHeight: 22,
     color: '#495057',
     marginBottom: 4,

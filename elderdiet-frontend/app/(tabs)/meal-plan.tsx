@@ -19,6 +19,7 @@ interface TreeStatusData {
   progress_to_next_stage: number;
   is_max_stage: boolean;
   stage_description: string;
+  today_water_count: number; // 新增字段：今日浇水次数
 }
 
 export default function MealPlanScreen() {
@@ -254,23 +255,42 @@ export default function MealPlanScreen() {
     <View style={styles.container}>
       {/* 固定Header */}
       <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 44) + 16 }]}>
-        <View style={styles.headerContent}>
+        <View style={styles.headerTopRow}>
           <View style={styles.headerLeft}>
             <Text style={styles.currentDate}>{getCurrentDate()}</Text>
             <Text style={styles.title}>今日膳食</Text>
           </View>
-          {currentMealPlan && (
+          <View style={styles.headerActions}>
             <TouchableOpacity 
-              style={styles.likeButton}
-              onPress={toggleLike}
+              style={[styles.headerButton, styles.aiRecommendHeaderButton]}
+              onPress={generateTodayMealPlan}
+              disabled={isGenerating}
             >
-              <Ionicons 
-                 name={currentMealPlan.liked ? 'heart' : 'heart-outline'} 
-                 size={28} 
-                 color={currentMealPlan.liked ? '#FF0000' : '#ccc'} 
-               />
+              {isGenerating ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="sparkles" size={18} color="#fff" />
+              )}
+              <Text style={styles.headerButtonText}>
+                {isGenerating ? '生成中...' : 'AI推荐'}
+              </Text>
             </TouchableOpacity>
-          )}
+            {currentMealPlan && (
+              <TouchableOpacity 
+                style={[styles.headerButton, styles.likeButton]}
+                onPress={toggleLike}
+              >
+                <Ionicons 
+                  name={currentMealPlan.liked ? 'heart' : 'heart-outline'} 
+                  size={18} 
+                  color={currentMealPlan.liked ? '#FF0000' : '#333'} 
+                />
+                <Text style={[styles.likeButtonText, {color: currentMealPlan.liked ? '#FF0000' : '#333'}]}>
+                  {currentMealPlan.liked ? '喜欢' : '喜欢'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
       
@@ -299,21 +319,7 @@ export default function MealPlanScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* AI膳食推荐按钮 - 移动到三餐导航下方 */}
-        <TouchableOpacity 
-          style={styles.aiRecommendButton}
-          onPress={generateTodayMealPlan}
-          disabled={isGenerating}
-        >
-          {isGenerating ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons name="sparkles" size={24} color="#fff" />
-          )}
-          <Text style={styles.aiRecommendButtonText}>
-            {isGenerating ? '生成中...' : 'AI膳食推荐'}
-          </Text>
-        </TouchableOpacity>
+
 
         {/* 膳食方案内容 */}
         <View style={styles.mealPlanContainer}>
@@ -335,7 +341,7 @@ export default function MealPlanScreen() {
           ) : !currentMealPlan ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>今日还没有膳食计划</Text>
-              <Text style={styles.emptySubtext}>点击上方"AI膳食推荐"按钮生成今日膳食计划</Text>
+              <Text style={styles.emptySubtext}>点击上方"AI推荐"按钮生成今日膳食计划</Text>
             </View>
           ) : (
             <>
@@ -397,14 +403,28 @@ export default function MealPlanScreen() {
                 >
                   <View style={styles.buttonContent}>
                     <Ionicons name="camera" size={24} color="#fff" />
-                    <Text style={styles.mealRecordButtonText}>记录今日美食{treeStatus.watering_progress === 0 ? " • 帮小树浇水" : ""}</Text>
+                    <Text style={styles.mealRecordButtonText}>
+                      记录今日美食
+                      {treeStatus.today_water_count === 0 ? " • 帮小树浇水" : 
+                       treeStatus.today_water_count === 1 ? "" : ""}
+                    </Text>
                   </View>
-                  {treeStatus.watering_progress === 1 && (
+                  {treeStatus.today_water_count > 0 && (
                     <View style={styles.waterStatusBadge}>
                       <Ionicons name="water" size={16} color="#fff" />
+                      {treeStatus.today_water_count === 2 && (
+                        <Text style={styles.waterCountText}>2</Text>
+                      )}
                     </View>
                   )}
                 </TouchableOpacity>
+                {/* 浇水间隔提示 */}
+                {treeStatus.today_water_count === 1 && (
+                  <View style={styles.wateringTipContainer}>
+                    <Ionicons name="time-outline" size={16} color="#28a745" style={{marginRight: 4}} />
+                    <Text style={styles.wateringTipText}>当天首次浇水后3小时后可再次浇水</Text>
+                  </View>
+                )}
               </>
             ) : (
               <View style={styles.treeErrorContainer}>
@@ -419,7 +439,7 @@ export default function MealPlanScreen() {
             )}
           </View>
           
-          {/* 删除这里的AI膳食推荐按钮，已移至上方 */}
+          {/* AI膳食推荐按钮已移至Header */}
         </View>
 
         {/* 家庭分享墙 - 替换原有的健康打卡日历 */}
@@ -453,7 +473,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 1000,
   },
-  headerContent: {
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -462,19 +482,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currentDate: {
-    fontSize: 20,
+    fontSize: 14,
     color: '#6c757d',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   title: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: 'bold',
     color: '#212529',
   },
-  likeButton: {
-    padding: 10,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  aiRecommendHeaderButton: {
+    backgroundColor: '#007bff',
+  },
+  headerButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  likeButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  likeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   loadingContainer: {
     flex: 1,
@@ -605,6 +655,7 @@ const styles = StyleSheet.create({
 
   // 小树浇水相关样式
   treeContainer: {
+    marginTop: 20,
     marginBottom: 20,
     backgroundColor: '#f8fff9',
     borderRadius: 16,
@@ -717,31 +768,27 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    flexDirection: 'row',
   },
-  
-  // AI推荐按钮 - 更新样式
-  aiRecommendButton: {
+  waterCountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+  wateringTipContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007bff',
-    paddingVertical: 14,
-    paddingHorizontal: 24, // add horizontal padding for a pill shape
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignSelf: 'center', // center the button horizontally
-    marginTop: 16,
-    marginBottom: 16,
-    // remove marginHorizontal so it doesn't stretch
+    marginTop: 8,
   },
-  aiRecommendButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
+  wateringTipText: {
+    color: '#28a745',
+    fontSize: 13,
+    marginLeft: 2,
   },
+
+  // AI推荐按钮 - 相关样式已合并至Header
+  aiRecommendButton: {},
+  aiRecommendButtonText: {},
 }); 

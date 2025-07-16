@@ -22,6 +22,7 @@ interface UserContextType {
   signIn: (phone: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
+  setRole: (role: UserRole | null) => void; // 新增
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -176,7 +177,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signUp,
       signIn, 
       signOut, 
-      isLoading 
+      isLoading,
+      setRole: setRoleState, // 新增
     }}>
       {children}
     </UserContext.Provider>
