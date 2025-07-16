@@ -296,7 +296,7 @@ export default function ProfileScreen() {
         <View style={styles.accountInfo}>
           <Text style={styles.accountLabel}>当前账号：</Text>
           <Text style={styles.accountValue}>
-            {role === 'elder' ? '老人账号' : '家属账号'} (UID: {uid})
+            {role === 'ELDER' ? '老人账号' : '家属账号'} (UID: {uid})
           </Text>
         </View>
 

@@ -2,6 +2,7 @@ package com.elderdiet.backend.controller;
 
 import com.elderdiet.backend.dto.ApiResponse;
 import com.elderdiet.backend.dto.FamilyLinkRequest;
+import com.elderdiet.backend.dto.FamilyLinkElderRequest;
 import com.elderdiet.backend.dto.FamilyMemberDTO;
 import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
@@ -56,6 +57,29 @@ public class FamilyController {
             return ResponseEntity.ok(ApiResponse.success("家庭链接创建成功", familyLink));
         } catch (Exception e) {
             log.error("链接子女用户失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 链接老人用户（只有子女可以调用）
+     */
+    @PostMapping("/link2elder")
+    @PreAuthorize("hasAuthority('ROLE_CHILD')")
+    public ResponseEntity<ApiResponse<FamilyLink>> linkElder(
+            @Valid @RequestBody FamilyLinkElderRequest request,
+            Authentication authentication) {
+
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 创建家庭链接
+            FamilyLink familyLink = familyService.linkElder(currentUser, request.getElderPhone());
+
+            return ResponseEntity.ok(ApiResponse.success("家庭链接创建成功", familyLink));
+        } catch (Exception e) {
+            log.error("链接老人用户失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }

@@ -64,6 +64,43 @@ public class FamilyService {
     }
 
     /**
+     * 链接老人用户
+     */
+    public FamilyLink linkElder(User child, String elderPhone) {
+        log.info("子女用户 {} 尝试链接老人用户: {}", child.getPhone(), elderPhone);
+
+        // 验证发起者角色必须是子女
+        if (child.getRole() != UserRole.CHILD) {
+            throw new RuntimeException("只有子女用户可以发起链接");
+        }
+
+        // 查找老人用户
+        User elder = userService.findByPhone(elderPhone)
+                .orElseThrow(() -> new RuntimeException("老人用户不存在"));
+
+        // 验证被链接的用户必须是老人
+        if (elder.getRole() != UserRole.ELDER) {
+            throw new RuntimeException("只能链接老人用户");
+        }
+
+        // 检查是否已经绑定
+        if (familyLinkRepository.existsByParentIdAndChildId(elder.getId(), child.getId())) {
+            throw new RuntimeException("该老人用户已经绑定");
+        }
+
+        // 创建家庭链接
+        FamilyLink familyLink = FamilyLink.builder()
+                .parentId(elder.getId())
+                .childId(child.getId())
+                .build();
+
+        FamilyLink savedLink = familyLinkRepository.save(familyLink);
+        log.info("成功创建家庭链接: 老人 {} <- 子女 {}", elderPhone, child.getPhone());
+
+        return savedLink;
+    }
+
+    /**
      * 获取老人的所有子女链接
      */
     public List<FamilyLink> getChildrenLinks(String parentId) {

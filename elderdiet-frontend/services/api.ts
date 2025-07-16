@@ -1,7 +1,7 @@
 // API基础配置
 //const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
-//const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
-const API_BASE_URL = 'https://api.elderdiet.me/api/v1'; // https证书
+const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
+//const API_BASE_URL = 'http://api.elderdiet.me/api/v1'; // https证书，只有电脑浏览器可以访问，手机浏览器无法访问
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -689,6 +689,10 @@ export interface LinkFamilyRequest {
   child_phone: string;
 }
 
+export interface LinkElderRequest {
+  elder_phone: string;
+}
+
 // 家庭分享墙相关API
 export const mealRecordsAPI = {
   // 获取分享墙时间线
@@ -779,6 +783,20 @@ export const familyAPI = {
     token: string
   ): Promise<ApiResponse<FamilyLink>> => {
     return request('/family/link', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 链接到老人账号
+  linkToElder: async (
+    requestData: LinkElderRequest,
+    token: string
+  ): Promise<ApiResponse<FamilyLink>> => {
+    return request('/family/link2elder', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

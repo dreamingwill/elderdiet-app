@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { CommentInfo, mealRecordsAPI } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import UserAvatar from './UserAvatar';
 
 const { height } = Dimensions.get('window');
 
@@ -137,11 +138,12 @@ export default function CommentModal({
   const renderComment = ({ item }: { item: CommentInfo }) => (
     <View style={styles.commentItem}>
       <View style={styles.commentHeader}>
-        <View style={styles.commentAvatar}>
-          <Text style={styles.commentAvatarText}>
-            {(item.user_info?.nickname ?? '用户').charAt(0)}
-          </Text>
-        </View>
+        <UserAvatar 
+          avatar={item.user_info?.avatar}
+          name={item.user_info?.nickname || '用户'}
+          size={36}
+          showBorder={false}
+        />
         <View style={styles.commentDetails}>
           <Text style={styles.commentUser}>{item.user_info?.nickname || '用户'}</Text>
           <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
@@ -295,7 +297,7 @@ const styles = StyleSheet.create({
   },
   commentItem: {
     marginBottom: 16,
-    padding: 12,
+    padding: 16,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     borderLeftWidth: 4,
@@ -304,33 +306,20 @@ const styles = StyleSheet.create({
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  commentAvatarText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    marginBottom: 12,
   },
   commentDetails: {
     flex: 1,
+    marginLeft: 12,
   },
   commentUser: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#212529',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   commentTime: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6c757d',
   },
   commentText: {

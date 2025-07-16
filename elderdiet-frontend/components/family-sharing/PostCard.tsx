@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, Dimensions, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'react-native';
 import { MealRecordResponse, mealRecordsAPI, CommentInfo } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import CommentModal from './CommentModal';
+import UserAvatar from './UserAvatar';
+import ImageViewer from './ImageViewer';
 
 const { width } = Dimensions.get('window');
 
@@ -18,8 +20,9 @@ interface PostCardProps {
 export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostCardProps) {
   const { token } = useAuth();
   const [isLiking, setIsLiking] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
   const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
+  const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // 处理点赞
   const handleLike = async () => {
@@ -48,44 +51,126 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
     setIsCommentModalVisible(false);
   };
 
+  // 处理图片点击
+  const handleImagePress = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageViewerVisible(true);
+  };
+
   // 格式化时间
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
     
     if (days > 0) {
       return `${days}天前`;
     } else if (hours > 0) {
       return `${hours}小时前`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟前`;
     } else {
       return '刚刚';
     }
   };
 
-  // 渲染图片
-  const renderImage = ({ item, index }: { item: string; index: number }) => (
-    <View style={styles.imageContainer}>
-      <Image 
-        source={{ uri: item }} 
-        style={styles.postImage}
-        resizeMode="cover"
-      />
-    </View>
-  );
+  // 计算图片网格布局
+  const getImageGridLayout = (imageCount: number) => {
+    const containerWidth = width - 32; // 减去左右padding
+    const spacing = 8;
+    
+    if (imageCount === 1) {
+      return {
+        itemWidth: containerWidth,
+        itemHeight: 200,
+        columns: 1,
+      };
+    } else if (imageCount === 2) {
+      return {
+        itemWidth: (containerWidth - spacing) / 2,
+        itemHeight: 150,
+        columns: 2,
+      };
+    } else if (imageCount === 3) {
+      return {
+        itemWidth: (containerWidth - spacing) / 2,
+        itemHeight: 120,
+        columns: 2,
+      };
+    } else if (imageCount === 4) {
+      return {
+        itemWidth: (containerWidth - spacing) / 2,
+        itemHeight: 120,
+        columns: 2,
+      };
+    } else {
+      return {
+        itemWidth: (containerWidth - spacing * 2) / 3,
+        itemHeight: 100,
+        columns: 3,
+      };
+    }
+  };
+
+  // 渲染图片网格
+  const renderImageGrid = () => {
+    if (record.image_urls.length === 0) return null;
+    
+    const { itemWidth, itemHeight, columns } = getImageGridLayout(record.image_urls.length);
+    const spacing = 8;
+    
+    return (
+      <View style={styles.imageGrid}>
+        {record.image_urls.map((imageUrl, index) => {
+          const isThirdInThreeImages = record.image_urls.length === 3 && index === 2;
+          const currentItemWidth = isThirdInThreeImages ? itemWidth * 2 + spacing : itemWidth;
+          
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.imageItem,
+                {
+                  width: currentItemWidth,
+                  height: itemHeight,
+                  marginBottom: spacing,
+                  marginRight: (index + 1) % columns === 0 ? 0 : spacing,
+                }
+              ]}
+              onPress={() => handleImagePress(index)}
+            >
+              <Image 
+                source={{ uri: imageUrl }} 
+                style={styles.gridImage}
+                resizeMode="cover"
+              />
+              {/* 如果图片超过9张，在最后一张显示更多指示器 */}
+              {record.image_urls.length > 9 && index === 8 && (
+                <View style={styles.moreImageOverlay}>
+                  <Text style={styles.moreImageText}>+{record.image_urls.length - 9}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.postCard}>
       {/* 用户信息头部 */}
       <View style={styles.userHeader}>
         <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(record.user_info?.nickname ?? '用户').charAt(0)}
-            </Text>
-          </View>
+          <UserAvatar 
+            avatar={record.user_info?.avatar}
+            name={record.user_info?.nickname || '用户'}
+            size={44}
+            showBorder={true}
+          />
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{record.user_info?.nickname || '用户'}</Text>
             <Text style={styles.postTime}>{formatTime(record.created_at)}</Text>
@@ -96,52 +181,31 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
         </View>
       </View>
 
-      {/* 图片轮播 */}
-      {record.image_urls.length > 0 && (
-        <View style={styles.imageSection}>
-          <FlatList
-            data={record.image_urls}
-            renderItem={renderImage}
-            keyExtractor={(item, index) => `${record.id}_image_${index}`}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-              setImageIndex(newIndex);
-            }}
-            style={styles.imageList}
-          />
-          
-          {/* 图片指示器 */}
-          {record.image_urls.length > 1 && (
-            <View style={styles.imageIndicator}>
-              {record.image_urls.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicatorDot,
-                    index === imageIndex && styles.indicatorDotActive
-                  ]}
-                />
-              ))}
-            </View>
-          )}
+      {/* 文字内容 */}
+      {record.caption && (
+        <View style={styles.contentSection}>
+          <Text style={styles.captionText}>{record.caption}</Text>
         </View>
       )}
 
-      {/* 文字内容 */}
-      <View style={styles.contentSection}>
-        <Text style={styles.captionText}>{record.caption}</Text>
-      </View>
+      {/* 图片网格 */}
+      {renderImageGrid()}
 
       {/* 用户互动评论 */}
       {record.comments.length > 0 && (
         <View style={styles.commentsSection}>
           {record.comments.slice(0, 2).map((comment) => (
             <View key={comment.id} style={styles.commentItem}>
-              <View style={styles.commentUser}>
-                <Text style={styles.commentUserText}>{comment.user_info?.nickname || '用户'}留言：</Text>
+              <View style={styles.commentHeader}>
+                <UserAvatar 
+                  avatar={comment.user_info?.avatar}
+                  name={comment.user_info?.nickname || '用户'}
+                  size={24}
+                />
+                <View style={styles.commentUserInfo}>
+                  <Text style={styles.commentUserName}>{comment.user_info?.nickname || '用户'}</Text>
+                  <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
+                </View>
               </View>
               <Text style={styles.commentText}>{comment.text}</Text>
             </View>
@@ -199,6 +263,14 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
         onCommentAdded={handleCommentAdded}
         initialComments={record.comments}
       />
+
+      {/* 图片查看器 */}
+      <ImageViewer
+        visible={isImageViewerVisible}
+        images={record.image_urls}
+        initialIndex={selectedImageIndex}
+        onClose={() => setIsImageViewerVisible(false)}
+      />
     </View>
   );
 }
@@ -227,22 +299,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   userDetails: {
     flex: 1,
+    marginLeft: 12,
   },
   userName: {
     fontSize: 16,
@@ -265,36 +324,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  imageSection: {
-    marginBottom: 12,
-  },
-  imageList: {
-    width: '100%',
-  },
-  imageContainer: {
-    width: width,
-    height: 200,
-  },
-  postImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  indicatorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
-    marginHorizontal: 4,
-  },
-  indicatorDotActive: {
-    backgroundColor: '#4CAF50',
-  },
   contentSection: {
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -303,6 +332,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#212529',
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  imageItem: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  moreImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreImageText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   commentsSection: {
     paddingHorizontal: 16,
@@ -320,13 +379,24 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#4CAF50',
   },
-  commentUser: {
-    marginBottom: 4,
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  commentUserText: {
+  commentUserInfo: {
+    marginLeft: 8,
+    flex: 1,
+  },
+  commentUserName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#4CAF50',
+    marginBottom: 2,
+  },
+  commentTime: {
+    fontSize: 12,
+    color: '#6c757d',
   },
   commentText: {
     fontSize: 14,

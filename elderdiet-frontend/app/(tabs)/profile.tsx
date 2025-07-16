@@ -28,10 +28,13 @@ export default function MeScreen() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [isFamilyLoading, setIsFamilyLoading] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isAddElderModalVisible, setIsAddElderModalVisible] = useState(false);
+  const [elderPhone, setElderPhone] = useState('');
+  const [isLinkingElder, setIsLinkingElder] = useState(false);
 
   // 获取家庭成员信息
   const loadFamilyMembers = async () => {
-    if (!token || role !== 'ELDER') return;
+    if (!token) return;
     
     setIsFamilyLoading(true);
     try {
@@ -310,6 +313,51 @@ export default function MeScreen() {
     }
   };
 
+  // 添加老人账号
+  const handleAddElder = async () => {
+    if (!elderPhone.trim()) {
+      Alert.alert('提示', '请输入老人手机号');
+      return;
+    }
+
+    // 简单的手机号验证
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    if (!phoneRegex.test(elderPhone)) {
+      Alert.alert('提示', '请输入正确的手机号格式');
+      return;
+    }
+
+    if (elderPhone === phone) {
+      Alert.alert('提示', '不能添加自己的手机号');
+      return;
+    }
+
+    setIsLinkingElder(true);
+    try {
+      const response = await familyAPI.linkToElder({ elder_phone: elderPhone }, token!);
+      if (response.success) {
+        Alert.alert('成功', '家庭链接创建成功！', [
+          {
+            text: '确定',
+            onPress: () => {
+              setIsAddElderModalVisible(false);
+              setElderPhone('');
+              // 刷新家庭成员列表
+              loadFamilyMembers();
+            },
+          },
+        ]);
+      } else {
+        Alert.alert('失败', response.message || '链接失败，请重试');
+      }
+    } catch (error: any) {
+      console.error('Link to elder error:', error);
+      Alert.alert('错误', error.message || '网络错误，请重试');
+    } finally {
+      setIsLinkingElder(false);
+    }
+  };
+
   // 退出登录处理
   const handleSignOut = () => {
     Alert.alert(
@@ -453,17 +501,17 @@ export default function MeScreen() {
         )}
       </View>
 
-      {/* 家庭管理卡片 - 仅老人角色显示 */}
-      {role === 'ELDER' && (
+      {/* 家庭管理卡片 - 老人和子女角色都显示 */}
+      {(role === 'ELDER' || role === 'CHILD') && (
         <View style={styles.familyCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>家庭管理</Text>
             <TouchableOpacity 
               style={styles.addButton} 
-              onPress={() => setIsAddChildModalVisible(true)}
+              onPress={() => role === 'ELDER' ? setIsAddChildModalVisible(true) : setIsAddElderModalVisible(true)}
             >
               <Ionicons name="add-circle-outline" size={20} color="#4CAF50" />
-              <Text style={styles.addText}>添加子女</Text>
+              <Text style={styles.addText}>{role === 'ELDER' ? '添加子女' : '添加老人'}</Text>
             </TouchableOpacity>
           </View>
           
@@ -556,6 +604,63 @@ export default function MeScreen() {
                 disabled={isLinkingFamily}
               >
                 {isLinkingFamily ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>确认添加</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 添加老人模态框 */}
+      <Modal
+        visible={isAddElderModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsAddElderModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>添加老人账号</Text>
+              <TouchableOpacity 
+                onPress={() => setIsAddElderModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>老人手机号</Text>
+              <TextInput
+                style={styles.phoneInput}
+                value={elderPhone}
+                onChangeText={setElderPhone}
+                placeholder="请输入老人的手机号码"
+                keyboardType="phone-pad"
+                maxLength={11}
+              />
+              <Text style={styles.inputHint}>
+                请确保输入的手机号已注册为老人账号
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setIsAddElderModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmButton, isLinkingElder && styles.disabledButton]}
+                onPress={handleAddElder}
+                disabled={isLinkingElder}
+              >
+                {isLinkingElder ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Text style={styles.confirmButtonText}>确认添加</Text>
