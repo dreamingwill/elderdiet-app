@@ -2,10 +2,20 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
-import { MealRecordResponse, mealRecordsAPI, CommentInfo } from '@/services/api';
+import { MealRecordResponse, mealRecordsAPI } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import PostCard from './PostCard';
 import { router, useFocusEffect } from 'expo-router';
+
+// Local comment interface to match API structure
+interface CommentInfo {
+  id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  username?: string;
+  user_avatar?: string | null;
+}
 
 interface FamilySharingWallProps {
   onCreatePost?: () => void;
@@ -82,9 +92,19 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
     setRecords(prevRecords => 
       prevRecords.map(record => {
         if (record.id === recordId) {
+          // Convert to API format
+          const apiComment = {
+            id: newComment.id,
+            user_id: newComment.user_id,
+            text: newComment.text,
+            created_at: newComment.created_at,
+            username: newComment.username || '我',
+            user_avatar: newComment.user_avatar
+          };
+          
           return {
             ...record,
-            comments: [newComment, ...record.comments],
+            comments: [apiComment, ...record.comments] as any, // Type cast to avoid TypeScript errors
             comments_count: record.comments_count + 1
           };
         }

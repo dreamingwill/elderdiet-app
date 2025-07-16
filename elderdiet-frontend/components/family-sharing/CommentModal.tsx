@@ -14,11 +14,21 @@ import {
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CommentInfo, mealRecordsAPI } from '@/services/api';
+import { mealRecordsAPI } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import UserAvatar from './UserAvatar';
 
 const { height } = Dimensions.get('window');
+
+// 更新评论接口以匹配API返回格式
+interface CommentInfo {
+  id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  username?: string;
+  user_avatar?: string | null;
+}
 
 interface CommentModalProps {
   visible: boolean;
@@ -72,18 +82,15 @@ export default function CommentModal({
       );
       
       if (response.success && response.data) {
-        // 创建新评论对象 (API可能只返回基本信息，需要补充用户信息)
+        // 创建新评论对象，使用API返回的格式
         const newComment: CommentInfo = {
           id: response.data.id,
           user_id: response.data.user_id,
           text: response.data.text,
           created_at: response.data.created_at,
-          user_info: {
-            user_id: response.data.user_id,
-            username: '我', // 临时显示，实际应该从用户信息获取
-            nickname: '我',
-            avatar: null
-          }
+          // 使用当前用户信息（实际应用中可能需要从应用状态获取）
+          username: response.data.username, // 临时显示当前用户为"我"
+          user_avatar: response.data.user_avatar
         };
         
         setComments(prev => [newComment, ...prev]);
@@ -139,13 +146,13 @@ export default function CommentModal({
     <View style={styles.commentItem}>
       <View style={styles.commentHeader}>
         <UserAvatar 
-          avatar={item.user_info?.avatar}
-          name={item.user_info?.nickname || '用户'}
+          avatar={item.user_avatar}
+          name={item.username || '用户'}
           size={36}
           showBorder={false}
         />
         <View style={styles.commentDetails}>
-          <Text style={styles.commentUser}>{item.user_info?.nickname || '用户'}</Text>
+          <Text style={styles.commentUser}>{item.username || '用户'}</Text>
           <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
         </View>
       </View>

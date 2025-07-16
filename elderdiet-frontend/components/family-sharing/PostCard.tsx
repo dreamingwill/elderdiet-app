@@ -3,13 +3,23 @@ import { StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Alert } fr
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'react-native';
-import { MealRecordResponse, mealRecordsAPI, CommentInfo } from '@/services/api';
+import { MealRecordResponse, mealRecordsAPI } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import CommentModal from './CommentModal';
 import UserAvatar from './UserAvatar';
 import ImageViewer from './ImageViewer';
 
 const { width } = Dimensions.get('window');
+
+// Local comment interface to match API structure
+interface CommentInfo {
+  id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+  username?: string;
+  user_avatar?: string | null;
+}
 
 interface PostCardProps {
   record: MealRecordResponse;
@@ -155,12 +165,12 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
         <View style={styles.userInfo}>
           <UserAvatar 
             avatar={record.user_info?.avatar}
-            name={record.user_info?.nickname || '用户'}
+            name={record.user_info?.username || '用户'}
             size={44}
             showBorder={true}
           />
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>{record.user_info?.nickname || '用户'}</Text>
+            <Text style={styles.userName}>{record.user_info?.username || '用户'}</Text>
             <Text style={styles.postTime}>{formatTime(record.created_at)}</Text>
           </View>
         </View>
@@ -186,12 +196,12 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
             <View key={comment.id} style={styles.commentItem}>
               <View style={styles.commentHeader}>
                 <UserAvatar 
-                  avatar={comment.user_info?.avatar}
-                  name={comment.user_info?.nickname || '用户'}
+                  avatar={comment.user_avatar}
+                  name={comment.username || '用户'}
                   size={24}
                 />
                 <View style={styles.commentUserInfo}>
-                  <Text style={styles.commentUserName}>{comment.user_info?.nickname || '用户'}</Text>
+                  <Text style={styles.commentUserName}>{comment.username || '用户'}</Text>
                   <Text style={styles.commentTime}>{formatTime(comment.created_at)}</Text>
                 </View>
               </View>

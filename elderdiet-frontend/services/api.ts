@@ -631,12 +631,8 @@ export interface CommentInfo {
   user_id: string;
   text: string;
   created_at: string;
-  user_info: {
-    user_id: string;
-    username: string;
-    avatar?: string | null;
-    nickname: string;
-  };
+  username: string;
+  user_avatar?: string | null;
 }
 
 export interface RecordComment {
@@ -646,6 +642,8 @@ export interface RecordComment {
   text: string;
   created_at: string;
   updated_at: string;
+  username: string;
+  user_avatar?: string | null;
 }
 
 export interface FamilyLink {
