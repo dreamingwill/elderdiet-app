@@ -11,13 +11,13 @@ export default function RoleSelectionScreen() {
 
   useEffect(() => {
     // 验证角色参数
-    if (role !== 'elder' && role !== 'child') {
+    if (role !== 'ELDER' && role !== 'CHILD') {
       router.replace('/');
     }
   }, [role]);
 
   const handleConfirm = async () => {
-    if (role === 'elder' || role === 'child') {
+    if (role === 'ELDER' || role === 'CHILD') {
       await setRole(role);
       router.replace('/');
     }
