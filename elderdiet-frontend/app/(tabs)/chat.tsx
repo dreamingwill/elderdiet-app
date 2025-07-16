@@ -574,8 +574,8 @@ export default function ChatScreen() {
   return (
     <KeyboardAvoidingView 
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
     >
       {/* 渐变背景 */}
       <View style={styles.backgroundGradient} />
@@ -597,9 +597,13 @@ export default function ChatScreen() {
         renderItem={renderMessage}
         keyExtractor={item => item.id}
         style={styles.messagesList}
-        contentContainerStyle={styles.messagesContainer}
+        contentContainerStyle={[
+          styles.messagesContainer, 
+          { paddingBottom: pendingImages.length > 0 ? 180 : 90 }
+        ]}
         ref={flatListRef}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         showsVerticalScrollIndicator={false}
       />
       
@@ -615,7 +619,11 @@ export default function ChatScreen() {
       {/* 图片预览区域 */}
       {pendingImages.length > 0 && (
         <View style={styles.imagePreviewContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.imagePreviewScroll}
+          >
             {pendingImages.map((imageUri, index) => (
               <View key={index} style={styles.imagePreviewWrapper}>
                 <Image 
@@ -632,12 +640,9 @@ export default function ChatScreen() {
               </View>
             ))}
           </ScrollView>
-                  <Text style={styles.imagePreviewText}>
-          已选择{pendingImages.length}张图片，输入文字后一起发送 (最多3张)
-        </Text>
-        {/* <Text style={styles.imageDebugText}>
-          图片路径: {pendingImages.map((uri, i) => `${i + 1}. ${uri.split('/').pop()}`).join(', ')}
-        </Text> */}
+          <Text style={styles.imagePreviewText}>
+            已选择{pendingImages.length}张图片，输入文字后一起发送 (最多3张)
+          </Text>
         </View>
       )}
       
@@ -790,7 +795,6 @@ const styles = StyleSheet.create({
   messagesContainer: {
     padding: 20,
     paddingTop: (StatusBar.currentHeight || 44) + 80, // 为固定header留出空间
-    paddingBottom: 20,
   },
   messageBubble: {
     flexDirection: 'row',
@@ -976,6 +980,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   inputWrapper: {
     paddingHorizontal: 16,
@@ -1007,6 +1015,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    zIndex: 20, // 增加z-index确保在imagePreviewContainer之上
   },
   optionButton: {
     alignItems: 'center',
@@ -1112,15 +1121,25 @@ const styles = StyleSheet.create({
     borderTopColor: '#e8f5e8',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    position: 'absolute',
+    bottom: 72,
+    left: 0,
+    right: 0,
+    zIndex: 0,
+  },
+  imagePreviewScroll: {
+    maxHeight: 100,
   },
   imagePreviewWrapper: {
     position: 'relative',
     alignSelf: 'flex-start',
     marginRight: 12,
+    marginBottom: 3,
+    marginTop: 5,
   },
   previewImage: {
-    width: 120,
-    height: 90,
+    width: 110,
+    height: 80,
     borderRadius: 12,
     backgroundColor: '#f0f0f0',
   },
@@ -1144,7 +1163,7 @@ const styles = StyleSheet.create({
   imagePreviewText: {
     fontSize: 12,
     color: '#666',
-    marginTop: 8,
+    marginTop: 5,
     textAlign: 'center',
   },
   imageDebugText: {
