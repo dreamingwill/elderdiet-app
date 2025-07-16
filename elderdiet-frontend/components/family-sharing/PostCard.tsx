@@ -119,43 +119,31 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
   const renderImageGrid = () => {
     if (record.image_urls.length === 0) return null;
     
-    const { itemWidth, itemHeight, columns } = getImageGridLayout(record.image_urls.length);
+    const imageSize = 100; // 固定图片大小
     const spacing = 8;
     
     return (
       <View style={styles.imageGrid}>
-        {record.image_urls.map((imageUrl, index) => {
-          const isThirdInThreeImages = record.image_urls.length === 3 && index === 2;
-          const currentItemWidth = isThirdInThreeImages ? itemWidth * 2 + spacing : itemWidth;
-          
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.imageItem,
-                {
-                  width: currentItemWidth,
-                  height: itemHeight,
-                  marginBottom: spacing,
-                  marginRight: (index + 1) % columns === 0 ? 0 : spacing,
-                }
-              ]}
-              onPress={() => handleImagePress(index)}
-            >
-              <Image 
-                source={{ uri: imageUrl }} 
-                style={styles.gridImage}
-                resizeMode="cover"
-              />
-              {/* 如果图片超过9张，在最后一张显示更多指示器 */}
-              {record.image_urls.length > 9 && index === 8 && (
-                <View style={styles.moreImageOverlay}>
-                  <Text style={styles.moreImageText}>+{record.image_urls.length - 9}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        {record.image_urls.slice(0, 3).map((imageUrl, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.imageItem,
+              {
+                width: imageSize,
+                height: imageSize,
+                marginRight: index < 2 ? spacing : 0,
+              }
+            ]}
+            onPress={() => handleImagePress(index)}
+          >
+            <Image 
+              source={{ uri: imageUrl }} 
+              style={styles.gridImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        ))}
       </View>
     );
   };
@@ -335,14 +323,12 @@ const styles = StyleSheet.create({
   },
   imageGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    marginTop: 8,
+    marginLeft: 10,  // 添加左边距
   },
   imageItem: {
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
-    position: 'relative',
   },
   gridImage: {
     width: '100%',
