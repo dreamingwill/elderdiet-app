@@ -48,6 +48,9 @@ public class GamificationService {
                 return;
             }
 
+            // 先检查是否需要重置每日浇水次数
+            profile = profileService.checkAndResetDailyWaterCount(user.getId());
+
             // 检查今日浇水次数是否已达上限
             int todayWaterCount = profile.getTodayWaterCount() != null ? profile.getTodayWaterCount() : 0;
             if (todayWaterCount >= MAX_DAILY_WATERING) {
@@ -144,7 +147,8 @@ public class GamificationService {
                 return getDefaultTreeStatus();
             }
 
-            // 检查是否需要重置每日浇水次数（这里只是为了显示，实际重置在ProfileService中）
+            // 检查并重置每日浇水次数
+            profile = profileService.checkAndResetDailyWaterCount(user.getId());
             int todayWaterCount = profile.getTodayWaterCount() != null ? profile.getTodayWaterCount() : 0;
 
             return TreeStatus.builder()

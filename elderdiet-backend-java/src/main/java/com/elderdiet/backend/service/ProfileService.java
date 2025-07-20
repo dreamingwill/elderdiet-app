@@ -222,6 +222,45 @@ public class ProfileService {
     }
 
     /**
+     * 检查并重置每日浇水次数（仅供GamificationService使用）
+     */
+    @Transactional
+    public ProfileDTO checkAndResetDailyWaterCount(String userId) {
+        log.info("检查用户每日浇水次数重置, userId: {}", userId);
+
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("健康档案不存在"));
+
+        LocalDateTime now = LocalDateTime.now();
+        boolean needReset = false;
+
+        // 检查是否需要重置每日浇水次数
+        if (profile.getWaterCountResetTime() == null) {
+            // 老用户数据兼容：如果没有重置时间，设置为明天0点并重置计数
+            needReset = true;
+            log.info("用户 {} 没有重置时间记录，进行兼容性重置", userId);
+        } else if (now.isAfter(profile.getWaterCountResetTime())) {
+            // 当前时间已过重置时间，需要重置
+            needReset = true;
+            log.info("用户 {} 已过重置时间，进行每日重置", userId);
+        }
+
+        if (needReset) {
+            // 重置今日浇水次数
+            profile.setTodayWaterCount(0);
+
+            // 设置下一个重置时间为明天的0点
+            LocalDateTime tomorrow = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            profile.setWaterCountResetTime(tomorrow);
+
+            profileRepository.save(profile);
+            log.info("用户 {} 每日浇水次数已重置，下次重置时间: {}", userId, tomorrow);
+        }
+
+        return convertToDTO(profile);
+    }
+
+    /**
      * 更新小树浇水状态（仅供GamificationService使用）
      */
     @Transactional
@@ -241,19 +280,6 @@ public class ProfileService {
         }
         if (lastWaterTime != null) {
             profile.setLastWaterTime(lastWaterTime);
-        }
-
-        // 检查是否需要重置每日浇水次数
-        LocalDateTime now = LocalDateTime.now();
-        if (profile.getWaterCountResetTime() == null || now.isAfter(profile.getWaterCountResetTime())) {
-            // 设置下一个重置时间为明天的0点
-            LocalDateTime tomorrow = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
-            profile.setWaterCountResetTime(tomorrow);
-
-            // 如果不是手动设置todayWaterCount，则重置为0
-            if (todayWaterCount == null) {
-                profile.setTodayWaterCount(0);
-            }
         }
 
         profileRepository.save(profile);
@@ -312,6 +338,10 @@ public class ProfileService {
         String phoneLastFour = phone.substring(Math.max(0, phone.length() - 4));
         String defaultName = (role == UserRole.ELDER ? "大树" : "小树") + phoneLastFour;
 
+        // 设置明天0点为第一次重置时间
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime tomorrow = now.plusDays(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+
         Profile profile = Profile.builder()
                 .userId(userId)
                 .name(defaultName)
@@ -327,6 +357,8 @@ public class ProfileService {
                 .treeStage(0)
                 .wateringProgress(0)
                 .completedTrees(0)
+                .todayWaterCount(0)
+                .waterCountResetTime(tomorrow)
                 .build();
 
         profileRepository.save(profile);
