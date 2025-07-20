@@ -782,6 +782,21 @@ export const mealRecordsAPI = {
       },
     });
   },
+
+  // 更新膳食记录可见性
+  updateRecordVisibility: async (
+    recordId: string,
+    visibility: 'PRIVATE' | 'FAMILY',
+    token: string
+  ): Promise<ApiResponse<MealRecord>> => {
+    return request(`/meal-records/${recordId}/visibility`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ visibility }),
+    });
+  },
 };
 
 // 家庭关系相关API

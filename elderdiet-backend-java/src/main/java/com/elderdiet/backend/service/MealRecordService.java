@@ -3,6 +3,7 @@ package com.elderdiet.backend.service;
 import com.elderdiet.backend.dto.MealRecordRequest;
 import com.elderdiet.backend.dto.MealRecordResponse;
 import com.elderdiet.backend.dto.ProfileDTO;
+import com.elderdiet.backend.dto.VisibilityUpdateRequest;
 import com.elderdiet.backend.entity.*;
 import com.elderdiet.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -249,5 +250,29 @@ public class MealRecordService {
                 .likedByCurrentUser(likedByCurrentUser)
                 .comments(comments)
                 .build();
+    }
+
+    /**
+     * 更新膳食记录的可见性
+     */
+    @Transactional
+    public MealRecord updateRecordVisibility(String recordId, User user, VisibilityUpdateRequest request) {
+        log.info("用户 {} 更新膳食记录 {} 的可见性为 {}", user.getPhone(), recordId, request.getVisibility());
+
+        // 查找膳食记录
+        MealRecord record = mealRecordRepository.findById(recordId)
+                .orElseThrow(() -> new RuntimeException("膳食记录不存在"));
+
+        // 验证权限：只有记录的创建者可以修改可见性
+        if (!record.getUserId().equals(user.getId())) {
+            throw new RuntimeException("无权限修改此膳食记录");
+        }
+
+        // 更新可见性
+        record.setVisibility(request.getVisibility());
+        MealRecord updatedRecord = mealRecordRepository.save(record);
+
+        log.info("膳食记录 {} 的可见性已更新为 {}", recordId, request.getVisibility());
+        return updatedRecord;
     }
 }

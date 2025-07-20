@@ -4,6 +4,7 @@ import com.elderdiet.backend.dto.ApiResponse;
 import com.elderdiet.backend.dto.CommentRequest;
 import com.elderdiet.backend.dto.MealRecordRequest;
 import com.elderdiet.backend.dto.MealRecordResponse;
+import com.elderdiet.backend.dto.VisibilityUpdateRequest;
 import com.elderdiet.backend.entity.MealRecord;
 import com.elderdiet.backend.entity.RecordComment;
 import com.elderdiet.backend.entity.User;
@@ -68,18 +69,6 @@ public class MealRecordController {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
-
-    /**
-     * 修改隐私设置
-     */
-    // @PutMapping("/{recordId}/privacy")
-    // public ResponseEntity<ApiResponse<MealRecord>> updatePrivacy(
-    // @PathVariable String recordId,
-    // @RequestBody MealRecordRequest request,
-    // Authentication authentication) {
-    // return ResponseEntity.ok(ApiResponse.success("隐私设置修改成功",
-    // mealRecordService.updatePrivacy(recordId, request, authentication)));
-    // }
 
     /**
      * 获取当前用户的分享墙时间线
@@ -164,6 +153,30 @@ public class MealRecordController {
 
         } catch (Exception e) {
             log.error("获取评论失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 更新膳食记录可见性（只有记录创建者可以调用）
+     */
+    @PutMapping("/{recordId}/visibility")
+    @PreAuthorize("hasAuthority('ROLE_ELDER')")
+    public ResponseEntity<ApiResponse<MealRecord>> updateRecordVisibility(
+            @PathVariable String recordId,
+            @Valid @RequestBody VisibilityUpdateRequest request,
+            Authentication authentication) {
+
+        try {
+            User currentUser = getCurrentUser(authentication);
+
+            // 更新可见性
+            MealRecord mealRecord = mealRecordService.updateRecordVisibility(recordId, currentUser, request);
+
+            return ResponseEntity.ok(ApiResponse.success("可见性修改成功", mealRecord));
+
+        } catch (Exception e) {
+            log.error("更新膳食记录可见性失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }

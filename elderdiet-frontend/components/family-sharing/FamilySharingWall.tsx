@@ -89,7 +89,7 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
 
   // 处理评论添加
   const handleCommentAdded = useCallback((recordId: string, newComment: CommentInfo) => {
-    setRecords(prevRecords => 
+    setRecords(prevRecords =>
       prevRecords.map(record => {
         if (record.id === recordId) {
           // Convert to API format
@@ -101,11 +101,26 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
             username: newComment.username || '我',
             user_avatar: newComment.user_avatar
           };
-          
+
           return {
             ...record,
             comments: [apiComment, ...record.comments] as any, // Type cast to avoid TypeScript errors
             comments_count: record.comments_count + 1
+          };
+        }
+        return record;
+      })
+    );
+  }, []);
+
+  // 处理可见性切换
+  const handleVisibilityToggle = useCallback((recordId: string, newVisibility: 'PRIVATE' | 'FAMILY') => {
+    setRecords(prevRecords =>
+      prevRecords.map(record => {
+        if (record.id === recordId) {
+          return {
+            ...record,
+            visibility: newVisibility
           };
         }
         return record;
@@ -128,6 +143,7 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
       record={item}
       onLikeToggle={handleLikeToggle}
       onCommentAdded={handleCommentAdded}
+      onVisibilityToggle={handleVisibilityToggle}
     />
   );
 

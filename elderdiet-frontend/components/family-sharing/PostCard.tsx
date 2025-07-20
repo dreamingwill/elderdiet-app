@@ -25,14 +25,16 @@ interface PostCardProps {
   record: MealRecordResponse;
   onLikeToggle: (recordId: string) => void;
   onCommentAdded: (recordId: string, newComment: CommentInfo) => void;
+  onVisibilityToggle?: (recordId: string, newVisibility: 'PRIVATE' | 'FAMILY') => void;
 }
 
-export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostCardProps) {
-  const { token } = useAuth();
+export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisibilityToggle }: PostCardProps) {
+  const { token, uid } = useAuth();
   const [isLiking, setIsLiking] = useState(false);
   const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   // 处理点赞
   const handleLike = async () => {
@@ -65,6 +67,30 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
   const handleImagePress = (index: number) => {
     setSelectedImageIndex(index);
     setIsImageViewerVisible(true);
+  };
+
+  // 处理可见性切换
+  const handleVisibilityToggle = async () => {
+    if (!token || isUpdatingVisibility || !uid) return;
+
+    // 只有记录的创建者可以修改可见性
+    if (record.user_id !== uid) return;
+
+    setIsUpdatingVisibility(true);
+    try {
+      const newVisibility = record.visibility === 'PRIVATE' ? 'FAMILY' : 'PRIVATE';
+      await mealRecordsAPI.updateRecordVisibility(record.id, newVisibility, token);
+
+      // 调用父组件的回调函数
+      if (onVisibilityToggle) {
+        onVisibilityToggle(record.id, newVisibility);
+      }
+    } catch (error) {
+      console.error('切换可见性失败:', error);
+      Alert.alert('错误', '切换可见性失败，请重试');
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
   };
 
   // 格式化时间
@@ -174,9 +200,33 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded }: PostC
             <Text style={styles.postTime}>{formatTime(record.created_at)}</Text>
           </View>
         </View>
-        <View style={styles.newBadge}>
-          <Text style={styles.newBadgeText}>NEW</Text>
-        </View>
+        {/* 可见性切换按钮 - 只有记录创建者可以看到 */}
+        {record.user_id === uid && (
+          <TouchableOpacity
+            style={[
+              styles.visibilityBadge,
+              record.visibility === 'FAMILY' ? styles.visibilityBadgeFamily : styles.visibilityBadgePrivate
+            ]}
+            onPress={handleVisibilityToggle}
+            disabled={isUpdatingVisibility}
+          >
+            {isUpdatingVisibility ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons
+                  name={record.visibility === 'FAMILY' ? 'people' : 'lock-closed'}
+                  size={12}
+                  color="#fff"
+                  style={styles.visibilityIcon}
+                />
+                <Text style={styles.visibilityBadgeText}>
+                  {record.visibility === 'FAMILY' ? '家庭可见' : '仅自己'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 文字内容 */}
@@ -318,6 +368,29 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   newBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 70,
+    justifyContent: 'center',
+  },
+  visibilityBadgeFamily: {
+    backgroundColor: '#4CAF50',
+  },
+  visibilityBadgePrivate: {
+    backgroundColor: '#FF9800',
+  },
+  visibilityIcon: {
+    marginRight: 4,
+  },
+  visibilityBadgeText: {
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
