@@ -522,7 +522,7 @@ export default function MeScreen() {
       )}
 
       {/* 成就勋章卡片（占位，后续扩展） */}
-      <View style={styles.achievementCard}>
+      {/* <View style={styles.achievementCard}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>成就勋章</Text>
           <TouchableOpacity>
@@ -540,7 +540,7 @@ export default function MeScreen() {
             至今，您已经坚持打卡 35 天，其中最长连续打卡 6 天
           </Text>
         </View>
-      </View>
+      </View> */}
 
       {/* 账户信息卡片 */}
       <View style={styles.accountCard}>
