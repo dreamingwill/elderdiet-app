@@ -17,15 +17,14 @@
       "supportsTablet": true ,
       "bundleIdentifier": "com.zeroh12.ElderDiet"
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true,
-      "package": "com.zeroh12.ElderDiet"
+      "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
     },
+    "edgeToEdgeEnabled": true,
+    "package": "com.zeroh12.ElderDiet"
+  },
     "web": {
       "bundler": "metro",
       "output": "static",

@@ -1,7 +1,5 @@
 // API基础配置
-//const API_BASE_URL = 'http://localhost:3001/api/v1'; // 本地开发
-const API_BASE_URL = 'http://8.153.204.247:3001/api/v1'; // ali云服务器地址
-//const API_BASE_URL = 'https://api.elderdiet.me/api/v1'; // https证书，只有电脑浏览器可以访问，手机浏览器无法访问
+import { API_BASE_URL, API_TIMEOUT } from '@/config/api.config';
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -23,7 +21,17 @@ async function request<T>(
   };
 
   try {
-    const response = await fetch(url, config);
+    // 添加超时处理
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+    
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
     const data = await response.json();
 
     if (!response.ok) {
@@ -31,7 +39,10 @@ async function request<T>(
     }
 
     return data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接');
+    }
     console.error('API request failed:', error);
     throw error;
   }

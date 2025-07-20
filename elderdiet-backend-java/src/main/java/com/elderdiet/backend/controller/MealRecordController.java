@@ -70,6 +70,18 @@ public class MealRecordController {
     }
 
     /**
+     * 修改隐私设置
+     */
+    // @PutMapping("/{recordId}/privacy")
+    // public ResponseEntity<ApiResponse<MealRecord>> updatePrivacy(
+    // @PathVariable String recordId,
+    // @RequestBody MealRecordRequest request,
+    // Authentication authentication) {
+    // return ResponseEntity.ok(ApiResponse.success("隐私设置修改成功",
+    // mealRecordService.updatePrivacy(recordId, request, authentication)));
+    // }
+
+    /**
      * 获取当前用户的分享墙时间线
      */
     @GetMapping("/feed")
