@@ -173,15 +173,20 @@ export default function CommentModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* 头部 */}
-        <View style={styles.header}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            {/* 拖拽指示器 */}
+            <View style={styles.dragIndicator} />
+
+            {/* 头部 */}
+            <View style={styles.header}>
           <Text style={styles.title}>评论</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#666" />
@@ -236,15 +241,38 @@ export default function CommentModal({
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    height: height * 0.75, // 占据屏幕3/4高度
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  dragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -254,7 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingTop: 50, // 为状态栏留出空间
+    paddingTop: 20, // 减少顶部间距
   },
   title: {
     fontSize: 20,

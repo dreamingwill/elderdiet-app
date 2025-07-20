@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'react-native';
@@ -8,8 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import CommentModal from './CommentModal';
 import UserAvatar from './UserAvatar';
 import ImageViewer from './ImageViewer';
-
-const { width } = Dimensions.get('window');
 
 // Local comment interface to match API structure
 interface CommentInfo {
@@ -113,43 +111,7 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
     }
   };
 
-  // 计算图片网格布局
-  const getImageGridLayout = (imageCount: number) => {
-    const containerWidth = width - 32; // 减去左右padding
-    const spacing = 8;
-    
-    if (imageCount === 1) {
-      return {
-        itemWidth: containerWidth,
-        itemHeight: 200,
-        columns: 1,
-      };
-    } else if (imageCount === 2) {
-      return {
-        itemWidth: (containerWidth - spacing) / 2,
-        itemHeight: 150,
-        columns: 2,
-      };
-    } else if (imageCount === 3) {
-      return {
-        itemWidth: (containerWidth - spacing) / 2,
-        itemHeight: 120,
-        columns: 2,
-      };
-    } else if (imageCount === 4) {
-      return {
-        itemWidth: (containerWidth - spacing) / 2,
-        itemHeight: 120,
-        columns: 2,
-      };
-    } else {
-      return {
-        itemWidth: (containerWidth - spacing * 2) / 3,
-        itemHeight: 100,
-        columns: 3,
-      };
-    }
-  };
+
 
   // 渲染图片网格
   const renderImageGrid = () => {
@@ -245,10 +207,10 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
           {record.comments.slice(0, 2).map((comment) => (
             <View key={comment.id} style={styles.commentItem}>
               <View style={styles.commentHeader}>
-                <UserAvatar 
+                <UserAvatar
                   avatar={comment.user_avatar}
                   name={comment.username || '用户'}
-                  size={24}
+                  size={30}
                 />
                 <View style={styles.commentUserInfo}>
                   <Text style={styles.commentUserName}>{comment.username || '用户'}</Text>
@@ -268,9 +230,9 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
         </View>
       )}
 
-      {/* 底部互动按钮 */}
+      {/* 底部互动按钮 - 紧凑布局 */}
       <View style={styles.actionSection}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionButton}
           onPress={handleLike}
           disabled={isLiking}
@@ -278,28 +240,32 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
           {isLiking ? (
             <ActivityIndicator size="small" color="#ff6b6b" />
           ) : (
-            <Ionicons 
-              name={record.liked_by_current_user ? "heart" : "heart-outline"} 
-              size={24} 
-              color={record.liked_by_current_user ? "#ff6b6b" : "#666"}
+            <Ionicons
+              name={record.liked_by_current_user ? "heart" : "heart-outline"}
+              size={20}
+              color={record.liked_by_current_user ? "#ff6b6b" : "#999"}
             />
           )}
-          <Text style={[
-            styles.actionText,
-            record.liked_by_current_user && styles.actionTextActive
-          ]}>
-            {record.likes_count > 0 ? record.likes_count : ''}
-          </Text>
+          {record.likes_count > 0 && (
+            <Text style={[
+              styles.actionText,
+              record.liked_by_current_user && styles.actionTextActive
+            ]}>
+              {record.likes_count}
+            </Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionButton}
           onPress={handleComment}
         >
-          <Ionicons name="chatbubble-outline" size={24} color="#666" />
-          <Text style={styles.actionText}>
-            {record.comments_count > 0 ? record.comments_count : ''}
-          </Text>
+          <Ionicons name="chatbubble-outline" size={20} color="#999" />
+          {record.comments_count > 0 && (
+            <Text style={styles.actionText}>
+              {record.comments_count}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -434,34 +400,36 @@ const styles = StyleSheet.create({
   },
   commentsSection: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    marginTop: 8,
-    paddingTop: 12,
+    borderTopColor: '#f8f8f8ff',
+    marginTop: 6,
+    paddingTop: 8,
   },
   commentItem: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    backgroundColor: '#f8f8f8ff',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#73d478ff',
   },
   commentHeader: {
+    backgroundColor: '#f8f8f8ff',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   commentUserInfo: {
-    marginLeft: 8,
+    backgroundColor: '#f8f8f8ff',
+    marginLeft: 6,
     flex: 1,
   },
   commentUserName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#4CAF50',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   commentTime: {
     fontSize: 12,
@@ -469,39 +437,38 @@ const styles = StyleSheet.create({
   },
   commentText: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 18,
     color: '#495057',
   },
   moreComments: {
     fontSize: 14,
     color: '#007bff',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
   actionSection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-    minWidth: 80,
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    marginRight: 20,
   },
   actionText: {
-    marginLeft: 8,
-    fontSize: 16,
+    marginLeft: 4,
+    fontSize: 14,
     color: '#666',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   actionTextActive: {
     color: '#ff6b6b',
