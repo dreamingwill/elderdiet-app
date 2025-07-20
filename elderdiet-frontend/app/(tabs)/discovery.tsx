@@ -13,6 +13,7 @@ import {
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import Carousel from 'react-native-reanimated-carousel';
+import { useRouter } from 'expo-router';
 import { healthArticlesAPI, HealthArticle } from '@/services/api';
 
 const { width } = Dimensions.get('window');
@@ -21,8 +22,8 @@ const { width } = Dimensions.get('window');
 
 // 营养分类
 const nutritionCategories = [
-  // { id: '1', title: '血糖管理', icon: 'pulse-outline', color: '#FF6B6B', bgColor: '#FFE8E8' },
-  // { id: '2', title: '心血管保护', icon: 'heart-outline', color: '#4ECDC4', bgColor: '#E8F8F7' },
+  { id: '1', title: '血糖管理', icon: 'pulse-outline', color: '#FF6B6B', bgColor: '#FFE8E8' },
+  { id: '2', title: '心血管保护', icon: 'heart-outline', color: '#4ECDC4', bgColor: '#E8F8F7' },
   { id: '3', title: '骨骼健康', icon: 'fitness-outline', color: '#45B7D1', bgColor: '#E8F4FD' },
   { id: '4', title: '消化养胃', icon: 'restaurant-outline', color: '#96CEB4', bgColor: '#F0F8F4' },
   { id: '5', title: '免疫增强', icon: 'shield-outline', color: '#FECA57', bgColor: '#FFF8E1' },
@@ -40,6 +41,7 @@ interface NutritionItem {
 }
 
 export default function DiscoveryScreen() {
+  const router = useRouter();
   const [activeSlide, setActiveSlide] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('nutrition');
@@ -121,19 +123,25 @@ export default function DiscoveryScreen() {
     }
   };
 
+  const navigateToArticle = (articleId: string) => {
+    router.push(`/article/${articleId}`);
+  };
+
   // 渲染轮播图项
   const renderCarouselItem = ({ item }: { item: HealthArticle }) => {
     return (
-      <ImageBackground
-        source={{ uri: item.cover_image || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400' }}
-        style={styles.carouselItem}
-        imageStyle={{ borderRadius: 12 }}
-      >
-        <View style={styles.carouselOverlay}>
-          <Text style={styles.carouselTitle}>{item.title}</Text>
-          <Text style={styles.carouselSubtitle}>{item.subtitle || ''}</Text>
-        </View>
-      </ImageBackground>
+      <TouchableOpacity onPress={() => navigateToArticle(item.id)}>
+        <ImageBackground
+          source={{ uri: item.cover_image || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400' }}
+          style={styles.carouselItem}
+          imageStyle={{ borderRadius: 12 }}
+        >
+          <View style={styles.carouselOverlay}>
+            <Text style={styles.carouselTitle}>{item.title}</Text>
+            <Text style={styles.carouselSubtitle}>{item.subtitle || ''}</Text>
+          </View>
+        </ImageBackground>
+      </TouchableOpacity>
     );
   };
 
@@ -151,8 +159,8 @@ export default function DiscoveryScreen() {
 
   // 渲染文章项
   const renderArticleItem = ({ item }: { item: HealthArticle }) => {
-    const isFavorite = favorites.includes(item._id);
-    const isExpanded = expandedArticles.includes(item._id);
+    const isFavorite = favorites.includes(item.id);
+    const isExpanded = expandedArticles.includes(item.id);
     
     // 获取文本段落
     const textParagraphs = item.content.paragraphs
@@ -163,7 +171,11 @@ export default function DiscoveryScreen() {
     const displayContent = isExpanded ? textParagraphs : previewContent;
     
     return (
-      <View style={styles.articleItem}>
+      <TouchableOpacity
+        style={styles.articleItem}
+        onPress={() => navigateToArticle(item.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.articleHeader}>
           <View style={styles.articleTitleContainer}>
             <Text style={styles.articleTitle}>{item.title}</Text>
@@ -174,7 +186,12 @@ export default function DiscoveryScreen() {
               <Text style={styles.readTime}>📖 {item.read_time}分钟</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => toggleFavorite(item._id)}>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleFavorite(item.id);
+            }}
+          >
             <Ionicons 
               name={isFavorite ? "star" : "star-outline"} 
               size={24} 
@@ -186,7 +203,7 @@ export default function DiscoveryScreen() {
         {/* 标签 */}
         <View style={styles.tagsContainer}>
           {item.tags.map((tag, index) => (
-            <View key={`${tag}-${index}`} style={styles.tag}>
+            <View key={`${item.id}-tag-${index}`} style={styles.tag}>
               <Text style={styles.tagText}>{tag}</Text>
             </View>
           ))}
@@ -203,7 +220,10 @@ export default function DiscoveryScreen() {
         {textParagraphs.length > 2 && (
           <TouchableOpacity 
             style={styles.expandButton}
-            onPress={() => toggleArticleExpansion(item._id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleArticleExpansion(item.id);
+            }}
           >
             <Text style={styles.expandButtonText}>
               {isExpanded ? '收起' : '展开全文'}
@@ -215,7 +235,7 @@ export default function DiscoveryScreen() {
             />
           </TouchableOpacity>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -268,7 +288,7 @@ export default function DiscoveryScreen() {
                 <View style={styles.paginationContainer}>
                   {carouselArticles.map((item, index) => (
                     <View
-                      key={item._id || index}
+                      key={item.id || index}
                       style={[
                         styles.paginationDot,
                         index === activeSlide && styles.paginationDotActive
@@ -311,7 +331,7 @@ export default function DiscoveryScreen() {
                 <FlatList
                   data={featuredArticles}
                   renderItem={renderArticleItem}
-                  keyExtractor={item => item._id}
+                  keyExtractor={item => item.id}
                   scrollEnabled={false}
                   contentContainerStyle={styles.articlesList}
                   refreshControl={

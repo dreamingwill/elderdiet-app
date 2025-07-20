@@ -306,7 +306,7 @@ export interface MealPlanStatsResponse {
 }
 
 export interface HealthArticle {
-  _id: string;
+  id: string;
   title: string;
   subtitle?: string;
   category: string;
