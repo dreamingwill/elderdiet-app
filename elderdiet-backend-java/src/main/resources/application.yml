@@ -72,6 +72,12 @@ aliyun:
     base-url: ${ALIYUN_OSS_BASE_URL:https://elder-diet.oss-cn-shanghai.aliyuncs.com}
     upload-path: ${ALIYUN_OSS_UPLOAD_PATH:diet-images/}
 
+# xfyun 科大讯飞
+xfyun:
+  app-id: ${XFYUN_APP_ID:your-app-id}
+  api-key: ${XFYUN_API_KEY:your-api-key}
+  api-secret: ${XFYUN_API_SECRET:your-api-secret}
+
 # 应用信息
 info:
   app:
