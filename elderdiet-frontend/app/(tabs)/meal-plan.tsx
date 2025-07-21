@@ -84,19 +84,19 @@ export default function MealPlanScreen() {
   };
 
   // 更换菜品
-  const handleDishChange = async (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number) => {
+  const handleDishChange = async (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number): Promise<void> => {
     if (!token || !currentMealPlan) return;
-    
+
     try {
       // 将前端的mealType转换为后端需要的格式
       const backendMealType = mealType.toUpperCase() as 'BREAKFAST' | 'LUNCH' | 'DINNER';
-      
+
       const response = await mealPlanAPI.replaceDish({
         meal_plan_id: currentMealPlan.id,
         meal_type: backendMealType,
         dish_index: dishIndex,
       }, token);
-      
+
       if (response.success && response.data) {
         setCurrentMealPlan(response.data);
         Alert.alert('成功', '菜品已更换！');
@@ -106,6 +106,7 @@ export default function MealPlanScreen() {
     } catch (error) {
       console.error('Failed to replace dish:', error);
       Alert.alert('错误', '更换菜品失败，请重试');
+      throw error; // 重新抛出错误，让DishItem组件知道操作失败
     }
   };
 

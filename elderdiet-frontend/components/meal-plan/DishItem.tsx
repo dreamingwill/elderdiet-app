@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Dish } from '@/services/api';
 
@@ -7,18 +7,26 @@ interface DishItemProps {
   dish: Dish;
   index: number;
   mealType: 'breakfast' | 'lunch' | 'dinner';
-  onReplace: (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number) => void;
+  onReplace: (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number) => Promise<void>;
 }
 
 const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isReplacing, setIsReplacing] = useState(false);
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const handleReplace = () => {
-    onReplace(mealType, index);
+  const handleReplace = async () => {
+    if (isReplacing) return; // 防止重复点击
+
+    setIsReplacing(true);
+    try {
+      await onReplace(mealType, index);
+    } finally {
+      setIsReplacing(false);
+    }
   };
 
   // 如果推荐理由超过60个字符，显示展开按钮
@@ -32,11 +40,20 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
       {/* 菜品名称和更换按钮 */}
       <View style={styles.dishHeader}>
         <Text style={styles.dishName}>{dish.name}</Text>
-        <TouchableOpacity 
-          style={styles.changeButton}
+        <TouchableOpacity
+          style={[
+            styles.changeButton,
+            isReplacing && styles.changeButtonDisabled
+          ]}
           onPress={handleReplace}
+          disabled={isReplacing}
+          testID="replace-button"
         >
-          <Ionicons name="refresh" size={18} color="#666" />
+          {isReplacing ? (
+            <ActivityIndicator size="small" color="#666" testID="loading-indicator" />
+          ) : (
+            <Ionicons name="refresh" size={18} color="#666" />
+          )}
         </TouchableOpacity>
       </View>
       
@@ -97,6 +114,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
+  },
+  changeButtonDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#e9ecef',
   },
   recommendationContainer: {
     backgroundColor: '#f8f9fa',
