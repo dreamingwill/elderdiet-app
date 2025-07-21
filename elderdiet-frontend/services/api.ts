@@ -48,6 +48,50 @@ async function request<T>(
   }
 }
 
+// 带自定义超时的请求函数
+async function requestWithTimeout<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  timeoutMs: number = API_TIMEOUT
+): Promise<T> {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  };
+
+  try {
+    // 使用自定义超时时间
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接');
+    }
+    console.error('API request failed:', error);
+    throw error;
+  }
+}
+
 // API响应类型定义
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -508,25 +552,25 @@ export const mealPlanAPI = {
     });
   },
 
-  // 生成今日膳食计划
+  // 生成今日膳食计划 - 使用更长的超时时间
   generateTodayMealPlan: async (token: string): Promise<ApiResponse<MealPlan>> => {
-    return request('/meal-plans/generate-today', {
+    return requestWithTimeout('/meal-plans/generate-today', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
       },
-    });
+    }, 60000); // 60秒超时，专门用于AI生成
   },
 
-  // 生成指定日期的膳食计划
+  // 生成指定日期的膳食计划 - 使用更长的超时时间
   generateMealPlan: async (requestData: MealPlanGenerateRequest, token: string): Promise<ApiResponse<MealPlan>> => {
-    return request('/meal-plans', {
+    return requestWithTimeout('/meal-plans', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(requestData),
-    });
+    }, 60000); // 60秒超时，专门用于AI生成
   },
 
   // 获取指定日期的最新膳食计划
