@@ -688,10 +688,10 @@ export default function ChatScreen() {
                       <Ionicons name="camera" size={20} color="#fff" />
                       <Text style={styles.optionText}>拍照</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.optionButton} onPress={startRecording}>
+                    {/* <TouchableOpacity style={styles.optionButton} onPress={startRecording}>
                       <Ionicons name="mic" size={20} color="#fff" />
                       <Text style={styles.optionText}>语音</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                   </View>
                 )}
               </View>

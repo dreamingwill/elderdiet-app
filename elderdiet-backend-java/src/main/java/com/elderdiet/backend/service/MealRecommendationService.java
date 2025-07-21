@@ -158,7 +158,7 @@ public class MealRecommendationService {
         prompt.append("4. 个性化定制：根据用户的健康状况和偏好进行定制\n");
         prompt.append("5. 食材新鲜：选择当季新鲜食材\n");
         prompt.append("6. 制作简单：考虑老年人的制作能力\n");
-        prompt.append("7. 菜品数量：为午餐和晚餐各生成3道菜品，早餐生成2-3道菜品。\n");
+        prompt.append("7. 菜品数量：为早餐、午餐和晚餐各生成3道菜品。\n");
 
         prompt.append("\n");
 
@@ -429,22 +429,20 @@ public class MealRecommendationService {
                       {
                         "name": "菜品名称",
                         "ingredients": ["食材1", "食材2"],
-                        "recommendationReason": "推荐理由",
-                        "preparationNotes": "制作说明",
-                        "tags": ["标签1", "标签2"]
+                        "recommendationReason": "推荐理由"
                       }
                     ],
-                    "nutritionSummary": "营养摘要",
-                    "mealTips": "用餐建议"
+                    "nutritionSummary": "营养摘要"
                   },
                   "lunch": { ... },
                   "dinner": { ... },
-                  "generatedReason": "整体推荐理由",
-                  "healthTips": "健康建议"
+                  "generatedReason": "整体推荐理由"
                 }
                 """;
     }
 
+    // "mealTips": "用餐建议"
+    // "healthTips": "健康建议"
     /**
      * 获取菜品JSON格式模板
      */
@@ -453,10 +451,10 @@ public class MealRecommendationService {
                 {
                   "name": "菜品名称",
                   "ingredients": ["食材1", "食材2"],
-                  "recommendationReason": "推荐理由",
-                  "preparationNotes": "制作说明",
-                  "tags": ["标签1", "标签2"]
+                  "recommendationReason": "推荐理由"
                 }
                 """;
     }
+    // "preparationNotes": "制作说明",
+    // "tags": ["标签1", "标签2"]
 }

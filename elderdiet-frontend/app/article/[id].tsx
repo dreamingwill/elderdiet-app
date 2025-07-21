@@ -113,13 +113,13 @@ export default function ArticleDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>文章详情</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={toggleFavorite} style={styles.actionButton}>
+          {/* <TouchableOpacity onPress={toggleFavorite} style={styles.actionButton}>
             <Ionicons 
               name={isFavorite ? "star" : "star-outline"} 
               size={24} 
               color={isFavorite ? "#FFD700" : "#666"} 
             />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
             <Ionicons name="share-outline" size={24} color="#666" />
           </TouchableOpacity>

@@ -79,7 +79,7 @@ public class MealRecordService {
     }
 
     /**
-     * 获取用户的分享墙时间线
+     * 获取用户的分享墙时间线（最多显示最近的30条）
      */
     public List<MealRecordResponse> getFeedForUser(User user) {
         log.info("获取用户 {} 的分享墙时间线", user.getPhone());
@@ -88,18 +88,18 @@ public class MealRecordService {
 
         switch (user.getRole()) {
             case ELDER:
-                // 老人用户：查询自己发布的所有记录
-                records = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+                // 老人用户：查询自己发布的最近30条记录
+                records = mealRecordRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId());
                 break;
 
             case CHILD:
-                // 子女用户：查询绑定的老人发布的FAMILY可见的记录
+                // 子女用户：查询绑定的老人发布的FAMILY可见的最近30条记录
                 List<FamilyLink> familyLinks = familyLinkRepository.findByChildId(user.getId());
                 if (!familyLinks.isEmpty()) {
                     List<String> parentIds = familyLinks.stream()
                             .map(FamilyLink::getParentId)
                             .collect(Collectors.toList());
-                    records = mealRecordRepository.findByUserIdInAndVisibilityOrderByCreatedAtDesc(
+                    records = mealRecordRepository.findTop30ByUserIdInAndVisibilityOrderByCreatedAtDesc(
                             parentIds, RecordVisibility.FAMILY);
                 }
                 break;

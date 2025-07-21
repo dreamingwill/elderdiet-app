@@ -257,11 +257,11 @@ export default function MeScreen() {
                 {member.relationship_type === 'child' ? '子女' : '家长'}
               </Text>
             </View>
-            <View style={styles.memberActions}>
+            {/* <View style={styles.memberActions}>
               <TouchableOpacity style={styles.memberActionButton}>
                 <Ionicons name="chatbubble-outline" size={20} color="#666" />
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         ))}
       </View>
@@ -429,10 +429,10 @@ export default function MeScreen() {
             </View>
           </View>
 
-          {/* 设置按钮 */}
+          {/* 设置按钮
           <TouchableOpacity style={styles.settingsButton}>
             <Ionicons name="settings-outline" size={24} color="#666" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 

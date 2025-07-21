@@ -64,6 +64,16 @@ public interface HealthArticleRepository extends MongoRepository<HealthArticle, 
     List<HealthArticle> findFeaturedArticlesWithLimit(Integer isFeatured, Integer status, Pageable pageable);
 
     /**
+     * 查找所有推荐文章（用于随机选择）
+     */
+    List<HealthArticle> findByIsFeaturedAndStatusOrderByCreatedAtDesc(Integer isFeatured, Integer status);
+
+    /**
+     * 查找所有轮播图文章（用于随机选择）
+     */
+    List<HealthArticle> findByIsCarouselAndStatusOrderByCreatedAtDesc(Integer isCarousel, Integer status);
+
+    /**
      * 获取所有分类
      */
     @Query(value = "{}", fields = "{'category': 1}")

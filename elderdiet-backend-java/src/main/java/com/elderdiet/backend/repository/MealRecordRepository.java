@@ -32,4 +32,15 @@ public interface MealRecordRepository extends MongoRepository<MealRecord, String
      * 根据用户ID列表和可见性查找膳食记录
      */
     List<MealRecord> findByUserIdInAndVisibilityOrderByCreatedAtDesc(List<String> userIds, RecordVisibility visibility);
+
+    /**
+     * 根据用户ID查找膳食记录（限制数量）
+     */
+    List<MealRecord> findTop30ByUserIdOrderByCreatedAtDesc(String userId);
+
+    /**
+     * 根据用户ID列表和可见性查找膳食记录（限制数量）
+     */
+    List<MealRecord> findTop30ByUserIdInAndVisibilityOrderByCreatedAtDesc(List<String> userIds,
+            RecordVisibility visibility);
 }

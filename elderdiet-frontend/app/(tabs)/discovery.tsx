@@ -63,6 +63,7 @@ export default function DiscoveryScreen() {
       }
     } catch (err) {
       console.error('获取轮播图数据失败:', err);
+      // 轮播图失败不影响整体页面，所以不设置error状态
     }
   };
 
@@ -72,9 +73,13 @@ export default function DiscoveryScreen() {
       const response = await healthArticlesAPI.getFeaturedArticles(10);
       if (response.success && response.data) {
         setFeaturedArticles(response.data);
+        setError(null); // 清除之前的错误状态
+      } else {
+        setError('获取推荐文章失败');
       }
     } catch (err) {
       console.error('获取推荐文章失败:', err);
+      setError('网络连接失败，请检查网络后重试');
     }
   };
 
@@ -98,8 +103,15 @@ export default function DiscoveryScreen() {
   // 刷新数据
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+    try {
+      await loadData();
+      // 可以在这里添加成功提示，比如使用Toast
+      console.log('刷新成功');
+    } catch (err) {
+      console.error('刷新失败:', err);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // 初始化加载
@@ -253,19 +265,32 @@ export default function DiscoveryScreen() {
             </Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={[styles.tab, activeTab === 'nearby' && styles.activeTab]}
             onPress={() => setActiveTab('nearby')}
           >
             <Text style={[styles.tabText, activeTab === 'nearby' && styles.activeTabText]}>
               附近
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
       {/* 内容区域 */}
-      <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#4CAF50']}
+            tintColor="#4CAF50"
+            title="下拉刷新"
+            titleColor="#666"
+          />
+        }
+      >
         {/* 营养知识内容 */}
         {activeTab === 'nutrition' && (
           <View>
@@ -334,13 +359,6 @@ export default function DiscoveryScreen() {
                   keyExtractor={item => item.id}
                   scrollEnabled={false}
                   contentContainerStyle={styles.articlesList}
-                  refreshControl={
-                    <RefreshControl
-                      refreshing={refreshing}
-                      onRefresh={onRefresh}
-                      colors={['#4CAF50']}
-                    />
-                  }
                 />
               )}
             </View>
@@ -432,7 +450,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
@@ -631,12 +649,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   articleTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: 'bold',
     flex: 1,
   },
   articleParagraph: {
-    fontSize: 14,
+    fontSize: 17,
     lineHeight: 22,
     color: '#666',
     marginBottom: 8,
