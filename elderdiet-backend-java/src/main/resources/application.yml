@@ -9,6 +9,13 @@ spring:
   application:
     name: elderdiet-backend-java
 
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB # 单个文件最大10MB
+      max-request-size: 50MB # 整个请求最大50MB
+      file-size-threshold: 2KB # 文件写入磁盘的阈值
+
   data:
     mongodb:
       uri: mongodb://localhost:27017/elderdiet

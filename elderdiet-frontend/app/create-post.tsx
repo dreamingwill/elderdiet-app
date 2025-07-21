@@ -6,9 +6,18 @@ import { Stack, router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { mealRecordsAPI, CreateMealRecordRequest } from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Image } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+// 图片压缩配置
+const IMAGE_COMPRESSION_CONFIG = {
+  maxWidth: 1200,      // 最大宽度
+  maxHeight: 1200,     // 最大高度
+  quality: 0.8,        // 压缩质量
+  maxSizeKB: 500,      // 最大文件大小(KB)
+};
 
 export default function CreatePostScreen() {
   const { token } = useAuth();
@@ -16,43 +25,142 @@ export default function CreatePostScreen() {
   const [images, setImages] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+
+  // 压缩图片函数
+  const compressImage = useCallback(async (uri: string): Promise<string> => {
+    try {
+      // 获取图片信息
+      const imageInfo = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        { format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      // 计算压缩尺寸
+      const { width: originalWidth, height: originalHeight } = imageInfo;
+      let targetWidth = originalWidth;
+      let targetHeight = originalHeight;
+
+      // 如果图片过大，按比例缩放
+      if (originalWidth > IMAGE_COMPRESSION_CONFIG.maxWidth || originalHeight > IMAGE_COMPRESSION_CONFIG.maxHeight) {
+        const widthRatio = IMAGE_COMPRESSION_CONFIG.maxWidth / originalWidth;
+        const heightRatio = IMAGE_COMPRESSION_CONFIG.maxHeight / originalHeight;
+        const ratio = Math.min(widthRatio, heightRatio);
+
+        targetWidth = Math.round(originalWidth * ratio);
+        targetHeight = Math.round(originalHeight * ratio);
+      }
+
+      // 压缩图片
+      const compressedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [
+          {
+            resize: {
+              width: targetWidth,
+              height: targetHeight,
+            },
+          },
+        ],
+        {
+          compress: IMAGE_COMPRESSION_CONFIG.quality,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+
+      console.log(`图片压缩完成: ${originalWidth}x${originalHeight} -> ${targetWidth}x${targetHeight}`);
+      return compressedImage.uri;
+    } catch (error) {
+      console.error('图片压缩失败:', error);
+      // 如果压缩失败，返回原图
+      return uri;
+    }
+  }, []);
 
   // 选择图片
   const pickImages = useCallback(async () => {
+    if (isCompressing) return; // 防止重复操作
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: [4, 3],
       });
 
       if (!result.canceled) {
-        const newImages = result.assets.map(asset => asset.uri);
-        setImages(prev => [...prev, ...newImages].slice(0, 9)); // 最多9张图片
+        setIsCompressing(true);
+
+        try {
+          // 压缩所有选中的图片
+          const compressedImages = await Promise.all(
+            result.assets.map(async (asset, index) => {
+              console.log(`压缩图片 ${index + 1}/${result.assets.length}`);
+              return await compressImage(asset.uri);
+            })
+          );
+
+          setImages(prev => [...prev, ...compressedImages].slice(0, 9)); // 最多9张图片
+        } finally {
+          setIsCompressing(false);
+        }
       }
     } catch (error) {
       console.error('选择图片失败:', error);
       Alert.alert('错误', '选择图片失败，请重试');
+      setIsCompressing(false);
     }
-  }, []);
+  }, [compressImage, isCompressing]);
 
   // 拍照
   const takePhoto = useCallback(async () => {
+    if (isCompressing) return; // 防止重复操作
+
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 0.8,
         aspect: [4, 3],
       });
 
       if (!result.canceled) {
-        const newImage = result.assets[0].uri;
-        setImages(prev => [...prev, newImage].slice(0, 9)); // 最多9张图片
+        setIsCompressing(true);
+
+        try {
+          // 压缩拍摄的图片
+          const compressedImage = await compressImage(result.assets[0].uri);
+          setImages(prev => [...prev, compressedImage].slice(0, 9)); // 最多9张图片
+        } finally {
+          setIsCompressing(false);
+        }
       }
     } catch (error) {
       console.error('拍照失败:', error);
       Alert.alert('错误', '拍照失败，请重试');
+      setIsCompressing(false);
+    }
+  }, [compressImage, isCompressing]);
+
+  // 验证文件大小
+  const validateFileSize = useCallback(async (uri: string): Promise<boolean> => {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const sizeInKB = blob.size / 1024;
+
+      if (sizeInKB > IMAGE_COMPRESSION_CONFIG.maxSizeKB) {
+        Alert.alert(
+          '文件过大',
+          `图片大小为 ${Math.round(sizeInKB)}KB，超过限制 ${IMAGE_COMPRESSION_CONFIG.maxSizeKB}KB。请选择较小的图片或等待压缩完成。`
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('验证文件大小失败:', error);
+      return true; // 验证失败时允许继续
     }
   }, []);
 
@@ -68,12 +176,6 @@ export default function CreatePostScreen() {
       return;
     }
 
-    // 移除caption校验，允许空内容
-    // if (!caption.trim()) {
-    //   Alert.alert('提示', '请输入分享内容');
-    //   return;
-    // }
-
     if (images.length === 0) {
       Alert.alert('提示', '请选择至少一张图片');
       return;
@@ -82,6 +184,18 @@ export default function CreatePostScreen() {
     setIsSubmitting(true);
 
     try {
+      // 验证所有图片大小
+      console.log('开始验证图片大小...');
+      for (let i = 0; i < images.length; i++) {
+        const isValid = await validateFileSize(images[i]);
+        if (!isValid) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      console.log('图片大小验证通过，开始上传...');
+
       const requestData: CreateMealRecordRequest = {
         caption: caption.trim(),
         visibility: isPrivate ? 'PRIVATE' : 'FAMILY',
@@ -100,13 +214,24 @@ export default function CreatePostScreen() {
       } else {
         throw new Error(response.message || '发布失败');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('发布分享失败:', error);
-      Alert.alert('错误', '发布失败，请重试');
+
+      // 根据错误类型提供更具体的错误信息
+      let errorMessage = '发布失败，请重试';
+      if (error.message?.includes('文件过大') || error.message?.includes('file size')) {
+        errorMessage = '图片文件过大，请选择较小的图片或等待压缩完成';
+      } else if (error.message?.includes('网络') || error.message?.includes('network')) {
+        errorMessage = '网络连接失败，请检查网络后重试';
+      } else if (error.message?.includes('格式') || error.message?.includes('format')) {
+        errorMessage = '图片格式不支持，请选择JPG、PNG格式的图片';
+      }
+
+      Alert.alert('错误', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, caption, images, isPrivate]);
+  }, [token, caption, images, isPrivate, validateFileSize]);
 
   return (
     <>
@@ -163,13 +288,33 @@ export default function CreatePostScreen() {
           
           {/* 图片操作按钮 */}
           <View style={styles.imageActions}>
-            <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
-              <Ionicons name="camera" size={20} color="#007bff" />
-              <Text style={styles.actionButtonText}>拍照</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, isCompressing && styles.actionButtonDisabled]}
+              onPress={takePhoto}
+              disabled={isCompressing}
+            >
+              {isCompressing ? (
+                <ActivityIndicator size="small" color="#007bff" />
+              ) : (
+                <Ionicons name="camera" size={20} color="#007bff" />
+              )}
+              <Text style={styles.actionButtonText}>
+                {isCompressing ? '处理中...' : '拍照'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={pickImages}>
-              <Ionicons name="images" size={20} color="#007bff" />
-              <Text style={styles.actionButtonText}>从相册选择</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, isCompressing && styles.actionButtonDisabled]}
+              onPress={pickImages}
+              disabled={isCompressing}
+            >
+              {isCompressing ? (
+                <ActivityIndicator size="small" color="#007bff" />
+              ) : (
+                <Ionicons name="images" size={20} color="#007bff" />
+              )}
+              <Text style={styles.actionButtonText}>
+                {isCompressing ? '处理中...' : '从相册选择'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -307,6 +452,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#e3f2fd',
     borderRadius: 20,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#f5f5f5',
   },
   actionButtonText: {
     marginLeft: 8,
