@@ -74,9 +74,9 @@ export default function ArticleDetailScreen() {
             style={styles.contentImage}
             resizeMode="cover"
           />
-          {paragraph.caption && (
+          {/* {paragraph.caption && (
             <Text style={styles.imageCaption}>{paragraph.caption}</Text>
-          )}
+          )} */}
         </View>
       );
     }
@@ -128,13 +128,13 @@ export default function ArticleDetailScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 封面图片 */}
-        {article.cover_image && (
+        {/* {article.cover_image && (
           <Image
             source={{ uri: article.cover_image }}
             style={styles.coverImage}
             resizeMode="cover"
           />
-        )}
+        )} */}
 
         <View style={styles.articleContent}>
           {/* 文章标题 */}

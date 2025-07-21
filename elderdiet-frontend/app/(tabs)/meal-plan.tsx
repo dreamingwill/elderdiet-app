@@ -4,10 +4,11 @@ import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { useUser } from '@/contexts/UserContext';
-import { mealPlanAPI, MealPlan as APIMealPlan, Dish } from '@/services/api';
+import { mealPlanAPI, MealPlan as APIMealPlan, Dish, profileAPI, checkProfileCompleteness as checkProfileCompletenessUtil, ProfileCompletenessResult } from '@/services/api';
 import { gamificationAPI } from '@/services/api';
 import DishItem from '@/components/meal-plan/DishItem';
 import FamilySharingWall from '@/components/family-sharing/FamilySharingWall';
+import ProfileCompletenessAlert from '@/components/ProfileCompletenessAlert';
 import { router, useFocusEffect } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -30,11 +31,15 @@ export default function MealPlanScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token, isLoading: authLoading } = useAuth();
-  const { role } = useUser();
-  
+  const { role, uid } = useUser();
+
   // 新增树状态相关状态
   const [treeStatus, setTreeStatus] = useState<TreeStatusData | null>(null);
   const [isLoadingTreeStatus, setIsLoadingTreeStatus] = useState(false);
+
+  // 健康档案完整性相关状态
+  const [profileCompleteness, setProfileCompleteness] = useState<ProfileCompletenessResult | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // 获取今日膳食计划
   const loadTodayMealPlan = async () => {
@@ -135,9 +140,9 @@ export default function MealPlanScreen() {
   // 获取树的状态
   const loadTreeStatus = async () => {
     if (!token) return;
-    
+
     setIsLoadingTreeStatus(true);
-    
+
     try {
       const response = await gamificationAPI.getTreeStatus(token);
       if (response.success && response.data) {
@@ -147,6 +152,30 @@ export default function MealPlanScreen() {
       console.error('Failed to load tree status:', error);
     } finally {
       setIsLoadingTreeStatus(false);
+    }
+  };
+
+  // 检查健康档案完整性
+  const loadProfileCompleteness = async () => {
+    if (!token || !uid) return;
+
+    setIsLoadingProfile(true);
+
+    try {
+      const response = await profileAPI.getProfile(uid, token);
+      const profile = response.success && response.data ? response.data : null;
+      const completenessResult = checkProfileCompletenessUtil(profile);
+      setProfileCompleteness(completenessResult);
+    } catch (error) {
+      console.error('Failed to load profile for completeness check:', error);
+      // 如果获取档案失败，假设档案不完整
+      setProfileCompleteness({
+        isComplete: false,
+        missingFields: ['健康档案信息'],
+        completionPercentage: 0,
+      });
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
@@ -164,14 +193,16 @@ export default function MealPlanScreen() {
     if (!authLoading && token) {
       loadTodayMealPlan();
       loadTreeStatus();
+      loadProfileCompleteness();
     }
   }, [token, authLoading]);
   
-  // 页面重新获取焦点时刷新树状态（从拍照打卡页面返回时）
+  // 页面重新获取焦点时刷新树状态和健康档案完整性（从拍照打卡页面或编辑档案页面返回时）
   useFocusEffect(
     useCallback(() => {
       if (token) {
         loadTreeStatus();
+        loadProfileCompleteness();
       }
     }, [token])
   );
@@ -321,8 +352,13 @@ export default function MealPlanScreen() {
             <Text style={[styles.mealTabText, selectedMealType === 'dinner' && styles.activeTabText]}>晚餐</Text>
           </TouchableOpacity>
         </View>
-        
 
+        {/* 健康档案完整性提醒 */}
+        {profileCompleteness && !profileCompleteness.isComplete && (
+          <ProfileCompletenessAlert
+            completenessResult={profileCompleteness}
+          />
+        )}
 
         {/* 膳食方案内容 */}
         <View style={styles.mealPlanContainer}>

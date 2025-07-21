@@ -101,6 +101,53 @@ export interface ChronicConditionOption {
   label: string;
 }
 
+// 健康档案完整性检查结果
+export interface ProfileCompletenessResult {
+  isComplete: boolean;
+  missingFields: string[];
+  completionPercentage: number;
+}
+
+// 健康档案完整性检查工具函数
+export const checkProfileCompleteness = (profile: ProfileData | null): ProfileCompletenessResult => {
+  if (!profile) {
+    return {
+      isComplete: false,
+      missingFields: ['所有基本信息'],
+      completionPercentage: 0,
+    };
+  }
+
+  const missingFields: string[] = [];
+  const requiredFields = [
+    { key: 'name', label: '姓名' },
+    { key: 'age', label: '年龄' },
+    { key: 'gender', label: '性别' },
+    { key: 'region', label: '居住地区' },
+    { key: 'height', label: '身高' },
+    { key: 'weight', label: '体重' },
+  ];
+
+  // 检查必填字段
+  requiredFields.forEach(field => {
+    const value = profile[field.key as keyof ProfileData];
+    if (!value || value === '' || value === 0) {
+      missingFields.push(field.label);
+    }
+  });
+
+  // 计算完成度百分比
+  const totalFields = requiredFields.length;
+  const completedFields = totalFields - missingFields.length;
+  const completionPercentage = Math.round((completedFields / totalFields) * 100);
+
+  return {
+    isComplete: missingFields.length === 0,
+    missingFields,
+    completionPercentage,
+  };
+};
+
 // 聊天相关类型定义
 export interface ChatMessage {
   id: string;
