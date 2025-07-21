@@ -328,29 +328,41 @@ export default function CreatePostScreen() {
             placeholder="今天吃了什么好吃的？分享一下心情吧..."
             value={caption}
             onChangeText={setCaption}
-            maxLength={500}
+            maxLength={100}
             textAlignVertical="top"
           />
-          <Text style={styles.charCount}>{caption.length}/500</Text>
+          <Text style={styles.charCount}>{caption.length}/100</Text>
         </View>
 
         {/* 隐私设置 */}
         <View style={styles.privacySection}>
-          <View style={styles.privacyHeader}>
-            <Text style={styles.sectionTitle}>隐私设置</Text>
+          <View style={styles.privacyRow}>
+            <View style={styles.privacyContent}>
+              <View style={styles.privacyLabelRow}>
+                <Ionicons
+                  name={isPrivate ? "lock-closed" : "people"}
+                  size={16}
+                  color={isPrivate ? "#ff9500" : "#34c759"}
+                />
+                <Text style={styles.privacyLabel}>
+                  {isPrivate ? '仅自己可见' : '家庭可见'}
+                </Text>
+              </View>
+              <Text style={styles.privacyHint}>
+                {isPrivate
+                  ? '只有你能看到这条分享，家人不会收到提醒'
+                  : '发布时，家人可收到消息提醒'
+                }
+              </Text>
+            </View>
             <Switch
               value={isPrivate}
               onValueChange={setIsPrivate}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={isPrivate ? '#f5dd4b' : '#f4f3f4'}
+              trackColor={{ false: '#34c759', true: '#ff9500' }}
+              thumbColor="#fff"
+              ios_backgroundColor="#e0e0e0"
             />
           </View>
-          <Text style={styles.privacyDescription}>
-            {isPrivate 
-              ? '仅自己可见：只有你能看到这条分享' 
-              : '家庭可见：家庭成员都能看到这条分享'
-            }
-          </Text>
         </View>
 
         {/* 发布按钮 */}
@@ -375,14 +387,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    letterSpacing: 0.3,
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
   submitButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     minWidth: 60,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#d1d5db',
   },
   submitButtonText: {
     color: '#fff',
@@ -392,18 +431,18 @@ const styles = StyleSheet.create({
   imageSection: {
     backgroundColor: '#fff',
     margin: 16,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#212529',
+    color: '#1a1a1a',
     marginBottom: 16,
   },
   imageGrid: {
@@ -443,46 +482,52 @@ const styles = StyleSheet.create({
   imageActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 16,
+    marginTop: 20,
+    gap: 12,
   },
   actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 20,
+    paddingVertical: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   actionButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
     backgroundColor: '#f5f5f5',
   },
   actionButtonText: {
-    marginLeft: 8,
+    marginLeft: 6,
     fontSize: 14,
-    color: '#007bff',
+    color: '#495057',
     fontWeight: '500',
   },
   textSection: {
     backgroundColor: '#fff',
     margin: 16,
-    marginTop: 0,
-    borderRadius: 12,
-    padding: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    minHeight: 120,
-    backgroundColor: '#fff',
+    minHeight: 100,
+    backgroundColor: '#fafafa',
+    color: '#333',
   },
   charCount: {
     textAlign: 'right',
@@ -493,45 +538,62 @@ const styles = StyleSheet.create({
   privacySection: {
     backgroundColor: '#fff',
     margin: 16,
-    marginTop: 0,
-    borderRadius: 12,
-    padding: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  privacyHeader: {
+  privacyRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
   },
-  privacyDescription: {
-    fontSize: 14,
+  privacyContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  privacyLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  privacyLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212529',
+    marginLeft: 6,
+  },
+  privacyHint: {
+    fontSize: 13,
     color: '#6c757d',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   publishButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#007AFF',
     margin: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
+    marginTop: 24,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   publishButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#d1d5db',
+    shadowOpacity: 0,
   },
   publishButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
+    letterSpacing: 0.5,
   },
 }); 
