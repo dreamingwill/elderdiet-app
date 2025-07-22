@@ -182,6 +182,29 @@ public class MealRecordController {
     }
 
     /**
+     * 生成营养师评论（手动触发）
+     */
+    @PostMapping("/{recordId}/nutritionist-comment")
+    @PreAuthorize("hasAuthority('ROLE_ELDER')")
+    public ResponseEntity<ApiResponse<String>> generateNutritionistComment(
+            @PathVariable String recordId,
+            Authentication authentication) {
+
+        try {
+            User currentUser = getCurrentUser(authentication);
+
+            // 异步生成营养师评论
+            mealRecordService.generateNutritionistComment(recordId, currentUser.getId());
+
+            return ResponseEntity.ok(ApiResponse.success("营养师评论生成中，请稍后刷新查看", null));
+
+        } catch (Exception e) {
+            log.error("生成营养师评论失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
      * 获取当前认证用户
      */
     private User getCurrentUser(Authentication authentication) {

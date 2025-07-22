@@ -693,6 +693,9 @@ export interface MealRecord {
   caption: string;
   image_urls: string[];
   visibility: 'PRIVATE' | 'FAMILY';
+  share_with_nutritionist?: boolean; // 是否分享给营养师
+  nutritionist_comment?: string; // 营养师评论
+  nutritionist_comment_at?: string; // 营养师评论时间
   created_at: string;
   updated_at: string;
 }
@@ -703,6 +706,9 @@ export interface MealRecordResponse {
   caption: string;
   image_urls: string[];
   visibility: 'PRIVATE' | 'FAMILY';
+  share_with_nutritionist?: boolean; // 是否分享给营养师
+  nutritionist_comment?: string; // 营养师评论
+  nutritionist_comment_at?: string; // 营养师评论时间
   created_at: string;
   updated_at: string;
   user_info: {
@@ -779,6 +785,7 @@ export interface TreeStatus {
 export interface CreateMealRecordRequest {
   caption: string;
   visibility: 'PRIVATE' | 'FAMILY';
+  shareWithNutritionist?: boolean; // 是否分享给营养师
 }
 
 export interface CreateCommentRequest {
@@ -886,6 +893,19 @@ export const mealRecordsAPI = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ visibility }),
+    });
+  },
+
+  // 生成营养师评论
+  generateNutritionistComment: async (
+    recordId: string,
+    token: string
+  ): Promise<ApiResponse<string>> => {
+    return request(`/meal-records/${recordId}/nutritionist-comment`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
   },
 };

@@ -28,6 +28,11 @@ public class MealRecordResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 营养师评论相关字段
+    private Boolean shareWithNutritionist; // 是否分享给营养师
+    private String nutritionistComment; // 营养师评论内容
+    private LocalDateTime nutritionistCommentAt; // 营养师评论时间
+
     // 聚合信息
     private UserInfo userInfo; // 发布者信息
     private boolean likedByCurrentUser; // 当前用户是否点赞

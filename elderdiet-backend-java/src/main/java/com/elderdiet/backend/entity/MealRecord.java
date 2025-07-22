@@ -45,6 +45,14 @@ public class MealRecord {
     @Builder.Default
     private int commentsCount = 0; // 评论数
 
+    // 营养师评论相关字段
+    @Builder.Default
+    private Boolean shareWithNutritionist = false; // 是否分享给营养师
+
+    private String nutritionistComment; // 营养师评论内容
+
+    private LocalDateTime nutritionistCommentAt; // 营养师评论时间
+
     @CreatedDate
     private LocalDateTime createdAt;
 

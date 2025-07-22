@@ -33,6 +33,7 @@ public class MealRecordService {
     private final RecordLikeRepository recordLikeRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final GamificationService gamificationService;
+    private final NutritionistCommentService nutritionistCommentService;
 
     /**
      * 创建膳食记录
@@ -62,6 +63,8 @@ public class MealRecordService {
                 .imageUrls(imageUrls)
                 .caption(request.getCaption() != null ? request.getCaption() : "")
                 .visibility(request.getVisibility())
+                .shareWithNutritionist(
+                        request.getShareWithNutritionist() != null ? request.getShareWithNutritionist() : false)
                 .build();
 
         MealRecord savedRecord = mealRecordRepository.save(mealRecord);
@@ -72,6 +75,19 @@ public class MealRecordService {
         // TODO: 如果可见性为FAMILY，触发通知逻辑
         if (request.getVisibility() == RecordVisibility.FAMILY) {
             log.info("TODO: 触发家庭通知逻辑");
+        }
+
+        // 如果用户选择分享给营养师，异步生成营养师评论
+        if (savedRecord.getShareWithNutritionist()) {
+            log.info("用户选择分享给营养师，开始生成营养师评论");
+            // 异步执行，避免阻塞用户操作
+            new Thread(() -> {
+                try {
+                    nutritionistCommentService.generateNutritionistComment(savedRecord.getId(), user.getId());
+                } catch (Exception e) {
+                    log.error("异步生成营养师评论失败: {}", e.getMessage(), e);
+                }
+            }).start();
         }
 
         log.info("膳食记录创建成功: {}", savedRecord.getId());
@@ -246,6 +262,9 @@ public class MealRecordService {
                 .commentsCount(record.getCommentsCount())
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())
+                .shareWithNutritionist(record.getShareWithNutritionist())
+                .nutritionistComment(record.getNutritionistComment())
+                .nutritionistCommentAt(record.getNutritionistCommentAt())
                 .userInfo(userInfo)
                 .likedByCurrentUser(likedByCurrentUser)
                 .comments(comments)
@@ -274,5 +293,27 @@ public class MealRecordService {
 
         log.info("膳食记录 {} 的可见性已更新为 {}", recordId, request.getVisibility());
         return updatedRecord;
+    }
+
+    /**
+     * 生成营养师评论（公开方法，供Controller调用）
+     */
+    public void generateNutritionistComment(String recordId, String userId) {
+        // 异步执行，避免阻塞用户操作
+        new Thread(() -> {
+            try {
+                nutritionistCommentService.generateNutritionistComment(recordId, userId);
+            } catch (Exception e) {
+                log.error("异步生成营养师评论失败: {}", e.getMessage(), e);
+            }
+        }).start();
+    }
+
+    /**
+     * 根据ID获取膳食记录
+     */
+    public MealRecord getMealRecordById(String recordId) {
+        return mealRecordRepository.findById(recordId)
+                .orElseThrow(() -> new RuntimeException("膳食记录不存在"));
     }
 }

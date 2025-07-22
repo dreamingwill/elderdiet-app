@@ -19,4 +19,6 @@ public class MealRecordRequest {
 
     @NotNull(message = "可见性不能为空")
     private RecordVisibility visibility; // 可见性
+
+    private Boolean shareWithNutritionist; // 是否分享给营养师，可为空，默认false
 }
