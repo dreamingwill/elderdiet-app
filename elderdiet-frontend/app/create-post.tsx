@@ -24,6 +24,7 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [shareWithNutritionist, setShareWithNutritionist] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
@@ -199,13 +200,18 @@ export default function CreatePostScreen() {
       const requestData: CreateMealRecordRequest = {
         caption: caption.trim(),
         visibility: isPrivate ? 'PRIVATE' : 'FAMILY',
+        shareWithNutritionist,
       };
 
       // 直接传递URI数组，不再转换为File对象
       const response = await mealRecordsAPI.createMealRecord(requestData, images, token);
 
       if (response.success) {
-        Alert.alert('成功', '分享发布成功！', [
+        const successMessage = shareWithNutritionist
+          ? '分享发布成功！营养师正在为您生成评论，请稍后查看分享墙'
+          : '分享发布成功！';
+
+        Alert.alert('成功', successMessage, [
           {
             text: '确定',
             onPress: () => router.back(),
@@ -231,7 +237,7 @@ export default function CreatePostScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, caption, images, isPrivate, validateFileSize]);
+  }, [token, caption, images, isPrivate, shareWithNutritionist, validateFileSize]);
 
   return (
     <>
@@ -359,6 +365,37 @@ export default function CreatePostScreen() {
               value={isPrivate}
               onValueChange={setIsPrivate}
               trackColor={{ false: '#34c759', true: '#ff9500' }}
+              thumbColor="#fff"
+              ios_backgroundColor="#e0e0e0"
+            />
+          </View>
+        </View>
+
+        {/* 营养师评论设置 */}
+        <View style={styles.nutritionistSection}>
+          <View style={styles.nutritionistRow}>
+            <View style={styles.nutritionistContent}>
+              <View style={styles.nutritionistLabelRow}>
+                <Ionicons
+                  name="medical"
+                  size={16}
+                  color="#28a745"
+                />
+                <Text style={styles.nutritionistLabel}>
+                  分享给营养师
+                </Text>
+              </View>
+              <Text style={styles.nutritionistHint}>
+                {shareWithNutritionist
+                  ? 'AI营养师将为您的饮食提供专业评价（约需10秒）'
+                  : '开启后，AI营养师会分析您的饮食并给出建议'
+                }
+              </Text>
+            </View>
+            <Switch
+              value={shareWithNutritionist}
+              onValueChange={setShareWithNutritionist}
+              trackColor={{ false: '#e0e0e0', true: '#28a745' }}
               thumbColor="#fff"
               ios_backgroundColor="#e0e0e0"
             />
@@ -568,6 +605,43 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   privacyHint: {
+    fontSize: 13,
+    color: '#6c757d',
+    lineHeight: 18,
+  },
+  nutritionistSection: {
+    backgroundColor: '#fff',
+    margin: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  nutritionistRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  nutritionistContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  nutritionistLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  nutritionistLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#212529',
+    marginLeft: 6,
+  },
+  nutritionistHint: {
     fontSize: 13,
     color: '#6c757d',
     lineHeight: 18,

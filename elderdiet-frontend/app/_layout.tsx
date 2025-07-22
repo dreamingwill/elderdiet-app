@@ -118,15 +118,21 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
             },
           }} 
         />
-        <Stack.Screen 
-          name="api-test" 
-          options={{ 
+        <Stack.Screen
+          name="api-test"
+          options={{
             headerShown: true,
             title: 'API 测试',
             headerTitleStyle: {
               fontSize: 20,
             },
-          }} 
+          }}
+        />
+        <Stack.Screen
+          name="create-post"
+          options={{
+            headerShown: false, // 在组件内部自定义header
+          }}
         />
       </Stack>
     </ThemeProvider>

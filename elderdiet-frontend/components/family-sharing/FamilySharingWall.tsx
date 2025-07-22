@@ -128,6 +128,18 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
     );
   }, []);
 
+  // 处理记录更新（营养师评论等）
+  const handleRecordUpdate = useCallback((recordId: string, updatedRecord: MealRecordResponse) => {
+    setRecords(prevRecords =>
+      prevRecords.map(record => {
+        if (record.id === recordId) {
+          return updatedRecord;
+        }
+        return record;
+      })
+    );
+  }, []);
+
   // 处理创建新分享
   const handleCreatePost = useCallback(() => {
     if (onCreatePost) {
@@ -144,6 +156,7 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
       onLikeToggle={handleLikeToggle}
       onCommentAdded={handleCommentAdded}
       onVisibilityToggle={handleVisibilityToggle}
+      onRecordUpdate={handleRecordUpdate}
     />
   );
 

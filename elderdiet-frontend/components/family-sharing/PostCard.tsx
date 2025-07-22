@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,15 +24,66 @@ interface PostCardProps {
   onLikeToggle: (recordId: string) => void;
   onCommentAdded: (recordId: string, newComment: CommentInfo) => void;
   onVisibilityToggle?: (recordId: string, newVisibility: 'PRIVATE' | 'FAMILY') => void;
+  onRecordUpdate?: (recordId: string, updatedRecord: MealRecordResponse) => void;
 }
 
-export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisibilityToggle }: PostCardProps) {
+export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisibilityToggle, onRecordUpdate }: PostCardProps) {
   const { token, uid } = useAuth();
   const [isLiking, setIsLiking] = useState(false);
   const [isCommentModalVisible, setIsCommentModalVisible] = useState(false);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
+  const [isCheckingComment, setIsCheckingComment] = useState(false);
+  const [localRecord, setLocalRecord] = useState(record);
+
+  // 检查营养师评论是否生成
+  useEffect(() => {
+    // 如果记录分享给了营养师但还没有评论，定期检查
+    if (localRecord.share_with_nutritionist && !localRecord.nutritionist_comment && token) {
+      const checkComment = async () => {
+        setIsCheckingComment(true);
+        try {
+          // 重新获取feed来检查评论是否生成
+          const response = await mealRecordsAPI.getFeed(token);
+          if (response.success && response.data) {
+            const updatedRecord = response.data.find(r => r.id === localRecord.id);
+            if (updatedRecord && updatedRecord.nutritionist_comment) {
+              setLocalRecord(updatedRecord);
+              if (onRecordUpdate) {
+                onRecordUpdate(localRecord.id, updatedRecord);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('检查营养师评论失败:', error);
+        } finally {
+          setIsCheckingComment(false);
+        }
+      };
+
+      // 立即检查一次
+      checkComment();
+
+      // 每10秒检查一次，最多检查6次（1分钟）
+      let checkCount = 0;
+      const interval = setInterval(() => {
+        checkCount++;
+        if (checkCount >= 6) {
+          clearInterval(interval);
+          return;
+        }
+        checkComment();
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [localRecord.share_with_nutritionist, localRecord.nutritionist_comment, localRecord.id, token, onRecordUpdate]);
+
+  // 更新本地记录当props变化时
+  useEffect(() => {
+    setLocalRecord(record);
+  }, [record]);
 
   // 处理点赞
   const handleLike = async () => {
@@ -40,8 +91,8 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
     
     setIsLiking(true);
     try {
-      await mealRecordsAPI.toggleLike(record.id, token);
-      onLikeToggle(record.id);
+      await mealRecordsAPI.toggleLike(localRecord.id, token);
+      onLikeToggle(localRecord.id);
     } catch (error) {
       console.error('点赞失败:', error);
       Alert.alert('错误', '点赞失败，请重试');
@@ -57,7 +108,7 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
 
   // 处理评论添加
   const handleCommentAdded = (newComment: CommentInfo) => {
-    onCommentAdded(record.id, newComment);
+    onCommentAdded(localRecord.id, newComment);
     setIsCommentModalVisible(false);
   };
 
@@ -72,16 +123,16 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
     if (!token || isUpdatingVisibility || !uid) return;
 
     // 只有记录的创建者可以修改可见性
-    if (record.user_id !== uid) return;
+    if (localRecord.user_id !== uid) return;
 
     setIsUpdatingVisibility(true);
     try {
-      const newVisibility = record.visibility === 'PRIVATE' ? 'FAMILY' : 'PRIVATE';
-      await mealRecordsAPI.updateRecordVisibility(record.id, newVisibility, token);
+      const newVisibility = localRecord.visibility === 'PRIVATE' ? 'FAMILY' : 'PRIVATE';
+      await mealRecordsAPI.updateRecordVisibility(localRecord.id, newVisibility, token);
 
       // 调用父组件的回调函数
       if (onVisibilityToggle) {
-        onVisibilityToggle(record.id, newVisibility);
+        onVisibilityToggle(localRecord.id, newVisibility);
       }
     } catch (error) {
       console.error('切换可见性失败:', error);
@@ -115,14 +166,14 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
 
   // 渲染图片网格
   const renderImageGrid = () => {
-    if (record.image_urls.length === 0) return null;
+    if (localRecord.image_urls.length === 0) return null;
     
     const imageSize = 100; // 固定图片大小
     const spacing = 8;
     
     return (
       <View style={styles.imageGrid}>
-        {record.image_urls.slice(0, 3).map((imageUrl, index) => (
+        {localRecord.image_urls.slice(0, 3).map((imageUrl, index) => (
           <TouchableOpacity
             key={index}
             style={[
@@ -151,23 +202,23 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
       {/* 用户信息头部 */}
       <View style={styles.userHeader}>
         <View style={styles.userInfo}>
-          <UserAvatar 
-            avatar={record.user_info?.avatar}
-            name={record.user_info?.username || '用户'}
+          <UserAvatar
+            avatar={localRecord.user_info?.avatar}
+            name={localRecord.user_info?.username || '用户'}
             size={44}
             showBorder={true}
           />
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>{record.user_info?.username || '用户'}</Text>
-            <Text style={styles.postTime}>{formatTime(record.created_at)}</Text>
+            <Text style={styles.userName}>{localRecord.user_info?.username || '用户'}</Text>
+            <Text style={styles.postTime}>{formatTime(localRecord.created_at)}</Text>
           </View>
         </View>
         {/* 可见性切换按钮 - 只有记录创建者可以看到 */}
-        {record.user_id === uid && (
+        {localRecord.user_id === uid && (
           <TouchableOpacity
             style={[
               styles.visibilityBadge,
-              record.visibility === 'FAMILY' ? styles.visibilityBadgeFamily : styles.visibilityBadgePrivate
+              localRecord.visibility === 'FAMILY' ? styles.visibilityBadgeFamily : styles.visibilityBadgePrivate
             ]}
             onPress={handleVisibilityToggle}
             disabled={isUpdatingVisibility}
@@ -177,13 +228,13 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
             ) : (
               <>
                 <Ionicons
-                  name={record.visibility === 'FAMILY' ? 'people' : 'lock-closed'}
+                  name={localRecord.visibility === 'FAMILY' ? 'people' : 'lock-closed'}
                   size={12}
                   color="#fff"
                   style={styles.visibilityIcon}
                 />
                 <Text style={styles.visibilityBadgeText}>
-                  {record.visibility === 'FAMILY' ? '家庭可见' : '仅自己'}
+                  {localRecord.visibility === 'FAMILY' ? '家庭可见' : '仅自己'}
                 </Text>
               </>
             )}
@@ -192,19 +243,51 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
       </View>
 
       {/* 文字内容 */}
-      {record.caption && (
+      {localRecord.caption && (
         <View style={styles.contentSection}>
-          <Text style={styles.captionText}>{record.caption}</Text>
+          <Text style={styles.captionText}>{localRecord.caption}</Text>
         </View>
       )}
 
       {/* 图片网格 */}
       {renderImageGrid()}
 
+      {/* 营养师评论 */}
+      {localRecord.share_with_nutritionist && (
+        <View style={styles.nutritionistSection}>
+          <View style={styles.nutritionistHeader}>
+            <Ionicons name="medical" size={16} color="#28a745" />
+            <Text style={styles.nutritionistTitle}>营养师评价</Text>
+            {isCheckingComment && !localRecord.nutritionist_comment && (
+              <ActivityIndicator size="small" color="#28a745" style={styles.loadingIndicator} />
+            )}
+          </View>
+
+          {localRecord.nutritionist_comment ? (
+            <View style={styles.nutritionistCommentContainer}>
+              <Text style={styles.nutritionistComment}>
+                {localRecord.nutritionist_comment}
+              </Text>
+              {localRecord.nutritionist_comment_at && (
+                <Text style={styles.nutritionistTime}>
+                  {formatTime(localRecord.nutritionist_comment_at)}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.nutritionistPending}>
+              <Text style={styles.nutritionistPendingText}>
+                {isCheckingComment ? '营养师正在分析中...' : '等待营养师评价'}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* 用户互动评论 */}
-      {record.comments.length > 0 && (
+      {localRecord.comments.length > 0 && (
         <View style={styles.commentsSection}>
-          {record.comments.slice(0, 2).map((comment) => (
+          {localRecord.comments.slice(0, 2).map((comment) => (
             <View key={comment.id} style={styles.commentItem}>
               <View style={styles.commentHeader}>
                 <UserAvatar
@@ -220,10 +303,10 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
               <Text style={styles.commentText}>{comment.text}</Text>
             </View>
           ))}
-          {record.comments.length > 2 && (
+          {localRecord.comments.length > 2 && (
             <TouchableOpacity onPress={handleComment}>
               <Text style={styles.moreComments}>
-                查看更多评论 ({record.comments_count}条)
+                查看更多评论 ({localRecord.comments_count}条)
               </Text>
             </TouchableOpacity>
           )}
@@ -241,17 +324,17 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
             <ActivityIndicator size="small" color="#ff6b6b" />
           ) : (
             <Ionicons
-              name={record.liked_by_current_user ? "heart" : "heart-outline"}
+              name={localRecord.liked_by_current_user ? "heart" : "heart-outline"}
               size={20}
-              color={record.liked_by_current_user ? "#ff6b6b" : "#999"}
+              color={localRecord.liked_by_current_user ? "#ff6b6b" : "#999"}
             />
           )}
-          {record.likes_count > 0 && (
+          {localRecord.likes_count > 0 && (
             <Text style={[
               styles.actionText,
-              record.liked_by_current_user && styles.actionTextActive
+              localRecord.liked_by_current_user && styles.actionTextActive
             ]}>
-              {record.likes_count}
+              {localRecord.likes_count}
             </Text>
           )}
         </TouchableOpacity>
@@ -261,9 +344,9 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
           onPress={handleComment}
         >
           <Ionicons name="chatbubble-outline" size={20} color="#999" />
-          {record.comments_count > 0 && (
+          {localRecord.comments_count > 0 && (
             <Text style={styles.actionText}>
-              {record.comments_count}
+              {localRecord.comments_count}
             </Text>
           )}
         </TouchableOpacity>
@@ -272,16 +355,16 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
       {/* 评论模态框 */}
       <CommentModal
         visible={isCommentModalVisible}
-        recordId={record.id}
+        recordId={localRecord.id}
         onClose={() => setIsCommentModalVisible(false)}
         onCommentAdded={handleCommentAdded}
-        initialComments={record.comments}
+        initialComments={localRecord.comments}
       />
 
       {/* 图片查看器 */}
       <ImageViewer
         visible={isImageViewerVisible}
-        images={record.image_urls}
+        images={localRecord.image_urls}
         initialIndex={selectedImageIndex}
         onClose={() => setIsImageViewerVisible(false)}
       />
@@ -473,4 +556,61 @@ const styles = StyleSheet.create({
   actionTextActive: {
     color: '#ff6b6b',
   },
-}); 
+  nutritionistSection: {
+    backgroundColor: '#f8fff8',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e8f5e8',
+  },
+  nutritionistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  nutritionistTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#28a745',
+    marginLeft: 6,
+    flex: 1,
+  },
+  loadingIndicator: {
+    marginLeft: 8,
+  },
+  nutritionistCommentContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#28a745',
+  },
+  nutritionistComment: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#2d5a2d',
+    fontWeight: '500',
+  },
+  nutritionistTime: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  nutritionistPending: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e8f5e8',
+    borderStyle: 'dashed',
+  },
+  nutritionistPendingText: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+});
