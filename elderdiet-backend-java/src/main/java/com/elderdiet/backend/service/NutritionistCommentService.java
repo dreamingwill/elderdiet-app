@@ -172,23 +172,26 @@ public class NutritionistCommentService {
                             .build());
 
             AiApiRequest request = AiApiRequest.builder()
-                    .model(aiProperties.getModel())
+                    .model(aiProperties.getModel(AiConfig.TaskType.NUTRITION_COMMENT))
                     .messages(messages)
-                    .temperature(aiProperties.getTemperature())
+                    .temperature(aiProperties.getTemperature(AiConfig.TaskType.NUTRITION_COMMENT))
                     .build();
 
             // 设置请求头
+            AiConfig.TaskType taskType = AiConfig.TaskType.NUTRITION_COMMENT;
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(aiProperties.getKey());
+            headers.setBearerAuth(aiProperties.getKey(taskType));
 
             // 创建请求实体
             HttpEntity<AiApiRequest> requestEntity = new HttpEntity<>(request, headers);
 
             // 发送POST请求
-            log.info("发送POST请求到: {} (提供商: {})", aiProperties.getUrl(), aiProperties.getProvider());
+            String apiUrl = aiProperties.getUrl(taskType);
+            String model = aiProperties.getModel(taskType);
+            log.info("发送POST请求到: {} (任务: {}, 模型: {})", apiUrl, taskType, model);
             ResponseEntity<AiApiResponse> responseEntity = restTemplate.postForEntity(
-                    aiProperties.getUrl(),
+                    apiUrl,
                     requestEntity,
                     AiApiResponse.class);
 

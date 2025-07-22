@@ -267,21 +267,26 @@ public class MealRecommendationService {
                         .build());
 
         AiApiRequest request = AiApiRequest.builder()
-                .model(aiProperties.getModel())
+                .model(aiProperties.getModel(AiConfig.TaskType.MEAL_RECOMMENDATION))
                 .messages(messages)
-                .temperature(aiProperties.getTemperature())
+                .temperature(aiProperties.getTemperature(AiConfig.TaskType.MEAL_RECOMMENDATION))
                 .build();
 
         // 设置请求头
+        AiConfig.TaskType taskType = AiConfig.TaskType.MEAL_RECOMMENDATION;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(aiProperties.getKey());
+        headers.setBearerAuth(aiProperties.getKey(taskType));
 
         HttpEntity<AiApiRequest> entity = new HttpEntity<>(request, headers);
 
         // 发送请求
+        String apiUrl = aiProperties.getUrl(taskType);
+        String model = aiProperties.getModel(taskType);
+        log.info("调用膳食推荐AI API: {} (模型: {})", apiUrl, model);
+
         ResponseEntity<String> response = restTemplate.exchange(
-                aiProperties.getUrl(),
+                apiUrl,
                 HttpMethod.POST,
                 entity,
                 String.class);

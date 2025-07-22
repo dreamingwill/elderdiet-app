@@ -2,10 +2,18 @@
 
 ## 概述
 
-ElderDiet 后端现在支持多个 AI 提供商，可以方便地在不同的 AI 模型之间切换。目前支持：
+ElderDiet 后端现在支持多个 AI 提供商，并且可以根据不同的任务类型使用不同的模型。目前支持：
 
 1. **钱多多 API** - 支持 GPT-4o、Claude 等多种模型
-2. **智谱 AI** - 支持 GLM-4V-Flash（免费）、GLM-4V-Plus 等模型
+2. **智谱 AI** - 支持 GLM-4V-Flash（免费）、GLM-4V-Plus、GLM-4-Flash-250414 等模型
+
+## 任务类型
+
+系统支持三种任务类型，每种任务可以配置不同的模型：
+
+1. **聊天任务 (chat)** - 支持多模态，推荐使用 `glm-4v-flash`
+2. **膳食推荐 (meal-recommendation)** - 纯文本任务，推荐使用 `GLM-4-Flash-250414`
+3. **营养评论 (nutrition-comment)** - 支持多模态，推荐使用 `glm-4v-flash`
 
 ## 配置方式
 
@@ -14,13 +22,21 @@ ElderDiet 后端现在支持多个 AI 提供商，可以方便地在不同的 AI
 在环境变量中设置以下参数：
 
 ```bash
-# 选择AI提供商 (qianduoduo 或 zhipu)
+# 默认AI提供商 (qianduoduo 或 zhipu)
 AI_PROVIDER=zhipu
 
-# 钱多多API配置
-QIANDUODUO_API_KEY=your-qianduoduo-api-key
+# 按任务类型配置提供商（可选）
+AI_CHAT_PROVIDER=zhipu
+AI_MEAL_PROVIDER=zhipu
+AI_NUTRITION_PROVIDER=zhipu
 
-# 智谱AI配置
+# 按任务类型配置模型（可选）
+AI_CHAT_MODEL=glm-4v-flash
+AI_MEAL_MODEL=GLM-4-Flash-250414
+AI_NUTRITION_MODEL=glm-4v-flash
+
+# API密钥配置
+QIANDUODUO_API_KEY=your-qianduoduo-api-key
 ZHIPU_API_KEY=your-zhipu-api-key
 ```
 
@@ -31,8 +47,28 @@ ZHIPU_API_KEY=your-zhipu-api-key
 ```yaml
 ai:
   api:
-    # 当前使用的API提供商
+    # 默认使用的API提供商
     provider: ${AI_PROVIDER:zhipu}
+
+    # 按任务类型配置模型
+    tasks:
+      # 聊天任务 - 支持多模态
+      chat:
+        provider: ${AI_CHAT_PROVIDER:zhipu}
+        model: ${AI_CHAT_MODEL:glm-4v-flash}
+        temperature: 0.7
+
+      # 膳食推荐任务 - 纯文本
+      meal-recommendation:
+        provider: ${AI_MEAL_PROVIDER:zhipu}
+        model: ${AI_MEAL_MODEL:GLM-4-Flash-250414}
+        temperature: 0.7
+
+      # 营养评论任务 - 支持多模态
+      nutrition-comment:
+        provider: ${AI_NUTRITION_PROVIDER:zhipu}
+        model: ${AI_NUTRITION_MODEL:glm-4v-flash}
+        temperature: 0.7
 
     # 钱多多API配置
     qianduoduo:
@@ -60,7 +96,8 @@ ai:
 
 ### 智谱 AI
 
-- `glm-4v-flash` - 免费的视觉语言模型，适用于单图像理解
+- `glm-4v-flash` - 免费的视觉语言模型，适用于单图像理解（推荐用于聊天和营养评论）
+- `GLM-4-Flash-250414` - 高效的纯文本模型（推荐用于膳食推荐）
 - `glm-4v-plus-0111` - 高级视觉语言模型，支持多图像和视频理解
 
 ## 切换 AI 提供商

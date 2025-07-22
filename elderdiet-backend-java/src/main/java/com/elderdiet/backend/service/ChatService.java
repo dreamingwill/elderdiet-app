@@ -225,9 +225,9 @@ public class ChatService {
         }
 
         return AiApiRequest.builder()
-                .model(aiProperties.getModel())
+                .model(aiProperties.getModel(AiConfig.TaskType.CHAT))
                 .messages(messages)
-                .temperature(aiProperties.getTemperature())
+                .temperature(aiProperties.getTemperature(AiConfig.TaskType.CHAT))
                 .build();
     }
 
@@ -308,10 +308,12 @@ public class ChatService {
      */
     private String callAiApi(AiApiRequest request) {
         try {
-            String apiUrl = aiProperties.getUrl();
-            String apiKey = aiProperties.getKey();
+            AiConfig.TaskType taskType = AiConfig.TaskType.CHAT;
+            String apiUrl = aiProperties.getUrl(taskType);
+            String apiKey = aiProperties.getKey(taskType);
+            String model = aiProperties.getModel(taskType);
 
-            log.info("开始调用AI API: {} (提供商: {})", apiUrl, aiProperties.getProvider());
+            log.info("开始调用AI API: {} (任务: {}, 模型: {})", apiUrl, taskType, model);
 
             // 验证API配置
             if (apiKey == null || apiKey.equals("your-api-key-here") || apiKey.equals("your-zhipu-api-key-here")) {
