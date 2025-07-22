@@ -24,7 +24,7 @@ export default function CreatePostScreen() {
   const [caption, setCaption] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [shareWithNutritionist, setShareWithNutritionist] = useState(false);
+  const [shareWithNutritionist, setShareWithNutritionist] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
@@ -346,25 +346,25 @@ export default function CreatePostScreen() {
             <View style={styles.privacyContent}>
               <View style={styles.privacyLabelRow}>
                 <Ionicons
-                  name={isPrivate ? "lock-closed" : "people"}
+                  name={!isPrivate ? "people" : "lock-closed"}
                   size={16}
-                  color={isPrivate ? "#ff9500" : "#34c759"}
+                  color={!isPrivate ? "#34c759" : "#ff9500"}
                 />
                 <Text style={styles.privacyLabel}>
-                  {isPrivate ? '仅自己可见' : '家庭可见'}
+                  {!isPrivate ? '家庭可见' : '仅自己可见'}
                 </Text>
               </View>
               <Text style={styles.privacyHint}>
-                {isPrivate
-                  ? '只有你能看到这条分享，家人不会收到提醒'
-                  : '发布时，家人可收到消息提醒'
+                {!isPrivate
+                  ? '发布后，家人可收到消息提醒'
+                  : '你能看到这条分享，家人不能看到'
                 }
               </Text>
             </View>
             <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: '#34c759', true: '#ff9500' }}
+              value={!isPrivate}
+              onValueChange={(value) => setIsPrivate(!value)}
+              trackColor={{ false: '#ff9500', true: '#34c759' }}
               thumbColor="#fff"
               ios_backgroundColor="#e0e0e0"
             />
@@ -379,7 +379,7 @@ export default function CreatePostScreen() {
                 <Ionicons
                   name="medical"
                   size={16}
-                  color="#28a745"
+                  color="#34c759"
                 />
                 <Text style={styles.nutritionistLabel}>
                   分享给营养师
@@ -387,15 +387,15 @@ export default function CreatePostScreen() {
               </View>
               <Text style={styles.nutritionistHint}>
                 {shareWithNutritionist
-                  ? 'AI营养师将为您的饮食提供专业评价（约需10秒）'
-                  : '开启后，AI营养师会分析您的饮食并给出建议'
+                  ? 'AI营养师将为您的饮食提供专业评价'
+                  : '开启后，AI营养师会分析您的饮食'
                 }
               </Text>
             </View>
             <Switch
               value={shareWithNutritionist}
               onValueChange={setShareWithNutritionist}
-              trackColor={{ false: '#e0e0e0', true: '#28a745' }}
+              trackColor={{ false: '#e0e0e0', true: '#34c759' }}
               thumbColor="#fff"
               ios_backgroundColor="#e0e0e0"
             />
