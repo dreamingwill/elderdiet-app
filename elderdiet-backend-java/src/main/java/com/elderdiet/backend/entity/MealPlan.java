@@ -51,9 +51,6 @@ public class MealPlan {
     @Size(max = 800, message = "整体推荐理由不能超过800字符")
     private String generatedReason; // 整体推荐理由
 
-    @Size(max = 300, message = "健康建议不能超过300字符")
-    private String healthTips; // 健康建议
-
     @Builder.Default
     private String status = "active"; // 状态: active, archived
 

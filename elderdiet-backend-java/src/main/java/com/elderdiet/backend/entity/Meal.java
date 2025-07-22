@@ -33,9 +33,6 @@ public class Meal {
     @Size(max = 300, message = "营养摘要不能超过300字符")
     private String nutritionSummary; // 营养摘要
 
-    @Size(max = 200, message = "用餐建议不能超过200字符")
-    private String mealTips; // 用餐建议
-
     /**
      * 获取餐次类型的中文描述
      */

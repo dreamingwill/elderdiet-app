@@ -31,7 +31,6 @@ public class MealPlanResponse {
     private Meal dinner;
 
     private String generatedReason;
-    private String healthTips;
     private String status;
     private Boolean liked;
 
@@ -53,7 +52,6 @@ public class MealPlanResponse {
                 .lunch(mealPlan.getLunch())
                 .dinner(mealPlan.getDinner())
                 .generatedReason(mealPlan.getGeneratedReason())
-                .healthTips(mealPlan.getHealthTips())
                 .status(mealPlan.getStatus())
                 .liked(mealPlan.getLiked())
                 .createdAt(mealPlan.getCreatedAt())

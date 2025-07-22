@@ -343,17 +343,13 @@ export const profileAPI = {
 // 膳食计划相关类型定义
 export interface Dish {
   name: string;
-  ingredients: string[];
   recommendation_reason: string;
-  preparation_notes: string;
-  tags: string[];
 }
 
 export interface MealInfo {
   meal_type: string;
   dishes: Dish[];
   nutrition_summary: string;
-  meal_tips: string;
   dish_count: number;
   meal_type_label: string;
 }
@@ -366,7 +362,6 @@ export interface MealPlan {
   lunch: MealInfo;
   dinner: MealInfo;
   generated_reason: string;
-  health_tips: string;
   status: string;
   liked: boolean;
   created_at: string;

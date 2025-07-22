@@ -149,6 +149,8 @@ public class MealRecommendationService {
         prompt.append("6. 制作简单：考虑老年人的制作能力\n");
         prompt.append("7. 菜品数量：为早餐、午餐和晚餐各生成3道菜品\n");
         prompt.append("8. 推荐理由字数：每道菜品的推荐理由必须严格控制在80~120汉字之间，不得超出此范围\n");
+        prompt.append("9. 多样化要求：每次生成的菜品都应该有所不同，避免重复，尽量选择不同的食材搭配和烹饪方式\n");
+        prompt.append("10. 创新性：在保证营养和健康的前提下，适当融入一些创新的搭配和做法，让膳食更有趣味性\n");
 
         prompt.append("\n");
 
@@ -177,6 +179,7 @@ public class MealRecommendationService {
 
         prompt.append("请确保每个菜品都有详细的推荐理由，说明为什么这道菜适合我的健康状况。");
         prompt.append("重要提醒：每道菜品的推荐理由必须严格控制在80~120汉字之间，请仔细计算字数确保符合要求。");
+        prompt.append("请尽量选择不同的食材组合和烹饪方式，让每次的膳食计划都有新意和变化。");
 
         return prompt.toString();
     }
@@ -225,7 +228,8 @@ public class MealRecommendationService {
             prompt.append("特殊要求：").append(request.getSpecialRequirement()).append("\n");
         }
 
-        prompt.append("\n请返回一道新的菜品，推荐理由必须严格控制在80~120汉字之间。格式如下：");
+        prompt.append("\n请返回一道新的菜品，推荐理由必须严格控制在80~120汉字之间。");
+        prompt.append("请尽量选择与原菜品不同的食材和烹饪方式，增加膳食的多样性。格式如下：");
         prompt.append(getDishJsonFormat());
 
         return prompt.toString();
@@ -247,6 +251,7 @@ public class MealRecommendationService {
 
         prompt.append("请推荐一道营养相当、适合我健康状况的菜品。");
         prompt.append("重要提醒：推荐理由必须严格控制在80~120汉字之间，请仔细计算字数确保符合要求。");
+        prompt.append("请选择与原菜品不同的食材和做法，让膳食更加丰富多样。");
 
         return prompt.toString();
     }
@@ -342,7 +347,6 @@ public class MealRecommendationService {
                 .lunch(lunch)
                 .dinner(dinner)
                 .generatedReason(jsonNode.get("generatedReason").asText())
-                .healthTips(jsonNode.has("healthTips") ? jsonNode.get("healthTips").asText() : null)
                 .build();
     }
 
@@ -364,7 +368,6 @@ public class MealRecommendationService {
                 .mealType(mealType)
                 .dishes(dishes)
                 .nutritionSummary(mealNode.has("nutritionSummary") ? mealNode.get("nutritionSummary").asText() : null)
-                .mealTips(mealNode.has("mealTips") ? mealNode.get("mealTips").asText() : null)
                 .build();
     }
 
@@ -372,28 +375,9 @@ public class MealRecommendationService {
      * 从JSON解析菜品
      */
     private Dish parseDishFromJson(JsonNode dishNode) {
-        List<String> ingredients = new ArrayList<>();
-        JsonNode ingredientsNode = dishNode.get("ingredients");
-        if (ingredientsNode != null && ingredientsNode.isArray()) {
-            for (JsonNode ingredient : ingredientsNode) {
-                ingredients.add(ingredient.asText());
-            }
-        }
-
-        List<String> tags = new ArrayList<>();
-        JsonNode tagsNode = dishNode.get("tags");
-        if (tagsNode != null && tagsNode.isArray()) {
-            for (JsonNode tag : tagsNode) {
-                tags.add(tag.asText());
-            }
-        }
-
         return Dish.builder()
                 .name(dishNode.get("name").asText())
-                .ingredients(ingredients)
                 .recommendationReason(dishNode.get("recommendationReason").asText())
-                .preparationNotes(dishNode.has("preparationNotes") ? dishNode.get("preparationNotes").asText() : null)
-                .tags(tags)
                 .build();
     }
 
@@ -425,7 +409,6 @@ public class MealRecommendationService {
                     "dishes": [
                       {
                         "name": "菜品名称",
-                        "ingredients": ["食材1", "食材2"],
                         "recommendationReason": "推荐理由（必须严格控制在80~120汉字之间）"
                       }
                     ],
@@ -438,8 +421,6 @@ public class MealRecommendationService {
                 """;
     }
 
-    // "mealTips": "用餐建议"
-    // "healthTips": "健康建议"
     /**
      * 获取菜品JSON格式模板
      */
@@ -447,11 +428,8 @@ public class MealRecommendationService {
         return """
                 {
                   "name": "菜品名称",
-                  "ingredients": ["食材1", "食材2"],
                   "recommendationReason": "推荐理由（必须严格控制在80~120汉字之间）"
                 }
                 """;
     }
-    // "preparationNotes": "制作说明",
-    // "tags": ["标签1", "标签2"]
 }

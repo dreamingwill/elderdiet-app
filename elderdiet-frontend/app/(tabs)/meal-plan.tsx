@@ -250,21 +250,7 @@ export default function MealPlanScreen() {
     }
   };
 
-  // 获取当前餐次的提示
-  const getCurrentMealTips = (): string => {
-    if (!currentMealPlan) return '';
-    
-    switch (selectedMealType) {
-      case 'breakfast':
-        return currentMealPlan.breakfast.meal_tips;
-      case 'lunch':
-        return currentMealPlan.lunch.meal_tips;
-      case 'dinner':
-        return currentMealPlan.dinner.meal_tips;
-      default:
-        return '';
-    }
-  };
+
 
   // 如果正在加载认证信息，显示加载状态
   if (authLoading) {
