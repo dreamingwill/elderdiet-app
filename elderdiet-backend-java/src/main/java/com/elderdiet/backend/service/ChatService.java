@@ -114,16 +114,37 @@ public class ChatService {
      * 获取聊天历史记录
      */
     private List<ChatMessage> getChatHistory(String userId) {
-        // 调试模式：不返回历史记录
-        log.info("调试模式：跳过历史记录");
-        return new ArrayList<>();
+        try {
+            // 检查用户是否设置了聊天清空时间戳
+            Profile profile = profileRepository.findByUserId(userId).orElse(null);
+            Instant sinceTimestamp = null;
+            if (profile != null && profile.getChatClearedAt() != null) {
+                sinceTimestamp = profile.getChatClearedAt();
+                log.info("用户 {} 设置了聊天清空时间戳: {}", userId, sinceTimestamp);
+            }
 
-        // 正式模式：返回历史记录
-        // List<ChatMessage> messages =
-        // chatMessageRepository.findTop10ByUserIdOrderByTimestampDesc(userId);
-        // // 反转列表，使其按时间正序排列
-        // Collections.reverse(messages);
-        // return messages;
+            List<ChatMessage> messages;
+            if (sinceTimestamp != null) {
+                // 获取清空时间戳之后的最近10条消息
+                messages = chatMessageRepository
+                        .findByUserIdAndTimestampAfterOrderByTimestampDesc(userId, sinceTimestamp)
+                        .stream()
+                        .limit(10)
+                        .collect(Collectors.toList());
+            } else {
+                // 获取最近10条消息
+                messages = chatMessageRepository.findTop10ByUserIdOrderByTimestampDesc(userId);
+            }
+
+            // 反转列表，使其按时间正序排列（最早的消息在前面）
+            Collections.reverse(messages);
+
+            log.info("为用户 {} 获取到 {} 条历史消息", userId, messages.size());
+            return messages;
+        } catch (Exception e) {
+            log.error("获取用户 {} 的聊天历史记录时出错: {}", userId, e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
