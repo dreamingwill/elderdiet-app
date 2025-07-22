@@ -158,7 +158,8 @@ public class MealRecommendationService {
         prompt.append("4. 个性化定制：根据用户的健康状况和偏好进行定制\n");
         prompt.append("5. 食材新鲜：选择当季新鲜食材\n");
         prompt.append("6. 制作简单：考虑老年人的制作能力\n");
-        prompt.append("7. 菜品数量：为早餐、午餐和晚餐各生成3道菜品。\n");
+        prompt.append("7. 菜品数量：为早餐、午餐和晚餐各生成3道菜品\n");
+        prompt.append("8. 推荐理由字数：每道菜品的推荐理由必须严格控制在70-110字之间，不得超出此范围\n");
 
         prompt.append("\n");
 
@@ -186,6 +187,7 @@ public class MealRecommendationService {
         }
 
         prompt.append("请确保每个菜品都有详细的推荐理由，说明为什么这道菜适合我的健康状况。");
+        prompt.append("重要提醒：每道菜品的推荐理由必须严格控制在70-110字之间，请仔细计算字数确保符合要求。");
 
         return prompt.toString();
     }
@@ -234,7 +236,7 @@ public class MealRecommendationService {
             prompt.append("特殊要求：").append(request.getSpecialRequirement()).append("\n");
         }
 
-        prompt.append("\n请返回一道新的菜品，格式如下：");
+        prompt.append("\n请返回一道新的菜品，推荐理由必须严格控制在70-110字之间。格式如下：");
         prompt.append(getDishJsonFormat());
 
         return prompt.toString();
@@ -255,6 +257,7 @@ public class MealRecommendationService {
         }
 
         prompt.append("请推荐一道营养相当、适合我健康状况的菜品。");
+        prompt.append("重要提醒：推荐理由必须严格控制在70-110字之间，请仔细计算字数确保符合要求。");
 
         return prompt.toString();
     }
@@ -429,7 +432,7 @@ public class MealRecommendationService {
                       {
                         "name": "菜品名称",
                         "ingredients": ["食材1", "食材2"],
-                        "recommendationReason": "推荐理由"
+                        "recommendationReason": "推荐理由（必须严格控制在70-110字之间）"
                       }
                     ],
                     "nutritionSummary": "营养摘要"
@@ -451,7 +454,7 @@ public class MealRecommendationService {
                 {
                   "name": "菜品名称",
                   "ingredients": ["食材1", "食材2"],
-                  "recommendationReason": "推荐理由"
+                  "recommendationReason": "推荐理由（必须严格控制在70-110字之间）"
                 }
                 """;
     }
