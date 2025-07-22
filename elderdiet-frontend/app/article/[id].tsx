@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#333',
     lineHeight: 32,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 20,
     color: '#666',
     lineHeight: 24,
     marginBottom: 16,
@@ -241,12 +241,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 16,
     color: 'white',
     fontWeight: '600',
   },
   readTime: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
   },
   tagsContainer: {
@@ -263,15 +263,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tagText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
   },
   contentContainer: {
     marginBottom: 32,
   },
   contentText: {
-    fontSize: 16,
-    lineHeight: 26,
+    fontSize: 22,
+    lineHeight: 28,
     color: '#333',
     marginBottom: 16,
   },
