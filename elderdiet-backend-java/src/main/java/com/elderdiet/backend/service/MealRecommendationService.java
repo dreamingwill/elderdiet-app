@@ -1,5 +1,6 @@
 package com.elderdiet.backend.service;
 
+import com.elderdiet.backend.config.AiConfig;
 import com.elderdiet.backend.dto.AiApiRequest;
 import com.elderdiet.backend.dto.DishReplaceRequest;
 import com.elderdiet.backend.dto.MealPlanRequest;
@@ -12,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -37,18 +37,7 @@ public class MealRecommendationService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${ai.api.url}")
-    private String aiApiUrl;
-
-    @Value("${ai.api.key}")
-    private String aiApiKey;
-
-    @Value("${ai.api.model}")
-    private String aiModel;
-
-    @Value("${ai.api.temperature}")
-    private Double aiTemperature;
+    private final AiConfig.AiProperties aiProperties;
 
     /**
      * 生成完整的膳食计划
@@ -278,21 +267,21 @@ public class MealRecommendationService {
                         .build());
 
         AiApiRequest request = AiApiRequest.builder()
-                .model(aiModel)
+                .model(aiProperties.getModel())
                 .messages(messages)
-                .temperature(aiTemperature)
+                .temperature(aiProperties.getTemperature())
                 .build();
 
         // 设置请求头
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(aiApiKey);
+        headers.setBearerAuth(aiProperties.getKey());
 
         HttpEntity<AiApiRequest> entity = new HttpEntity<>(request, headers);
 
         // 发送请求
         ResponseEntity<String> response = restTemplate.exchange(
-                aiApiUrl,
+                aiProperties.getUrl(),
                 HttpMethod.POST,
                 entity,
                 String.class);

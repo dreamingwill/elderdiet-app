@@ -1,5 +1,6 @@
 package com.elderdiet.backend.service;
 
+import com.elderdiet.backend.config.AiConfig;
 import com.elderdiet.backend.dto.AiApiRequest;
 import com.elderdiet.backend.dto.AiApiResponse;
 import com.elderdiet.backend.entity.MealRecord;
@@ -7,7 +8,6 @@ import com.elderdiet.backend.dto.ProfileDTO;
 import com.elderdiet.backend.repository.MealRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,18 +31,7 @@ public class NutritionistCommentService {
     private final MealRecordRepository mealRecordRepository;
     private final ProfileService profileService;
     private final RestTemplate restTemplate;
-
-    @Value("${ai.api.url}")
-    private String aiApiUrl;
-
-    @Value("${ai.api.key}")
-    private String aiApiKey;
-
-    @Value("${ai.api.model}")
-    private String aiModel;
-
-    @Value("${ai.api.temperature:0.7}")
-    private Double aiTemperature;
+    private final AiConfig.AiProperties aiProperties;
 
     /**
      * 为膳食记录生成营养师评论
@@ -183,23 +172,23 @@ public class NutritionistCommentService {
                             .build());
 
             AiApiRequest request = AiApiRequest.builder()
-                    .model(aiModel)
+                    .model(aiProperties.getModel())
                     .messages(messages)
-                    .temperature(aiTemperature)
+                    .temperature(aiProperties.getTemperature())
                     .build();
 
             // 设置请求头
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(aiApiKey);
+            headers.setBearerAuth(aiProperties.getKey());
 
             // 创建请求实体
             HttpEntity<AiApiRequest> requestEntity = new HttpEntity<>(request, headers);
 
             // 发送POST请求
-            log.info("发送POST请求到: {}", aiApiUrl);
+            log.info("发送POST请求到: {} (提供商: {})", aiProperties.getUrl(), aiProperties.getProvider());
             ResponseEntity<AiApiResponse> responseEntity = restTemplate.postForEntity(
-                    aiApiUrl,
+                    aiProperties.getUrl(),
                     requestEntity,
                     AiApiResponse.class);
 

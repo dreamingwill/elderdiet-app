@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/api/v1/health",
                                 "/api/v1/profiles/options/**",
                                 "/api/v1/health-articles/**",
+                                "/api/v1/ai-config/**",
                                 "/actuator/**",
                                 "/error")
                         .permitAll()

@@ -1,5 +1,6 @@
 package com.elderdiet.backend.service;
 
+import com.elderdiet.backend.config.AiConfig;
 import com.elderdiet.backend.dto.*;
 import com.elderdiet.backend.entity.ChatMessage;
 import com.elderdiet.backend.entity.Profile;
@@ -8,7 +9,6 @@ import com.elderdiet.backend.repository.ProfileRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -29,18 +29,7 @@ public class ChatService {
     private final ProfileRepository profileRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${ai.api.url}")
-    private String aiApiUrl;
-
-    @Value("${ai.api.key}")
-    private String aiApiKey;
-
-    @Value("${ai.api.model}")
-    private String aiModel;
-
-    @Value("${ai.api.temperature}")
-    private Double aiTemperature;
+    private final AiConfig.AiProperties aiProperties;
 
     /**
      * 处理聊天消息
@@ -236,9 +225,9 @@ public class ChatService {
         }
 
         return AiApiRequest.builder()
-                .model(aiModel)
+                .model(aiProperties.getModel())
                 .messages(messages)
-                .temperature(aiTemperature)
+                .temperature(aiProperties.getTemperature())
                 .build();
     }
 
@@ -319,10 +308,13 @@ public class ChatService {
      */
     private String callAiApi(AiApiRequest request) {
         try {
-            log.info("开始调用AI API: {}", aiApiUrl);
+            String apiUrl = aiProperties.getUrl();
+            String apiKey = aiProperties.getKey();
+
+            log.info("开始调用AI API: {} (提供商: {})", apiUrl, aiProperties.getProvider());
 
             // 验证API配置
-            if (aiApiKey == null || aiApiKey.equals("your-api-key-here")) {
+            if (apiKey == null || apiKey.equals("your-api-key-here") || apiKey.equals("your-zhipu-api-key-here")) {
                 log.error("AI API Key未配置或使用默认值");
                 throw new IllegalArgumentException("AI API Key未正确配置");
             }
@@ -338,15 +330,15 @@ public class ChatService {
             // 设置请求头
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(aiApiKey);
+            headers.setBearerAuth(apiKey);
 
             // 创建请求实体
             HttpEntity<AiApiRequest> requestEntity = new HttpEntity<>(request, headers);
 
             // 发送POST请求
-            log.info("发送POST请求到: {}", aiApiUrl);
+            log.info("发送POST请求到: {}", apiUrl);
             ResponseEntity<AiApiResponse> responseEntity = restTemplate.postForEntity(
-                    aiApiUrl,
+                    apiUrl,
                     requestEntity,
                     AiApiResponse.class);
 

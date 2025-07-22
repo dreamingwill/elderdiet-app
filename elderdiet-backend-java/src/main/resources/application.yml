@@ -63,11 +63,24 @@ management:
 # AI API配置
 ai:
   api:
-    url: https://api2.aigcbest.top/v1/chat/completions
-    key: ${QIANDUODUO_API_KEY:your-api-key-here}
-    #claude-3-5-haiku-latest，gpt-4o，gpt-4o-mini，gemini-1.5-flash
-    model: gpt-4o
-    temperature: 0.7
+    # 当前使用的API提供商: qianduoduo, zhipu
+    provider: ${AI_PROVIDER:zhipu}
+
+    # 钱多多API配置
+    qianduoduo:
+      url: https://api2.aigcbest.top/v1/chat/completions
+      key: ${QIANDUODUO_API_KEY:your-api-key-here}
+      #claude-3-5-haiku-latest，gpt-4o，gpt-4o-mini，gemini-1.5-flash
+      model: gpt-4o
+      temperature: 0.7
+
+    # 智谱AI配置
+    zhipu:
+      url: https://open.bigmodel.cn/api/paas/v4/chat/completions
+      key: ${ZHIPU_API_KEY:your-zhipu-api-key-here}
+      # glm-4v-plus-0111, glm-4v-flash (免费)
+      model: glm-4v-flash
+      temperature: 0.7
 
 # 阿里云OSS配置
 aliyun:
