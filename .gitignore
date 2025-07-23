@@ -43,19 +43,20 @@ build/Release
 # ==================== Frontend (React Native) ====================
 
 # Expo
-ElderDiet/.expo/
-ElderDiet/dist/
-ElderDiet/web-build/
-ElderDiet/.expo-shared/
+elderdiet-frontend/.expo/
+elderdiet-frontend/dist/
+elderdiet-frontend/web-build/
+elderdiet-frontend/.expo-shared/
 
 # React Native
-ElderDiet/ios/Pods/
-ElderDiet/android/app/build/
-ElderDiet/android/.gradle/
-ElderDiet/android/app/release/
+elderdiet-frontend/ios/
+elderdiet-frontend/android/app/build/
+elderdiet-frontend/android/.gradle/
+elderdiet-frontend/android/build/
+elderdiet-frontend/android/app/release/
 
 # Metro
-ElderDiet/.metro-health-check*
+elderdiet-frontend/.metro-health-check*
 
 # ==================== Backend (Node.js) ====================
 
