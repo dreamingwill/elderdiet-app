@@ -1,124 +1,147 @@
-import { API_BASE_URL } from '@/config/api.config';
+/**
+ * 网络连通性测试工具
+ * 用于检查Expo推送服务在中国大陆的可用性
+ */
 
 export interface NetworkTestResult {
   success: boolean;
-  message: string;
-  details?: any;
-  timestamp: string;
+  service: string;
+  responseTime?: number;
+  error?: string;
 }
 
-export const testNetworkConnection = async (): Promise<NetworkTestResult> => {
-  const timestamp = new Date().toISOString();
+/**
+ * 带超时的fetch请求
+ */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
-    console.log('Testing network connection to:', API_BASE_URL);
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+/**
+ * 测试Expo推送服务连通性
+ */
+export async function testExpoPushService(): Promise<NetworkTestResult> {
+  const startTime = Date.now();
+  
+  try {
+    console.log('🌐 测试Expo推送服务连通性...');
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
+    // 测试Expo API端点
+    const response = await fetchWithTimeout('https://exp.host/--/api/v2/push/getReceiptIds', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      signal: controller.signal,
-    });
+      body: JSON.stringify({
+        ids: ['test-id'],
+      }),
+    }, 10000); // 10秒超时
+
+    const responseTime = Date.now() - startTime;
     
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data = await response.json();
+    if (response.status < 500) {
+      // 即使返回错误，但能连通就说明网络OK
+      console.log('✅ Expo推送服务连通正常');
       return {
         success: true,
-        message: '网络连接正常',
-        details: {
-          status: response.status,
-          statusText: response.statusText,
-          data,
-          baseURL: API_BASE_URL,
-        },
-        timestamp,
+        service: 'Expo Push Service',
+        responseTime,
       };
     } else {
-      return {
-        success: false,
-        message: `服务器响应错误: ${response.status}`,
-        details: {
-          status: response.status,
-          statusText: response.statusText,
-          baseURL: API_BASE_URL,
-        },
-        timestamp,
-      };
+      throw new Error(`HTTP ${response.status}`);
     }
   } catch (error: any) {
-    let message = '网络连接失败';
-    
-    if (error.name === 'AbortError') {
-      message = '请求超时';
-    } else if (error.message) {
-      message = error.message;
-    }
+    const responseTime = Date.now() - startTime;
+    console.error('❌ Expo推送服务连通失败:', error);
     
     return {
       success: false,
-      message,
-      details: {
-        error: error.toString(),
-        name: error.name,
-        baseURL: API_BASE_URL,
-      },
-      timestamp,
+      service: 'Expo Push Service',
+      responseTime,
+      error: error.message || '连接失败',
     };
   }
-};
+}
 
-export const testMultipleEndpoints = async (): Promise<NetworkTestResult[]> => {
-  const endpoints = [
-    '/health',
-    '/auth/test',
-    '/user/profile',
-  ];
+/**
+ * 测试后端API连通性
+ */
+export async function testBackendAPI(baseUrl: string): Promise<NetworkTestResult> {
+  const startTime = Date.now();
   
-  const results: NetworkTestResult[] = [];
+  try {
+    console.log('🌐 测试后端API连通性...');
+    
+    const response = await fetchWithTimeout(`${baseUrl}/actuator/health`, {}, 5000);
+    
+    const responseTime = Date.now() - startTime;
+    
+    if (response.ok) {
+      console.log('✅ 后端API连通正常');
+      return {
+        success: true,
+        service: 'Backend API',
+        responseTime,
+      };
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error: any) {
+    const responseTime = Date.now() - startTime;
+    console.error('❌ 后端API连通失败:', error);
+    
+    return {
+      success: false,
+      service: 'Backend API',
+      responseTime,
+      error: error.message || '连接失败',
+    };
+  }
+}
+
+/**
+ * 综合网络测试
+ */
+export async function runNetworkTests(backendUrl: string): Promise<NetworkTestResult[]> {
+  console.log('🚀 开始网络连通性测试...');
   
-  for (const endpoint of endpoints) {
+  const results = await Promise.all([
+    testExpoPushService(),
+    testBackendAPI(backendUrl),
+  ]);
+  
+  console.log('📊 网络测试结果:', results);
+  return results;
+}
+
+/**
+ * 检查是否在中国大陆网络环境
+ */
+export async function detectChinaNetwork(): Promise<boolean> {
+  try {
+    // 尝试访问Google DNS，如果失败可能在中国大陆
+    await fetchWithTimeout('https://8.8.8.8/', { method: 'HEAD' }, 3000);
+    return false; // 能访问Google DNS，不在中国大陆限制网络
+  } catch {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      results.push({
-        success: response.ok,
-        message: `${endpoint}: ${response.status} ${response.statusText}`,
-        details: {
-          endpoint,
-          status: response.status,
-          statusText: response.statusText,
-        },
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error: any) {
-      results.push({
-        success: false,
-        message: `${endpoint}: ${error.message || 'Unknown error'}`,
-        details: {
-          endpoint,
-          error: error.toString(),
-        },
-        timestamp: new Date().toISOString(),
-      });
+      // 尝试访问百度，如果成功可能在中国大陆
+      await fetchWithTimeout('https://www.baidu.com/', { method: 'HEAD' }, 3000);
+      return true; // 能访问百度但不能访问Google，可能在中国大陆
+    } catch {
+      return false; // 都访问不了，网络问题
     }
   }
-  
-  return results;
-}; 
+} 

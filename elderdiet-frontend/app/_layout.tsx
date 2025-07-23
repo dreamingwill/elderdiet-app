@@ -71,11 +71,22 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
 
   // 初始化推送服务
   useEffect(() => {
-    if (isAuthenticated) {
-      pushService.initialize().catch(error => {
-        console.error('推送服务初始化失败:', error);
-      });
-    }
+    const initializePushService = async () => {
+      try {
+        if (isAuthenticated) {
+          console.log('👤 用户已登录，初始化推送服务...');
+          
+          // 初始化推送服务（不在这里重试设备注册，避免竞态条件）
+          await pushService.initialize();
+        } else {
+          console.log('👤 用户未登录，跳过推送初始化');
+        }
+      } catch (error) {
+        console.error('❌ 推送服务初始化失败:', error);
+      }
+    };
+
+    initializePushService();
 
     // 清理函数
     return () => {

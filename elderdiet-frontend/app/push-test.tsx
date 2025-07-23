@@ -11,20 +11,71 @@ import {
 import { pushService } from '@/services/pushService';
 import { API_BASE_URL } from '@/config/api.config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
 
 export default function PushTestScreen() {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [statistics, setStatistics] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [permissionStatus, setPermissionStatus] = useState<string>('');
 
   useEffect(() => {
     loadPushToken();
     loadStatistics();
+    loadDeviceInfo();
+    checkPermissions();
   }, []);
 
   const loadPushToken = () => {
-    const token = pushService.getPushToken();
-    setPushToken(token);
+    const tokenStatus = pushService.getTokenStatus();
+    setPushToken(tokenStatus.token);
+    console.log('📱 当前Token状态:', tokenStatus);
+  };
+
+  const loadDeviceInfo = () => {
+    const info = {
+      isDevice: Device.isDevice,
+      deviceName: Device.deviceName,
+      modelName: Device.modelName,
+      brand: Device.brand,
+      platform: Device.osName,
+      osVersion: Device.osVersion,
+    };
+    setDeviceInfo(info);
+    console.log('📱 设备信息:', info);
+  };
+
+  const checkPermissions = async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setPermissionStatus(status);
+      console.log('🔔 推送权限状态:', status);
+    } catch (error) {
+      console.error('检查权限失败:', error);
+    }
+  };
+
+  const retryDeviceRegistration = async () => {
+    setLoading(true);
+    try {
+      Alert.alert('🔄 重新注册', '正在重新注册设备...');
+      
+      await pushService.retryDeviceRegistration();
+      
+      // 重新加载Token
+      setTimeout(() => {
+        loadPushToken();
+        Alert.alert('✅ 成功', '设备重新注册完成，请检查Token状态');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('重新注册失败:', error);
+      Alert.alert('❌ 失败', '设备重新注册失败: ' + error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadStatistics = async () => {
@@ -124,22 +175,71 @@ export default function PushTestScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>推送功能测试</Text>
-
+        <Text style={styles.title}>📱 推送功能测试</Text>
+        
+        {/* 设备信息部分 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>推送Token状态</Text>
-          <View style={styles.tokenContainer}>
-            <Text style={styles.tokenLabel}>Token:</Text>
-            <Text style={styles.tokenText}>
-              {pushToken ? `${pushToken.substring(0, 20)}...` : '未获取'}
+          <Text style={styles.sectionTitle}>🔍 设备信息</Text>
+          {deviceInfo && (
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>设备类型: {deviceInfo.isDevice ? '真实设备' : '模拟器'}</Text>
+              <Text style={styles.infoText}>设备名称: {deviceInfo.deviceName || '未知'}</Text>
+              <Text style={styles.infoText}>型号: {deviceInfo.modelName || '未知'}</Text>
+              <Text style={styles.infoText}>品牌: {deviceInfo.brand || '未知'}</Text>
+              <Text style={styles.infoText}>平台: {deviceInfo.platform || '未知'}</Text>
+              <Text style={styles.infoText}>系统版本: {deviceInfo.osVersion || '未知'}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* 权限状态 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔔 推送权限</Text>
+          <Text style={[
+            styles.statusText,
+            permissionStatus === 'granted' ? styles.successText : styles.errorText
+          ]}>
+            状态: {permissionStatus === 'granted' ? '✅ 已授权' : '❌ 未授权'}
+          </Text>
+          {permissionStatus !== 'granted' && (
+            <Text style={styles.warningText}>
+              ⚠️ 需要推送权限才能获取设备Token
             </Text>
-          </View>
+          )}
+        </View>
+
+        {/* Token状态 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔑 推送Token状态</Text>
+          
+          {pushToken ? (
+            <View style={styles.tokenContainer}>
+              <Text style={styles.successText}>✅ Token已获取</Text>
+              <Text style={styles.tokenText}>
+                {pushToken.substring(0, 40)}...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.tokenContainer}>
+              <Text style={styles.errorText}>❌ 未获取到Token</Text>
+              {!deviceInfo?.isDevice && (
+                <Text style={styles.warningText}>
+                  ⚠️ 模拟器无法获取推送Token，请使用真实设备测试
+                </Text>
+              )}
+            </View>
+          )}
+          
           <TouchableOpacity
             style={styles.button}
-            onPress={reinitializePush}
+            onPress={retryDeviceRegistration}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>重新初始化推送</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>🔄 重新注册设备</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -189,6 +289,54 @@ export default function PushTestScreen() {
             >
               <Text style={styles.refreshButtonText}>刷新统计</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {deviceInfo && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>设备信息</Text>
+            <View style={styles.deviceInfoContainer}>
+              <Text style={styles.deviceInfoText}>
+                设备类型: {deviceInfo.isDevice ? '真机' : '模拟器'}
+              </Text>
+              <Text style={styles.deviceInfoText}>
+                设备名称: {deviceInfo.deviceName}
+              </Text>
+              <Text style={styles.deviceInfoText}>
+                型号: {deviceInfo.modelName}
+              </Text>
+              <Text style={styles.deviceInfoText}>
+                品牌: {deviceInfo.brand}
+              </Text>
+              <Text style={styles.deviceInfoText}>
+                平台: {deviceInfo.platform}
+              </Text>
+              <Text style={styles.deviceInfoText}>
+                操作系统版本: {deviceInfo.osVersion}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {permissionStatus && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>推送权限</Text>
+            <View style={styles.permissionContainer}>
+              <Text style={styles.permissionText}>
+                权限状态: {permissionStatus}
+              </Text>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={checkPermissions}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>检查权限</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -287,5 +435,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  deviceInfoContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  deviceInfoText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  permissionContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  permissionText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  infoContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  statusText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  successText: {
+    color: '#28a745',
+  },
+  errorText: {
+    color: '#dc3545',
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#ffc107',
+    marginTop: 8,
   },
 });

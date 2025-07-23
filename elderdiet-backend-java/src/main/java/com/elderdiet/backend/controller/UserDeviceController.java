@@ -37,6 +37,25 @@ public class UserDeviceController {
             Authentication authentication) {
 
         try {
+            // 添加详细的调试日志
+            log.info("收到设备注册请求:");
+            log.info("- deviceToken: '{}'", request.getDeviceToken());
+            log.info("- platform: {}", request.getPlatform());
+            log.info("- deviceModel: '{}'", request.getDeviceModel());
+            log.info("- appVersion: '{}'", request.getAppVersion());
+            log.info("- pushEnabled: {}", request.getPushEnabled());
+            log.info("- mealRecordPushEnabled: {}", request.getMealRecordPushEnabled());
+            log.info("- reminderPushEnabled: {}", request.getReminderPushEnabled());
+
+            // 检查deviceToken是否为空
+            if (request.getDeviceToken() == null) {
+                log.error("deviceToken为null");
+            } else if (request.getDeviceToken().trim().isEmpty()) {
+                log.error("deviceToken为空字符串");
+            } else {
+                log.info("deviceToken长度: {}", request.getDeviceToken().length());
+            }
+
             User user = userService.getCurrentUser(authentication);
             UserDeviceResponse response = userDeviceService.registerDevice(user, request);
 

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authStorage } from '../utils/authStorage';
 import { authAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { pushService } from '../services/pushService';
 
 type UserRole = 'ELDER' | 'CHILD';
 
@@ -135,6 +136,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRoleState(userData.role);
         setUidState(userData.uid);
         setPhoneState(userData.phone);
+
+        console.log('✅ 用户登录成功，推送服务将自动处理设备注册');
       } else {
         throw new Error(response.message || '登录失败');
       }
