@@ -37,31 +37,62 @@ public class UserDeviceController {
             Authentication authentication) {
 
         try {
+            // 使用Jackson将请求对象转换为JSON字符串进行调试
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String requestJson = objectMapper.writeValueAsString(request);
+            log.info("收到设备注册请求，解析后的JSON: {}", requestJson);
+
             // 添加详细的调试日志
-            log.info("收到设备注册请求:");
-            log.info("- deviceToken: '{}'", request.getDeviceToken());
-            log.info("- platform: {}", request.getPlatform());
-            log.info("- deviceModel: '{}'", request.getDeviceModel());
-            log.info("- appVersion: '{}'", request.getAppVersion());
-            log.info("- pushEnabled: {}", request.getPushEnabled());
-            log.info("- mealRecordPushEnabled: {}", request.getMealRecordPushEnabled());
-            log.info("- reminderPushEnabled: {}", request.getReminderPushEnabled());
+            log.info("解析后的请求对象各字段:");
+            log.info("- deviceToken: '{}' (类型: {})", request.getDeviceToken(),
+                    request.getDeviceToken() != null ? request.getDeviceToken().getClass().getSimpleName() : "null");
+            log.info("- platform: {} (类型: {})", request.getPlatform(),
+                    request.getPlatform() != null ? request.getPlatform().getClass().getSimpleName() : "null");
+            log.info("- deviceModel: '{}' (类型: {})", request.getDeviceModel(),
+                    request.getDeviceModel() != null ? request.getDeviceModel().getClass().getSimpleName() : "null");
+            log.info("- appVersion: '{}' (类型: {})", request.getAppVersion(),
+                    request.getAppVersion() != null ? request.getAppVersion().getClass().getSimpleName() : "null");
+            log.info("- pushEnabled: {} (类型: {})", request.getPushEnabled(),
+                    request.getPushEnabled() != null ? request.getPushEnabled().getClass().getSimpleName() : "null");
+            log.info("- mealRecordPushEnabled: {} (类型: {})", request.getMealRecordPushEnabled(),
+                    request.getMealRecordPushEnabled() != null
+                            ? request.getMealRecordPushEnabled().getClass().getSimpleName()
+                            : "null");
+            log.info("- reminderPushEnabled: {} (类型: {})", request.getReminderPushEnabled(),
+                    request.getReminderPushEnabled() != null
+                            ? request.getReminderPushEnabled().getClass().getSimpleName()
+                            : "null");
 
             // 检查deviceToken是否为空
             if (request.getDeviceToken() == null) {
-                log.error("deviceToken为null");
+                log.error("❌ deviceToken为null");
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("设备Token不能为空"));
             } else if (request.getDeviceToken().trim().isEmpty()) {
-                log.error("deviceToken为空字符串");
+                log.error("❌ deviceToken为空字符串，原始值: '{}', 长度: {}",
+                        request.getDeviceToken(), request.getDeviceToken().length());
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("设备Token不能为空"));
             } else {
-                log.info("deviceToken长度: {}", request.getDeviceToken().length());
+                log.info("✅ deviceToken有效，长度: {}, 值: '{}'",
+                        request.getDeviceToken().length(), request.getDeviceToken());
             }
 
             User user = userService.getCurrentUser(authentication);
             UserDeviceResponse response = userDeviceService.registerDevice(user, request);
 
             return ResponseEntity.ok(ApiResponse.success("设备注册成功", response));
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            log.error("❌ 参数验证失败: {}", e.getMessage());
+            // 输出具体的验证错误
+            e.getConstraintViolations().forEach(violation -> {
+                log.error("验证错误 - 字段: {}, 值: '{}', 错误信息: {}",
+                        violation.getPropertyPath(), violation.getInvalidValue(), violation.getMessage());
+            });
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("参数验证失败: " + e.getMessage()));
         } catch (Exception e) {
-            log.error("设备注册失败: {}", e.getMessage(), e);
+            log.error("❌ 设备注册失败: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("设备注册失败: " + e.getMessage()));
         }
