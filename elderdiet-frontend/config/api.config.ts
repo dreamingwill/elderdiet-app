@@ -23,7 +23,7 @@ const getEnvironment = () => {
   if (__DEV__) {
     return 'development';
   }
-  return 'production'; // 可以改为 'productionSecure' 当HTTPS可用时
+  return 'production'; // 保持使用HTTP，直到HTTPS证书配置完成
 };
 
 export const getCurrentConfig = () => {
