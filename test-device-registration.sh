@@ -14,8 +14,8 @@ LOGIN_RESPONSE=$(curl -s -X POST \
   "${BACKEND_URL}/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
-    "phone": "13800138000",
-    "password": "password123"
+    "phone": "13600136000",
+    "password": "123456"
   }')
 
 echo "登录响应: $LOGIN_RESPONSE"
