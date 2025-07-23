@@ -6,11 +6,6 @@ module.exports = {
   ...config.expo,
   android: {
     ...config.expo.android,
-    // 以下是添加的配置，使用plugins来处理
-    config: {
-      // 允许HTTP流量
-      usesCleartextTraffic: true
-    }
   },
   // 使用插件来处理网络安全配置
   plugins: [
