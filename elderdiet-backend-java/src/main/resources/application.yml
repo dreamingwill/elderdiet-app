@@ -38,6 +38,13 @@ jwt:
   secret: ${JWT_SECRET:your-super-secret-jwt-key-change-this-in-production}
   expiration: ${JWT_EXPIRES_IN:604800} # 7天 (秒)
 
+# JPush配置
+jpush:
+  app-key: ${JPUSH_APP_KEY:your-jpush-app-key}
+  master-secret: ${JPUSH_MASTER_SECRET:your-jpush-master-secret}
+  environment: ${JPUSH_ENVIRONMENT:dev} # dev 或 production
+  time-to-live: 86400 # 推送消息存活时间（秒），默认1天
+
 # 日志配置
 logging:
   level:
@@ -138,7 +145,7 @@ spring:
   data:
     mongodb:
       #uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@localhost:27017/elderdiet_dev
-      uri: mongodb://${MONGODB_USER:devUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_dev
+      uri: mongodb://${MONGODB_USER:prodUser}:${MONGODB_PASSWORD}@8.153.204.247:27017/elderdiet_prod
 
 logging:
   level:

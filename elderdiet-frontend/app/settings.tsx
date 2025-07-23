@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { PushSettingsModal } from '@/components/PushSettingsModal';
 
 export default function SettingsScreen() {
+  const [pushSettingsVisible, setPushSettingsVisible] = useState(false);
+
   const settingsItems = [
     {
       title: '账号管理',
@@ -14,10 +17,10 @@ export default function SettingsScreen() {
       }
     },
     {
-      title: '通知设置',
+      title: '推送通知',
       icon: 'notifications-outline',
       onPress: () => {
-        // 导航到通知设置页面
+        setPushSettingsVisible(true);
       }
     },
     {
@@ -40,6 +43,13 @@ export default function SettingsScreen() {
       onPress: () => {
         // 导航到帮助页面
       }
+    },
+    {
+      title: '推送测试',
+      icon: 'notifications-circle-outline',
+      onPress: () => {
+        router.push('/push-test');
+      }
     }
   ];
 
@@ -60,6 +70,11 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      <PushSettingsModal
+        visible={pushSettingsVisible}
+        onClose={() => setPushSettingsVisible(false)}
+      />
     </ScrollView>
   );
 }

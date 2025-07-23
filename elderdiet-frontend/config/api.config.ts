@@ -9,6 +9,7 @@ export const API_CONFIG = {
   // 生产环境 - HTTP (临时)
   production: {
     baseURL: 'http://8.153.204.247:3001/api/v1',
+    //baseURL: 'http://localhost:3001/api/v1',
     timeout: 45000, // 增加到45秒，生产环境更保守
   },
   // 生产环境 - HTTPS (推荐)

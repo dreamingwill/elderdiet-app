@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme, ColorSchemeName } from 'react-native';
 import { UserProvider, useUser } from '@/contexts/UserContext';
+import { pushService } from '@/services/pushService';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -56,9 +57,9 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
 
   useEffect(() => {
     if (isLoading) return; // 等待认证状态加载完成
-    
+
     const inAuthGroup = segments[0] === '(auth)';
-    
+
     if (isAuthenticated && inAuthGroup) {
       // 用户已登录但在认证页面，跳转到主页面
       router.replace('/(tabs)/meal-plan');
@@ -67,6 +68,22 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
       router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isLoading, segments, router]);
+
+  // 初始化推送服务
+  useEffect(() => {
+    if (isAuthenticated) {
+      pushService.initialize().catch(error => {
+        console.error('推送服务初始化失败:', error);
+      });
+    }
+
+    // 清理函数
+    return () => {
+      if (isAuthenticated) {
+        pushService.cleanup();
+      }
+    };
+  }, [isAuthenticated]);
 
   // 等待认证状态加载完成
   if (isLoading) {
@@ -132,6 +149,26 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
           name="create-post"
           options={{
             headerShown: false, // 在组件内部自定义header
+          }}
+        />
+        <Stack.Screen
+          name="push-test"
+          options={{
+            headerShown: true,
+            title: '推送测试',
+            headerTitleStyle: {
+              fontSize: 20,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            headerShown: true,
+            title: '设置',
+            headerTitleStyle: {
+              fontSize: 20,
+            },
           }}
         />
       </Stack>

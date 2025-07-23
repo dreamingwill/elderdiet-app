@@ -34,6 +34,8 @@ public class MealRecordService {
     private final RecordCommentRepository recordCommentRepository;
     private final GamificationService gamificationService;
     private final NutritionistCommentService nutritionistCommentService;
+    private final JPushService jPushService;
+    private final FamilyService familyService;
 
     /**
      * 创建膳食记录
@@ -72,9 +74,17 @@ public class MealRecordService {
         // 触发小树浇水逻辑
         gamificationService.waterTree(user);
 
-        // TODO: 如果可见性为FAMILY，触发通知逻辑
+        // 如果可见性为FAMILY，触发推送通知给子女用户
         if (request.getVisibility() == RecordVisibility.FAMILY) {
-            log.info("TODO: 触发家庭通知逻辑");
+            log.info("膳食记录设置为家庭可见，开始推送通知给子女用户");
+            // 异步执行推送，避免阻塞用户操作
+            new Thread(() -> {
+                try {
+                    sendMealRecordNotificationToChildren(user, savedRecord);
+                } catch (Exception e) {
+                    log.error("发送膳食记录推送通知失败: {}", e.getMessage(), e);
+                }
+            }).start();
         }
 
         // 如果用户选择分享给营养师，异步生成营养师评论
@@ -315,5 +325,60 @@ public class MealRecordService {
     public MealRecord getMealRecordById(String recordId) {
         return mealRecordRepository.findById(recordId)
                 .orElseThrow(() -> new RuntimeException("膳食记录不存在"));
+    }
+
+    /**
+     * 发送膳食记录通知给子女用户
+     */
+    private void sendMealRecordNotificationToChildren(User elderUser, MealRecord mealRecord) {
+        try {
+            // 获取老人的所有子女链接
+            List<FamilyLink> childrenLinks = familyService.getChildrenLinks(elderUser.getId());
+
+            if (childrenLinks.isEmpty()) {
+                log.info("老人用户 {} 没有关联的子女用户，跳过推送", elderUser.getPhone());
+                return;
+            }
+
+            // 获取子女用户ID列表
+            List<String> childUserIds = childrenLinks.stream()
+                    .map(FamilyLink::getChildId)
+                    .collect(Collectors.toList());
+
+            // 获取老人的姓名（用于推送内容）
+            String elderName = getElderDisplayName(elderUser);
+
+            // 发送推送通知
+            jPushService.sendMealRecordNotification(elderName, mealRecord.getId(), childUserIds);
+
+            log.info("成功发送膳食记录推送通知，老人: {}, 子女数量: {}",
+                    elderUser.getPhone(), childUserIds.size());
+
+        } catch (Exception e) {
+            log.error("发送膳食记录推送通知失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取老人的显示名称
+     */
+    private String getElderDisplayName(User elderUser) {
+        try {
+            // 尝试获取用户档案中的姓名
+            ProfileDTO profile = profileService.getProfileByUserIdInternal(elderUser.getId());
+            if (profile != null && profile.getName() != null && !profile.getName().trim().isEmpty()) {
+                return profile.getName();
+            }
+        } catch (Exception e) {
+            log.debug("获取用户档案失败，使用默认名称: {}", e.getMessage());
+        }
+
+        // 如果没有设置姓名，使用手机号的后4位
+        String phone = elderUser.getPhone();
+        if (phone != null && phone.length() >= 4) {
+            return "用户" + phone.substring(phone.length() - 4);
+        }
+
+        return "家人";
     }
 }

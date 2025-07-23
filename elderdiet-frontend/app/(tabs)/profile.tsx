@@ -429,10 +429,13 @@ export default function MeScreen() {
             </View>
           </View>
 
-          {/* 设置按钮
-          <TouchableOpacity style={styles.settingsButton}>
+          {/* 设置按钮 */}
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push('/settings')}
+          >
             <Ionicons name="settings-outline" size={24} color="#666" />
-          </TouchableOpacity> */}
+          </TouchableOpacity>
         </View>
       </View>
 

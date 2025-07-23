@@ -3,9 +3,11 @@ package com.elderdiet.backend.service;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.entity.UserRole;
 import com.elderdiet.backend.repository.UserRepository;
+import com.elderdiet.backend.security.JwtAuthenticationToken;
 import com.elderdiet.backend.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -97,5 +99,25 @@ public class UserService implements UserDetailsService {
     public void deleteUser(String id) {
         userRepository.deleteById(id);
         log.info("删除用户成功: {}", id);
+    }
+
+    /**
+     * 从Authentication中获取当前用户
+     */
+    public User getCurrentUser(Authentication authentication) {
+        if (authentication == null) {
+            throw new RuntimeException("用户未认证");
+        }
+
+        String userId;
+        if (authentication instanceof JwtAuthenticationToken) {
+            // 从JWT认证Token中获取用户ID
+            userId = (String) authentication.getPrincipal();
+        } else {
+            throw new RuntimeException("不支持的认证类型");
+        }
+
+        return findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
     }
 }
