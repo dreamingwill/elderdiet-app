@@ -505,6 +505,12 @@ export default function EditProfileScreen() {
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setShowChronicModal(false)}
+                style={styles.modalBackButton}
+              >
+                <Ionicons name="arrow-back" size={24} color="#333" />
+              </TouchableOpacity>
               <Text style={styles.modalTitle}>选择慢性疾病</Text>
               <TouchableOpacity
                 onPress={() => setShowChronicModal(false)}
@@ -734,6 +740,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  modalBackButton: {
+    padding: 8,
+    borderRadius: 8,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -779,14 +789,14 @@ const styles = StyleSheet.create({
   },
   // 分类相关样式
   categoryContainer: {
-    marginBottom: 16,
+    marginBottom: 1,
   },
   categoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f0f0f0',
+    padding: 16,
+    backgroundColor: '#f0f6f6',
     borderRadius: 8,
     marginBottom: 8,
   },

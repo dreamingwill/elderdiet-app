@@ -184,16 +184,9 @@ public class ProfileService {
         if (dto.getAvatarUrl() != null) {
             profile.setAvatarUrl(dto.getAvatarUrl());
         }
-        // 小树字段通常不由用户直接更新，而由游戏化服务更新
-        if (dto.getTreeStage() != null) {
-            profile.setTreeStage(dto.getTreeStage());
-        }
-        if (dto.getWateringProgress() != null) {
-            profile.setWateringProgress(dto.getWateringProgress());
-        }
-        if (dto.getCompletedTrees() != null) {
-            profile.setCompletedTrees(dto.getCompletedTrees());
-        }
+        // 注意：小树相关字段（treeStage, wateringProgress, completedTrees等）
+        // 不在此方法中更新，它们只能通过专门的游戏化服务方法更新，
+        // 以防止普通的档案更新操作意外重置小树的成长进度
     }
 
     /**

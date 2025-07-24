@@ -438,10 +438,15 @@ export default function MealPlanScreen() {
                       </View>
                       {treeStatus.today_water_count > 0 && (
                         <View style={styles.waterStatusBadge}>
-                          <Ionicons name="water" size={16} color="#fff" />
-                          {treeStatus.today_water_count === 2 && (
-                            <Text style={styles.waterCountText}>2</Text>
-                          )}
+                          {[0, 1].map((idx) => (
+                            <Ionicons
+                              key={idx}
+                              name="water"
+                              size={16}
+                              color={treeStatus.today_water_count > idx ? '#339CFF' : '#fff'}
+                              style={{ marginRight: idx === 0 ? 2 : 0 }}
+                            />
+                          ))}
                         </View>
                       )}
                     </TouchableOpacity>
@@ -792,10 +797,11 @@ const styles = StyleSheet.create({
   waterStatusBadge: {
     position: 'absolute',
     right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    backgroundColor: '#f8fff9',
+    borderRadius: 8, // 圆角矩形
+    paddingHorizontal: 8, // 水平内边距
+    height: 28, // 稍微高一点
+    minWidth: 40, // 最小宽度
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
