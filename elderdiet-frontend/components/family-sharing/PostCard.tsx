@@ -531,10 +531,11 @@ const styles = StyleSheet.create({
   },
   actionSection: {
     flexDirection: 'row',
+    marginTop: 8,
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 2,
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
   },
@@ -567,11 +568,13 @@ const styles = StyleSheet.create({
   },
   nutritionistHeader: {
     flexDirection: 'row',
+    backgroundColor: '#f8fff8',
     alignItems: 'center',
     marginBottom: 8,
   },
   nutritionistTitle: {
     fontSize: 14,
+    backgroundColor: '#f8fff8',
     fontWeight: '600',
     color: '#28a745',
     marginLeft: 6,
