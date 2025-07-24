@@ -14,11 +14,63 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Stack } from 'expo-router';
 import { useProfile } from '../hooks/useProfile';
-import { ProfileData } from '../services/api';
+import { ProfileData, ChronicConditionOption } from '../services/api';
+
+// 慢性疾病分类映射
+const CHRONIC_CONDITION_CATEGORIES = {
+  '心血管系统': [
+    'hypertension', 'heart_disease', 'coronary_heart_disease',
+    'arrhythmia', 'heart_failure', 'hyperlipidemia', 'atherosclerosis'
+  ],
+  '内分泌代谢': [
+    'diabetes', 'type_2_diabetes', 'thyroid_disease',
+    'hyperthyroidism', 'hypothyroidism', 'gout', 'obesity'
+  ],
+  '呼吸系统': [
+    'asthma', 'copd', 'chronic_bronchitis', 'pulmonary_emphysema'
+  ],
+  '消化系统': [
+    'gastritis', 'peptic_ulcer', 'gastroesophageal_reflux',
+    'chronic_hepatitis', 'fatty_liver', 'gallstones', 'chronic_constipation'
+  ],
+  '骨骼肌肉': [
+    'arthritis', 'rheumatoid_arthritis', 'osteoarthritis',
+    'osteoporosis', 'lumbar_disc_herniation', 'cervical_spondylosis'
+  ],
+  '神经系统': [
+    'stroke', 'cerebral_infarction', 'cerebral_hemorrhage',
+    'parkinsons_disease', 'alzheimers_disease', 'dementia', 'migraine'
+  ],
+  '泌尿生殖': [
+    'chronic_kidney_disease', 'kidney_stones',
+    'benign_prostatic_hyperplasia', 'urinary_incontinence'
+  ],
+  '眼科疾病': [
+    'cataract', 'glaucoma', 'macular_degeneration', 'diabetic_retinopathy'
+  ],
+  '耳鼻喉科': [
+    'hearing_loss', 'tinnitus', 'chronic_sinusitis'
+  ],
+  '皮肤疾病': [
+    'chronic_eczema', 'psoriasis'
+  ],
+  '血液系统': [
+    'anemia', 'iron_deficiency_anemia'
+  ],
+  '精神心理': [
+    'depression', 'anxiety_disorder', 'insomnia'
+  ],
+  '肿瘤疾病': [
+    'cancer_history', 'benign_tumor'
+  ],
+  '其他': [
+    'chronic_fatigue_syndrome', 'fibromyalgia', 'others'
+  ]
+};
 
 export default function EditProfileScreen() {
   const { profile, chronicConditionsOptions, isLoading, isFirstTime, createProfile, updateProfile } = useProfile();
-  
+
   // 表单状态
   const [formData, setFormData] = useState<Partial<ProfileData>>({
     name: '',
@@ -31,6 +83,11 @@ export default function EditProfileScreen() {
     dietary_preferences: [],
     notes: '',
   });
+
+  // 分类展开状态 - 默认展开常见分类
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(['心血管系统', '内分泌代谢', '呼吸系统'])
+  );
 
   // UI状态
   const [isSaving, setIsSaving] = useState(false);
@@ -149,6 +206,45 @@ export default function EditProfileScreen() {
       : [...current, condition];
 
     setFormData({ ...formData, chronic_conditions: updated });
+  };
+
+  // 切换分类展开状态
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  // 根据分类组织慢性疾病选项
+  const getCategorizedConditions = () => {
+    const categorized: { [key: string]: ChronicConditionOption[] } = {};
+
+    // 初始化所有分类
+    Object.keys(CHRONIC_CONDITION_CATEGORIES).forEach(category => {
+      categorized[category] = [];
+    });
+
+    // 将选项分配到对应分类
+    chronicConditionsOptions.forEach(option => {
+      let assigned = false;
+      for (const [category, values] of Object.entries(CHRONIC_CONDITION_CATEGORIES)) {
+        if (values.includes(option.value)) {
+          categorized[category].push(option);
+          assigned = true;
+          break;
+        }
+      }
+      // 如果没有找到对应分类，放入"其他"
+      if (!assigned) {
+        categorized['其他'].push(option);
+      }
+    });
+
+    return categorized;
   };
 
   // 添加饮食偏好
@@ -419,25 +515,47 @@ export default function EditProfileScreen() {
             </View>
             
             <ScrollView style={styles.modalContent}>
-              {chronicConditionsOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.optionItem,
-                    formData.chronic_conditions?.includes(option.value) && styles.optionItemSelected
-                  ]}
-                  onPress={() => toggleChronicCondition(option.value)}
-                >
-                  <Text style={[
-                    styles.optionText,
-                    formData.chronic_conditions?.includes(option.value) && styles.optionTextSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                  {formData.chronic_conditions?.includes(option.value) && (
-                    <Text style={styles.checkmark}>✓</Text>
+              {Object.entries(getCategorizedConditions()).map(([category, options]) => (
+                <View key={category} style={styles.categoryContainer}>
+                  {/* 分类标题 */}
+                  <TouchableOpacity
+                    style={styles.categoryHeader}
+                    onPress={() => toggleCategory(category)}
+                  >
+                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Ionicons
+                      name={expandedCategories.has(category) ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+
+                  {/* 分类下的选项 */}
+                  {expandedCategories.has(category) && (
+                    <View style={styles.categoryOptions}>
+                      {options.map((option) => (
+                        <TouchableOpacity
+                          key={option.value}
+                          style={[
+                            styles.optionItem,
+                            formData.chronic_conditions?.includes(option.value) && styles.optionItemSelected
+                          ]}
+                          onPress={() => toggleChronicCondition(option.value)}
+                        >
+                          <Text style={[
+                            styles.optionText,
+                            formData.chronic_conditions?.includes(option.value) && styles.optionTextSelected
+                          ]}>
+                            {option.label}
+                          </Text>
+                          {formData.chronic_conditions?.includes(option.value) && (
+                            <Text style={styles.checkmark}>✓</Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   )}
-                </TouchableOpacity>
+                </View>
               ))}
             </ScrollView>
           </View>
@@ -659,4 +777,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-}); 
+  // 分类相关样式
+  categoryContainer: {
+    marginBottom: 16,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  categoryOptions: {
+    paddingLeft: 8,
+  },
+});
