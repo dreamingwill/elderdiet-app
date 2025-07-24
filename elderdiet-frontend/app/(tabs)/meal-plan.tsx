@@ -443,7 +443,7 @@ export default function MealPlanScreen() {
                               key={idx}
                               name="water"
                               size={16}
-                              color={treeStatus.today_water_count > idx ? '#339CFF' : '#fff'}
+                              color={treeStatus.today_water_count > idx ? '#339CFF' : '#aaaaaa'}
                               style={{ marginRight: idx === 0 ? 2 : 0 }}
                             />
                           ))}
