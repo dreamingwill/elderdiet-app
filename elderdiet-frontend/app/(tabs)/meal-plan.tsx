@@ -292,7 +292,7 @@ export default function MealPlanScreen() {
                 <Ionicons name="sparkles" size={18} color="#fff" />
               )}
               <Text style={styles.headerButtonText}>
-                {isGenerating ? '生成中...' : 'AI推荐'}
+                {isGenerating ? '生成中' : 'AI推荐'}
               </Text>
             </TouchableOpacity>
             {currentMealPlan && (
@@ -492,7 +492,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#f8f9fa',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
     shadowColor: '#000',
