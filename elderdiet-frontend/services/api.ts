@@ -804,10 +804,10 @@ export interface LinkElderRequest {
 // 分享墙分页响应数据结构
 export interface FeedResponse {
   records: MealRecordResponse[];
-  currentPage: number;
-  totalPages: number;
-  totalRecords: number;
-  hasMore: boolean;
+  current_page: number;
+  total_pages: number;
+  total_records: number;
+  has_more: boolean;
 }
 
 // 家庭分享墙相关API

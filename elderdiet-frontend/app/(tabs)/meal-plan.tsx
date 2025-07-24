@@ -205,8 +205,8 @@ export default function MealPlanScreen() {
       if (response.success && response.data) {
         setRecords(response.data.records);
         setCurrentPage(1);
-        setHasMore(response.data.hasMore);
-        setTotalRecords(response.data.totalRecords);
+        setHasMore(response.data.has_more);
+        setTotalRecords(response.data.total_records);
       } else {
         setRecords([]);
         setHasMore(false);
@@ -222,18 +222,24 @@ export default function MealPlanScreen() {
   }, [token, pageSize]);
 
   const loadMoreFeed = useCallback(async () => {
-    if (!token || !hasMore || isLoadingMoreRecords) return;
+    console.log('loadMoreFeed called, token:', !!token, 'hasMore:', hasMore, 'isLoading:', isLoadingMoreRecords, 'currentPage:', currentPage);
+    if (!token || !hasMore || isLoadingMoreRecords) {
+      console.log('loadMoreFeed early return');
+      return;
+    }
 
     try {
       setIsLoadingMoreRecords(true);
       const nextPage = currentPage + 1;
+      console.log('Loading page:', nextPage);
       const response = await mealRecordsAPI.getFeed(token, nextPage, pageSize);
 
       if (response.success && response.data) {
+        console.log('Loaded', response.data.records.length, 'records, hasMore:', response.data.has_more);
         setRecords(prevRecords => [...prevRecords, ...response.data!.records]);
         setCurrentPage(nextPage);
-        setHasMore(response.data.hasMore);
-        setTotalRecords(response.data.totalRecords);
+        setHasMore(response.data.has_more);
+        setTotalRecords(response.data.total_records);
       }
     } catch (error) {
       console.error('加载更多数据失败:', error);
@@ -241,6 +247,13 @@ export default function MealPlanScreen() {
       setIsLoadingMoreRecords(false);
     }
   }, [token, currentPage, pageSize, hasMore, isLoadingMoreRecords]);
+
+  const handleEndReached = useCallback(() => {
+    console.log('onEndReached triggered, hasMore:', hasMore, 'isLoadingMoreRecords:', isLoadingMoreRecords);
+    if (hasMore && !isLoadingMoreRecords) {
+      loadMoreFeed();
+    }
+  }, [loadMoreFeed, hasMore, isLoadingMoreRecords]);
 
   const handleLikeToggle = useCallback((recordId: string) => {
     setRecords(prevRecords => 
@@ -713,7 +726,7 @@ export default function MealPlanScreen() {
         renderSectionHeader={renderSectionHeader}
         keyExtractor={(item, index) => {
           if (typeof item === 'string') return item;
-          return item.id || index.toString();
+          return item.id || `record-${index}`;
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -724,12 +737,17 @@ export default function MealPlanScreen() {
             tintColor="#4CAF50"
           />
         }
-        onEndReached={loadMoreFeed}
-        onEndReachedThreshold={0.1}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
         ListFooterComponent={renderListFooter}
         ListEmptyComponent={renderListEmpty}
         contentContainerStyle={styles.sectionListContainer}
         stickySectionHeadersEnabled={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={5}
+        updateCellsBatchingPeriod={100}
+        initialNumToRender={10}
+        windowSize={10}
       />
     </View>
   );

@@ -54,8 +54,8 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
           setRecords(response.data.records);
         }
 
-        setHasMore(response.data.hasMore);
-        setTotalRecords(response.data.totalRecords);
+        setHasMore(response.data.has_more);
+        setTotalRecords(response.data.total_records);
       } else {
         setRecords([]);
         setHasMore(false);
@@ -83,8 +83,8 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
         // 追加新数据到现有数据
         setRecords(prevRecords => [...prevRecords, ...response.data!.records]);
         setCurrentPage(nextPage);
-        setHasMore(response.data.hasMore);
-        setTotalRecords(response.data.totalRecords);
+        setHasMore(response.data.has_more);
+        setTotalRecords(response.data.total_records);
       }
     } catch (error) {
       console.error('加载更多数据失败:', error);
@@ -284,7 +284,7 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
           ]}
           // 无限滚动配置
           onEndReached={loadMoreFeed}
-          onEndReachedThreshold={0.1}
+          onEndReachedThreshold={0.5}
           ListFooterComponent={() => {
             if (isLoadingMore) {
               return (
