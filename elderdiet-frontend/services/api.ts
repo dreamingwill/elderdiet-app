@@ -801,11 +801,27 @@ export interface LinkElderRequest {
   elder_phone: string;
 }
 
+// 分享墙分页响应数据结构
+export interface FeedResponse {
+  records: MealRecordResponse[];
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  hasMore: boolean;
+}
+
 // 家庭分享墙相关API
 export const mealRecordsAPI = {
   // 获取分享墙时间线
-  getFeed: async (token: string): Promise<ApiResponse<MealRecordResponse[]>> => {
-    return request('/meal-records/feed', {
+  getFeed: async (token: string, page?: number, limit?: number): Promise<ApiResponse<FeedResponse>> => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/meal-records/feed${queryString ? `?${queryString}` : ''}`;
+
+    return request(endpoint, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

@@ -74,13 +74,16 @@ public class MealRecordController {
      * 获取当前用户的分享墙时间线
      */
     @GetMapping("/feed")
-    public ResponseEntity<ApiResponse<List<MealRecordResponse>>> getFeed(Authentication authentication) {
+    public ResponseEntity<ApiResponse<MealRecordService.FeedResponse>> getFeed(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            Authentication authentication) {
         try {
             // 获取当前用户
             User currentUser = getCurrentUser(authentication);
 
             // 获取分享墙时间线
-            List<MealRecordResponse> feed = mealRecordService.getFeedForUser(currentUser);
+            MealRecordService.FeedResponse feed = mealRecordService.getFeedForUser(currentUser, page, limit);
 
             return ResponseEntity.ok(ApiResponse.success("获取分享墙时间线成功", feed));
 

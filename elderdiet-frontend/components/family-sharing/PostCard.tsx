@@ -45,9 +45,9 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
         setIsCheckingComment(true);
         try {
           // 重新获取feed来检查评论是否生成
-          const response = await mealRecordsAPI.getFeed(token);
+          const response = await mealRecordsAPI.getFeed(token, 1, 30);
           if (response.success && response.data) {
-            const updatedRecord = response.data.find(r => r.id === localRecord.id);
+            const updatedRecord = response.data.records.find((r: any) => r.id === localRecord.id);
             if (updatedRecord && updatedRecord.nutritionist_comment) {
               setLocalRecord(updatedRecord);
               if (onRecordUpdate) {

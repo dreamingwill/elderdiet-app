@@ -8,6 +8,9 @@ import com.elderdiet.backend.entity.*;
 import com.elderdiet.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +27,47 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MealRecordService {
+
+    /**
+     * 分享墙响应数据结构
+     */
+    public static class FeedResponse {
+        private List<MealRecordResponse> records;
+        private int currentPage;
+        private int totalPages;
+        private long totalRecords;
+        private boolean hasMore;
+
+        public FeedResponse(List<MealRecordResponse> records, int currentPage, int totalPages, long totalRecords,
+                boolean hasMore) {
+            this.records = records;
+            this.currentPage = currentPage;
+            this.totalPages = totalPages;
+            this.totalRecords = totalRecords;
+            this.hasMore = hasMore;
+        }
+
+        // Getters
+        public List<MealRecordResponse> getRecords() {
+            return records;
+        }
+
+        public int getCurrentPage() {
+            return currentPage;
+        }
+
+        public int getTotalPages() {
+            return totalPages;
+        }
+
+        public long getTotalRecords() {
+            return totalRecords;
+        }
+
+        public boolean isHasMore() {
+            return hasMore;
+        }
+    }
 
     private final MealRecordRepository mealRecordRepository;
     private final OssService ossService;
@@ -140,6 +184,59 @@ public class MealRecordService {
         return records.stream()
                 .map(record -> convertToResponse(record, user))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取用户的分享墙时间线（支持分页）
+     */
+    public FeedResponse getFeedForUser(User user, int page, int limit) {
+        log.info("获取用户 {} 的分享墙时间线，页码: {}, 每页数量: {}", user.getPhone(), page, limit);
+
+        // 创建分页对象（页码从0开始）
+        Pageable pageable = PageRequest.of(page - 1, limit);
+
+        Page<MealRecord> recordPage;
+        long totalRecords = 0;
+
+        switch (user.getRole()) {
+            case ELDER:
+                // 老人用户：查询自己发布的记录
+                recordPage = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+                totalRecords = mealRecordRepository.countByUserId(user.getId());
+                break;
+
+            case CHILD:
+                // 子女用户：查询绑定的老人发布的FAMILY可见记录
+                List<FamilyLink> familyLinks = familyLinkRepository.findByChildId(user.getId());
+                if (!familyLinks.isEmpty()) {
+                    List<String> parentIds = familyLinks.stream()
+                            .map(FamilyLink::getParentId)
+                            .collect(Collectors.toList());
+                    recordPage = mealRecordRepository.findByUserIdInAndVisibilityOrderByCreatedAtDesc(
+                            parentIds, RecordVisibility.FAMILY, pageable);
+                    totalRecords = mealRecordRepository.countByUserIdInAndVisibility(parentIds,
+                            RecordVisibility.FAMILY);
+                } else {
+                    // 没有绑定的老人，返回空结果
+                    return new FeedResponse(Collections.emptyList(), page, 0, 0, false);
+                }
+                break;
+
+            default:
+                log.warn("未知的用户角色: {}", user.getRole());
+                return new FeedResponse(Collections.emptyList(), page, 0, 0, false);
+        }
+
+        // 转换为响应DTO
+        List<MealRecordResponse> records = recordPage.getContent().stream()
+                .map(record -> convertToResponse(record, user))
+                .collect(Collectors.toList());
+
+        // 计算分页信息
+        int totalPages = recordPage.getTotalPages();
+        boolean hasMore = page < totalPages;
+
+        return new FeedResponse(records, page, totalPages, totalRecords, hasMore);
     }
 
     /**

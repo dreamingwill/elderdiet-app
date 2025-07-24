@@ -26,26 +26,72 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
   const [records, setRecords] = useState<MealRecordResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 获取分享墙数据
-  const loadFeed = useCallback(async () => {
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const pageSize = 10;
+
+  // 获取分享墙数据（首次加载或刷新）
+  const loadFeed = useCallback(async (refresh = false) => {
     if (!token) return;
-    
+
     try {
       setError(null);
-      const response = await mealRecordsAPI.getFeed(token);
+      const page = refresh ? 1 : currentPage;
+      const response = await mealRecordsAPI.getFeed(token, page, pageSize);
+
       if (response.success && response.data) {
-        setRecords(response.data);
+        if (refresh) {
+          // 刷新时替换所有数据
+          setRecords(response.data.records);
+          setCurrentPage(1);
+        } else {
+          // 首次加载时设置数据
+          setRecords(response.data.records);
+        }
+
+        setHasMore(response.data.hasMore);
+        setTotalRecords(response.data.totalRecords);
       } else {
         setRecords([]);
+        setHasMore(false);
+        setTotalRecords(0);
       }
     } catch (error) {
       console.error('获取分享墙数据失败:', error);
       setError('获取分享墙数据失败');
       setRecords([]);
+      setHasMore(false);
+      setTotalRecords(0);
     }
-  }, [token]);
+  }, [token, currentPage, pageSize]);
+
+  // 加载更多数据
+  const loadMoreFeed = useCallback(async () => {
+    if (!token || !hasMore || isLoadingMore) return;
+
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const response = await mealRecordsAPI.getFeed(token, nextPage, pageSize);
+
+      if (response.success && response.data) {
+        // 追加新数据到现有数据
+        setRecords(prevRecords => [...prevRecords, ...response.data!.records]);
+        setCurrentPage(nextPage);
+        setHasMore(response.data.hasMore);
+        setTotalRecords(response.data.totalRecords);
+      }
+    } catch (error) {
+      console.error('加载更多数据失败:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [token, currentPage, pageSize, hasMore, isLoadingMore]);
 
   // 初始加载
   useEffect(() => {
@@ -66,7 +112,7 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
   // 下拉刷新
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadFeed();
+    await loadFeed(true); // 传入refresh=true
     setIsRefreshing(false);
   }, [loadFeed]);
 
@@ -236,6 +282,27 @@ export default function FamilySharingWall({ onCreatePost }: FamilySharingWallPro
             styles.listContainer,
             records.length === 0 && styles.emptyListContainer
           ]}
+          // 无限滚动配置
+          onEndReached={loadMoreFeed}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={() => {
+            if (isLoadingMore) {
+              return (
+                <View style={styles.loadMoreContainer}>
+                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <Text style={styles.loadMoreText}>加载更多...</Text>
+                </View>
+              );
+            }
+            if (!hasMore && records.length > 0) {
+              return (
+                <View style={styles.loadMoreContainer}>
+                  <Text style={styles.noMoreText}>没有更多内容了</Text>
+                </View>
+              );
+            }
+            return null;
+          }}
         />
       )}
     </View>
@@ -323,4 +390,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-}); 
+  loadMoreContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 8,
+  },
+  noMoreText: {
+    fontSize: 14,
+    color: '#adb5bd',
+    fontStyle: 'italic',
+  },
+});
