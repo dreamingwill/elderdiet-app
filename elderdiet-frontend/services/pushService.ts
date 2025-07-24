@@ -40,86 +40,95 @@ class PushService {
   private responseListener: any = null;
   private initializationRetryCount = 0;
   private maxRetries = 3;
-  private useJPush = true; // 使用JPush而不是Expo推送
-  private jpushAvailable = false; // JPush是否可用
+  private useJPush = true; // 重新启用JPush，现在Config Plugin已修复
+  private jpushAvailable = false; // JPush可用性状态
 
   /**
    * 检查JPush是否可用
+   * 在Development Build中应该可用，在Expo Go中不可用
    */
   private async checkJPushAvailability(): Promise<boolean> {
     try {
       // 尝试导入JPush模块
       const JPush = require('jpush-react-native').default;
 
-      // 更严格的检测：尝试实际调用JPush方法
-      if (JPush && JPush !== null && typeof JPush.init === 'function') {
-        // 尝试调用一个安全的方法来验证JPush是否真正可用
+      // 检测JPush是否真正可用
+      if (JPush && typeof JPush.init === 'function') {
         try {
+          // 尝试调用一个安全的方法来验证JPush是否真正可用
           JPush.setLoggerEnable(true); // 这是一个安全的测试调用
-          console.log('✅ JPush SDK 真正可用');
+          console.log('✅ JPush SDK在Development Build中可用');
           return true;
         } catch (initError) {
-          console.log('⚠️ JPush SDK 存在但无法调用，可能在Expo环境中:', initError);
+          console.log('⚠️ JPush SDK存在但无法调用，可能在Expo Go中运行:', initError);
           return false;
         }
       } else {
-        console.log('⚠️ JPush SDK 对象为null或缺少方法，回退到简化推送服务');
+        console.log('⚠️ JPush SDK对象为null或缺少方法');
         return false;
       }
     } catch (error) {
-      console.log('⚠️ JPush SDK 加载失败，回退到简化推送服务:', error instanceof Error ? error.message : error);
+      console.log('⚠️ JPush SDK加载失败，可能在Expo Go中运行:', error instanceof Error ? error.message : error);
       return false;
     }
   }
 
   /**
    * 初始化推送服务
+   * 智能检测：Development Build中使用JPush，Expo Go中降级到Expo推送
    */
   async initialize(): Promise<void> {
     try {
       console.log('🚀 开始初始化推送服务...');
 
       if (this.useJPush) {
-        // 检查JPush是否可用
+        // 检查JPush可用性
         this.jpushAvailable = await this.checkJPushAvailability();
 
         if (this.jpushAvailable) {
-          // 使用JPush推送服务
-          console.log('📱 使用JPush推送服务...');
+          // 在Development Build中使用JPush推送服务
+          console.log('📱 使用JPush获取Registration ID...');
           try {
             await jpushService.initialize();
           } catch (jpushError) {
-            console.log('❌ JPush初始化失败，强制回退到简化推送服务:', jpushError);
+            console.log('❌ JPush初始化失败，降级到Expo推送:', jpushError);
             this.jpushAvailable = false; // 标记为不可用
-            await simplePushService.initialize();
+            await this.fallbackToExpoPush();
           }
         } else {
-          // 回退到简化推送服务
-          console.log('📱 JPush不可用，使用简化推送服务...');
-          await simplePushService.initialize();
+          // 在Expo Go中降级到Expo推送（仅用于开发调试）
+          console.log('📱 JPush不可用，降级到Expo推送（开发环境）...');
+          await this.fallbackToExpoPush();
         }
       } else {
-        // 使用Expo推送
-        console.log('📱 使用Expo推送服务...');
-        const token = await this.registerForPushNotifications();
-
-        if (token) {
-          console.log('✅ 推送Token获取成功:', token.substring(0, 20) + '...');
-
-          // 尝试注册设备到后端
-          await this.registerDeviceToBackendWithRetry();
-        } else {
-          console.log('❌ 推送Token获取失败');
-        }
-
-        // 设置通知监听器
-        this.setupNotificationListeners();
+        // 直接使用Expo推送
+        await this.fallbackToExpoPush();
       }
 
       console.log('✅ 推送服务初始化完成');
     } catch (error) {
       console.error('❌ 推送服务初始化失败:', error);
     }
+  }
+
+  /**
+   * 降级到Expo推送
+   */
+  private async fallbackToExpoPush(): Promise<void> {
+    console.log('📱 使用Expo推送服务获取Token...');
+    const token = await this.registerForPushNotifications();
+
+    if (token) {
+      console.log('✅ Expo推送Token获取成功:', token.substring(0, 20) + '...');
+
+      // 尝试注册设备到后端
+      await this.registerDeviceToBackendWithRetry();
+    } else {
+      console.log('❌ Expo推送Token获取失败');
+    }
+
+    // 设置通知监听器
+    this.setupNotificationListeners();
   }
 
   /**
@@ -154,7 +163,7 @@ class PushService {
       }
 
       // 获取推送Token
-      console.log('🔑 获取推送Token...');
+      console.log('🔑 获取Expo推送Token...');
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: '36ea1d9a-f68a-4445-a8fa-c22c49972703', // 从app.json中获取
       });
@@ -200,24 +209,26 @@ class PushService {
 
   /**
    * 注册设备到后端
+   * 智能选择：优先使用JPush Registration ID，降级使用Expo Push Token
    */
   async registerDeviceToBackend(): Promise<boolean> {
     try {
       // 获取当前使用的推送Token
       let deviceToken: string | null = null;
+      let tokenType = 'unknown';
 
-      if (this.useJPush) {
-        if (this.jpushAvailable) {
-          deviceToken = jpushService.getRegistrationIdSync();
-        } else {
-          deviceToken = simplePushService.getDeviceToken();
-        }
+      if (this.useJPush && this.jpushAvailable) {
+        // 使用JPush Registration ID
+        deviceToken = jpushService.getRegistrationIdSync();
+        tokenType = 'jpush';
       } else {
+        // 使用Expo Push Token
         deviceToken = this.expoPushToken;
+        tokenType = 'expo';
       }
 
       if (!deviceToken) {
-        console.log('⚠️ 没有推送Token，跳过设备注册');
+        console.log(`⚠️ 没有${tokenType}推送Token，跳过设备注册`);
         return false;
       }
 
@@ -227,8 +238,8 @@ class PushService {
         return false;
       }
 
-      console.log('📤 向后端注册设备...');
-      console.log('🔍 使用的Token:', deviceToken);
+      console.log(`📤 向后端注册设备（${tokenType}）...`);
+      console.log(`🔍 使用的${tokenType}Token:`, deviceToken.substring(0, 30) + '...');
 
       const deviceInfo: DeviceRegistration = {
         deviceToken: deviceToken,
@@ -250,10 +261,11 @@ class PushService {
       });
 
       if (response.ok) {
-        console.log('✅ 设备注册成功');
+        console.log(`✅ 设备注册成功（${tokenType}），后端将使用极光推送发送`);
         return true;
       } else {
-        console.error('❌ 设备注册失败:', response.status);
+        const errorText = await response.text();
+        console.error('❌ 设备注册失败:', response.status, errorText);
         return false;
       }
     } catch (error) {
@@ -377,23 +389,16 @@ class PushService {
       if (this.useJPush) {
         if (this.jpushAvailable) {
           // 使用JPush推送服务
+          console.log('📱 使用JPush重新注册设备...');
           await jpushService.onUserLogin();
         } else {
-          // 使用简化推送服务
-          await simplePushService.onUserLogin();
+          // 降级到Expo推送
+          console.log('📱 JPush不可用，使用Expo推送重新注册设备...');
+          await this.retryExpoPushRegistration();
         }
       } else {
         // 使用Expo推送
-        if (!this.expoPushToken) {
-          console.log('⚠️ 没有推送Token，重新获取...');
-          await this.registerForPushNotifications();
-        }
-
-        if (this.expoPushToken) {
-          await this.registerDeviceToBackendWithRetry();
-        } else {
-          console.log('❌ 无法获取推送Token，设备注册失败');
-        }
+        await this.retryExpoPushRegistration();
       }
     } catch (error) {
       console.error('❌ 重新注册设备失败:', error);
@@ -401,40 +406,56 @@ class PushService {
   }
 
   /**
-   * 获取当前推送Token状态
+   * 重试Expo推送注册
    */
-  getTokenStatus(): { hasToken: boolean; token: string | null } {
-    if (this.useJPush) {
-      if (this.jpushAvailable) {
-        const token = jpushService.getRegistrationIdSync();
-        return {
-          hasToken: !!token,
-          token: token
-        };
-      } else {
-        const token = simplePushService.getDeviceToken();
-        return {
-          hasToken: !!token,
-          token: token
-        };
-      }
+  private async retryExpoPushRegistration(): Promise<void> {
+    if (!this.expoPushToken) {
+      console.log('⚠️ 没有Expo推送Token，重新获取...');
+      await this.registerForPushNotifications();
     }
-    return {
-      hasToken: !!this.expoPushToken,
-      token: this.expoPushToken
-    };
+
+    if (this.expoPushToken) {
+      console.log('✅ 使用Expo推送Token重新注册设备');
+      await this.registerDeviceToBackendWithRetry();
+    } else {
+      console.log('❌ 无法获取Expo推送Token，设备注册失败');
+    }
+  }
+
+  /**
+   * 获取当前推送Token状态
+   * 智能返回：优先JPush Registration ID，降级Expo Push Token
+   */
+  getTokenStatus(): { hasToken: boolean; token: string | null; tokenType: 'jpush' | 'expo' | 'none' } {
+    if (this.useJPush && this.jpushAvailable) {
+      const jpushToken = jpushService.getRegistrationIdSync();
+      return {
+        hasToken: !!jpushToken,
+        token: jpushToken,
+        tokenType: 'jpush'
+      };
+    } else if (this.expoPushToken) {
+      return {
+        hasToken: true,
+        token: this.expoPushToken,
+        tokenType: 'expo'
+      };
+    } else {
+      return {
+        hasToken: false,
+        token: null,
+        tokenType: 'none'
+      };
+    }
   }
 
   /**
    * 获取推送Token（向后兼容）
+   * 智能返回：优先JPush Registration ID，降级Expo Push Token
    */
   getPushToken(): string | null {
-    if (this.useJPush) {
-      if (this.jpushAvailable) {
-        return jpushService.getRegistrationIdSync();
-      } else {
-        return simplePushService.getDeviceToken();
-      }
+    if (this.useJPush && this.jpushAvailable) {
+      return jpushService.getRegistrationIdSync();
     }
     return this.expoPushToken;
   }

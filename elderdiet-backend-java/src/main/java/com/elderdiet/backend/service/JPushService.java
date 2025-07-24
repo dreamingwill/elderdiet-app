@@ -17,6 +17,7 @@ import com.elderdiet.backend.repository.PushRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +25,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * JPush推送服务
+ * 混合推送服务
+ * 支持JPush Registration ID和Expo Push Token两种推送方式
  */
 @Slf4j
 @Service
@@ -35,6 +37,7 @@ public class JPushService {
     private final JPushConfig jPushConfig;
     private final PushRecordRepository pushRecordRepository;
     private final UserDeviceService userDeviceService;
+    private final RestTemplate restTemplate;
 
     /**
      * 发送膳食记录通知给子女用户

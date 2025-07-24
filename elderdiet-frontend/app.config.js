@@ -7,7 +7,7 @@ module.exports = {
   android: {
     ...config.expo.android,
   },
-  // 使用插件来处理网络安全配置
+  // 使用插件来处理网络安全配置和JPush
   plugins: [
     ...config.expo.plugins,
     [
@@ -20,9 +20,21 @@ module.exports = {
             -keepclassmembers class * {
                 @android.webkit.JavascriptInterface <methods>;
             }
+            # JPush相关保护规则
+            -dontoptimize
+            -dontpreverify
+            -dontwarn cn.jpush.**
+            -keep class cn.jpush.** { *; }
+            -keep class * extends cn.jpush.android.helpers.JPushMessageReceiver { *; }
+            -dontwarn cn.jiguang.**
+            -keep class cn.jiguang.** { *; }
           `
         }
       }
+    ],
+    // 添加JPush Config Plugin
+    [
+      "./jpush-plugin.js"
     ]
   ],
   // 配置EAS构建

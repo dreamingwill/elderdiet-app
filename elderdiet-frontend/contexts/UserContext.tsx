@@ -138,6 +138,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPhoneState(userData.phone);
 
         console.log('✅ 用户登录成功，推送服务将自动处理设备注册');
+        
+        // 登录成功后立即尝试注册设备到推送服务
+        try {
+          const { pushService } = await import('@/services/pushService');
+          console.log('🔄 用户登录成功，立即重新注册设备...');
+          await pushService.retryDeviceRegistration();
+        } catch (pushError) {
+          console.error('❌ 登录后设备注册失败:', pushError);
+          // 不抛出错误，因为登录本身是成功的，设备注册失败不应该影响登录流程
+        }
       } else {
         throw new Error(response.message || '登录失败');
       }
