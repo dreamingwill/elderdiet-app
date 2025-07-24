@@ -123,21 +123,27 @@ export interface UserInfo {
 
 export interface ProfileData {
   _id?: string;
-  userId: string;
+  user_id: string;
   name: string;
   age: number;
   gender: 'male' | 'female' | 'other';
   region: string;
   height: number;
   weight: number;
-  chronicConditions: string[];
-  dietaryPreferences: string[];
+  chronic_conditions: string[];
+  dietary_preferences: string[];
   notes?: string;
   bmi?: number;
-  bmiStatus?: string;
+  bmi_status?: string;
+  bmi_status_label?: string;
   avatar_url?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  tree_stage?: number;
+  watering_progress?: number;
+  completed_trees?: number;
+  today_water_count?: number;
+  last_water_time?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ChronicConditionOption {
@@ -272,7 +278,7 @@ export const profileAPI = {
   },
 
   // 创建健康档案
-  createProfile: async (profileData: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>, token: string): Promise<ApiResponse<ProfileData>> => {
+  createProfile: async (profileData: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>, token: string): Promise<ApiResponse<ProfileData>> => {
     return request('/profiles', {
       method: 'POST',
       headers: {
@@ -283,7 +289,7 @@ export const profileAPI = {
   },
 
   // 更新健康档案
-  updateProfile: async (userId: string, profileData: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>, token: string): Promise<ApiResponse<ProfileData>> => {
+  updateProfile: async (userId: string, profileData: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>, token: string): Promise<ApiResponse<ProfileData>> => {
     return request(`/profiles/${userId}`, {
       method: 'PUT',
       headers: {

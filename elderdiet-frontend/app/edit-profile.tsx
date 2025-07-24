@@ -27,8 +27,8 @@ export default function EditProfileScreen() {
     region: '',
     height: 0,
     weight: 0,
-    chronicConditions: [],
-    dietaryPreferences: [],
+    chronic_conditions: [],
+    dietary_preferences: [],
     notes: '',
   });
 
@@ -57,8 +57,8 @@ export default function EditProfileScreen() {
         region: profile.region,
         height: profile.height,
         weight: profile.weight,
-        chronicConditions: profile.chronicConditions || [],
-        dietaryPreferences: profile.dietaryPreferences || [],
+        chronic_conditions: profile.chronic_conditions || [],
+        dietary_preferences: profile.dietary_preferences || [],
         notes: profile.notes || '',
       });
     }
@@ -117,8 +117,8 @@ export default function EditProfileScreen() {
         region: formData.region!,
         height: formData.height!,
         weight: formData.weight!,
-        chronicConditions: formData.chronicConditions || [],
-        dietaryPreferences: formData.dietaryPreferences || [],
+        chronic_conditions: formData.chronic_conditions || [],
+        dietary_preferences: formData.dietary_preferences || [],
         notes: formData.notes || '',
       };
 
@@ -143,21 +143,21 @@ export default function EditProfileScreen() {
 
   // 切换慢性疾病选择
   const toggleChronicCondition = (condition: string) => {
-    const current = formData.chronicConditions || [];
+    const current = formData.chronic_conditions || [];
     const updated = current.includes(condition)
       ? current.filter(c => c !== condition)
       : [...current, condition];
-    
-    setFormData({ ...formData, chronicConditions: updated });
+
+    setFormData({ ...formData, chronic_conditions: updated });
   };
 
   // 添加饮食偏好
   const addDietaryPreference = () => {
     const preference = dietaryPreferenceInput.trim();
-    if (preference && !(formData.dietaryPreferences || []).includes(preference)) {
+    if (preference && !(formData.dietary_preferences || []).includes(preference)) {
       setFormData({
         ...formData,
-        dietaryPreferences: [...(formData.dietaryPreferences || []), preference],
+        dietary_preferences: [...(formData.dietary_preferences || []), preference],
       });
       setDietaryPreferenceInput('');
     }
@@ -167,7 +167,7 @@ export default function EditProfileScreen() {
   const removeDietaryPreference = (preference: string) => {
     setFormData({
       ...formData,
-      dietaryPreferences: (formData.dietaryPreferences || []).filter(p => p !== preference),
+      dietary_preferences: (formData.dietary_preferences || []).filter(p => p !== preference),
     });
   };
 
@@ -316,17 +316,17 @@ export default function EditProfileScreen() {
               onPress={() => setShowChronicModal(true)}
             >
               <Text style={styles.selectButtonText}>
-                {formData.chronicConditions?.length 
-                  ? `已选择 ${formData.chronicConditions.length} 项`
+                {formData.chronic_conditions?.length
+                  ? `已选择 ${formData.chronic_conditions.length} 项`
                   : '点击选择慢性疾病'
                 }
               </Text>
             </TouchableOpacity>
             
             {/* 显示已选择的慢性疾病 */}
-            {formData.chronicConditions && formData.chronicConditions.length > 0 && (
+            {formData.chronic_conditions && formData.chronic_conditions.length > 0 && (
               <View style={styles.selectedItems}>
-                {formData.chronicConditions.map((condition) => (
+                {formData.chronic_conditions.map((condition) => (
                   <View key={condition} style={styles.selectedItem}>
                     <Text style={styles.selectedItemText}>
                       {chronicConditionsOptions.find(opt => opt.value === condition)?.label || condition}
@@ -358,9 +358,9 @@ export default function EditProfileScreen() {
             </View>
             
             {/* 显示已添加的饮食偏好 */}
-            {formData.dietaryPreferences && formData.dietaryPreferences.length > 0 && (
+            {formData.dietary_preferences && formData.dietary_preferences.length > 0 && (
               <View style={styles.selectedItems}>
-                {formData.dietaryPreferences.map((preference, index) => (
+                {formData.dietary_preferences.map((preference, index) => (
                   <TouchableOpacity
                     key={index}
                     style={styles.selectedItem}
@@ -424,17 +424,17 @@ export default function EditProfileScreen() {
                   key={option.value}
                   style={[
                     styles.optionItem,
-                    formData.chronicConditions?.includes(option.value) && styles.optionItemSelected
+                    formData.chronic_conditions?.includes(option.value) && styles.optionItemSelected
                   ]}
                   onPress={() => toggleChronicCondition(option.value)}
                 >
                   <Text style={[
                     styles.optionText,
-                    formData.chronicConditions?.includes(option.value) && styles.optionTextSelected
+                    formData.chronic_conditions?.includes(option.value) && styles.optionTextSelected
                   ]}>
                     {option.label}
                   </Text>
-                  {formData.chronicConditions?.includes(option.value) && (
+                  {formData.chronic_conditions?.includes(option.value) && (
                     <Text style={styles.checkmark}>✓</Text>
                   )}
                 </TouchableOpacity>

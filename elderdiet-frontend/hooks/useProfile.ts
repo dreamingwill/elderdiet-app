@@ -9,8 +9,8 @@ export interface UseProfileResult {
   isFirstTime: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
-  createProfile: (data: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateProfile: (data: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  createProfile: (data: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>) => Promise<void>;
+  updateProfile: (data: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>) => Promise<void>;
 }
 
 export const useProfile = (): UseProfileResult => {
@@ -71,7 +71,7 @@ export const useProfile = (): UseProfileResult => {
   }, [uid, token]);
 
   // 创建Profile
-  const createProfile = useCallback(async (data: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>) => {
+  const createProfile = useCallback(async (data: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>) => {
     if (!token) {
       throw new Error('用户未登录');
     }
@@ -89,7 +89,7 @@ export const useProfile = (): UseProfileResult => {
   }, [token]);
 
   // 更新Profile
-  const updateProfile = useCallback(async (data: Omit<ProfileData, '_id' | 'userId' | 'bmi' | 'bmiStatus' | 'createdAt' | 'updatedAt'>) => {
+  const updateProfile = useCallback(async (data: Omit<ProfileData, '_id' | 'user_id' | 'bmi' | 'bmi_status' | 'bmi_status_label' | 'created_at' | 'updated_at' | 'tree_stage' | 'watering_progress' | 'completed_trees' | 'today_water_count' | 'last_water_time'>) => {
     if (!uid || !token) {
       throw new Error('用户未登录');
     }

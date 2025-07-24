@@ -116,6 +116,7 @@ public class Profile {
 
     /**
      * 获取BMI状态（虚拟字段，不存储到数据库）
+     * 参考国际通用BMI分类标准
      */
     public String getBmiStatus() {
         Double bmi = getBmi();
@@ -125,12 +126,12 @@ public class Profile {
 
         if (bmi < 18.5) {
             return "underweight"; // 偏瘦
-        } else if (bmi < 24) {
+        } else if (bmi < 25.0) { // 国际通用正常范围是18.5到24.9
             return "normal"; // 正常
-        } else if (bmi < 28) {
+        } else if (bmi < 30.0) { // 国际通用超重范围是25.0到29.9
             return "overweight"; // 超重
         } else {
-            return "obese"; // 肥胖
+            return "obese"; // 肥胖 (BMI >= 30.0)
         }
     }
 

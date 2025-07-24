@@ -94,12 +94,87 @@ export default function MeScreen() {
   // 慢性疾病标签映射
   const getConditionLabel = (condition: string): string => {
     const labels: Record<string, string> = {
+      // 心血管系统疾病
       hypertension: '高血压',
-      diabetes: '糖尿病',
       heart_disease: '心脏病',
-      asthma: '哮喘',
-      arthritis: '关节炎',
+      coronary_heart_disease: '冠心病',
+      arrhythmia: '心律不齐',
+      heart_failure: '心力衰竭',
       hyperlipidemia: '高血脂',
+      atherosclerosis: '动脉硬化',
+
+      // 内分泌代谢系统疾病
+      diabetes: '糖尿病',
+      type_2_diabetes: '2型糖尿病',
+      thyroid_disease: '甲状腺疾病',
+      hyperthyroidism: '甲亢',
+      hypothyroidism: '甲减',
+      gout: '痛风',
+      obesity: '肥胖症',
+
+      // 呼吸系统疾病
+      asthma: '哮喘',
+      copd: '慢性阻塞性肺疾病',
+      chronic_bronchitis: '慢性支气管炎',
+      pulmonary_fibrosis: '肺纤维化',
+
+      // 消化系统疾病
+      gastritis: '胃炎',
+      peptic_ulcer: '消化性溃疡',
+      ibs: '肠易激综合征',
+      chronic_hepatitis: '慢性肝炎',
+      cirrhosis: '肝硬化',
+      gallstones: '胆结石',
+
+      // 泌尿系统疾病
+      chronic_kidney_disease: '慢性肾病',
+      kidney_stones: '肾结石',
+      prostate_hyperplasia: '前列腺增生',
+      urinary_incontinence: '尿失禁',
+
+      // 神经系统疾病
+      stroke: '脑卒中',
+      parkinsons_disease: '帕金森病',
+      alzheimers_disease: '阿尔茨海默病',
+      dementia: '痴呆症',
+      epilepsy: '癫痫',
+      migraine: '偏头痛',
+
+      // 骨骼肌肉系统疾病
+      osteoporosis: '骨质疏松症',
+      arthritis: '关节炎',
+      rheumatoid_arthritis: '类风湿关节炎',
+      osteoarthritis: '骨关节炎',
+      lumbar_disc_herniation: '腰椎间盘突出',
+      cervical_spondylosis: '颈椎病',
+
+      // 眼科疾病
+      cataract: '白内障',
+      glaucoma: '青光眼',
+      macular_degeneration: '黄斑变性',
+      diabetic_retinopathy: '糖尿病视网膜病变',
+
+      // 皮肤疾病
+      eczema: '湿疹',
+      psoriasis: '银屑病',
+      dermatitis: '皮炎',
+
+      // 血液系统疾病
+      anemia: '贫血',
+      thrombosis: '血栓症',
+
+      // 精神心理疾病
+      depression: '抑郁症',
+      anxiety_disorder: '焦虑症',
+      insomnia: '失眠症',
+
+      // 肿瘤疾病
+      cancer_history: '肿瘤病史',
+      benign_tumor: '良性肿瘤',
+
+      // 其他
+      chronic_fatigue_syndrome: '慢性疲劳综合征',
+      fibromyalgia: '纤维肌痛症',
       others: '其他',
     };
     return labels[condition] || condition;
@@ -107,12 +182,12 @@ export default function MeScreen() {
 
   // 渲染慢性疾病标签
   const renderChronicConditions = () => {
-    if (!profile?.chronicConditions || profile.chronicConditions.length === 0) {
+    if (!profile?.chronic_conditions || profile.chronic_conditions.length === 0) {
       return <Text style={styles.placeholderText}>暂无慢性疾病记录</Text>;
     }
 
-    const displayConditions = profile.chronicConditions.slice(0, 3);
-    const remaining = profile.chronicConditions.length - 3;
+    const displayConditions = profile.chronic_conditions.slice(0, 3);
+    const remaining = profile.chronic_conditions.length - 3;
 
     return (
       <View style={styles.tagsContainer}>
@@ -132,12 +207,12 @@ export default function MeScreen() {
 
   // 渲染饮食偏好标签
   const renderDietaryPreferences = () => {
-    if (!profile?.dietaryPreferences || profile.dietaryPreferences.length === 0) {
+    if (!profile?.dietary_preferences || profile.dietary_preferences.length === 0) {
       return <Text style={styles.placeholderText}>暂无饮食偏好设置</Text>;
     }
 
-    const displayPreferences = profile.dietaryPreferences.slice(0, 3);
-    const remaining = profile.dietaryPreferences.length - 3;
+    const displayPreferences = profile.dietary_preferences.slice(0, 3);
+    const remaining = profile.dietary_preferences.length - 3;
 
     return (
       <View style={styles.tagsContainer}>
@@ -473,10 +548,10 @@ export default function MeScreen() {
                     </Text>
                     <View style={[
                       styles.bmiStatus,
-                      { backgroundColor: getBMIStatusColor(profile.bmiStatus) }
+                      { backgroundColor: getBMIStatusColor(profile.bmi_status) }
                     ]}>
                       <Text style={styles.bmiStatusText}>
-                        {getBMIStatusText(profile.bmiStatus)}
+                        {getBMIStatusText(profile.bmi_status)}
                       </Text>
                     </View>
                   </View>

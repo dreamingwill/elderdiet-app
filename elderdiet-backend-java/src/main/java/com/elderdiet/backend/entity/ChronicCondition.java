@@ -90,6 +90,8 @@ public enum ChronicCondition {
     BENIGN_TUMOR("benign_tumor", "良性肿瘤"),
 
     // 其他
+    CHRONIC_FATIGUE_SYNDROME("chronic_fatigue_syndrome", "慢性疲劳综合征"),
+    FIBROMYALGIA("fibromyalgia", "纤维肌痛症"),
     OTHERS("others", "其他");
 
     private final String value;
