@@ -141,6 +141,78 @@ public class JPushService {
     }
 
     /**
+     * 发送评论通知给膳食记录发布者
+     */
+    public void sendCommentNotification(String commenterName, String mealRecordId, String recordOwnerId) {
+        if (jPushClient == null) {
+            log.warn("JPush客户端未初始化，跳过推送");
+            return;
+        }
+
+        try {
+            // 获取记录发布者的启用推送设备
+            List<UserDevice> devices = userDeviceService.getUsersMealRecordEnabledDevices(List.of(recordOwnerId));
+
+            if (devices.isEmpty()) {
+                log.info("记录发布者没有启用推送的设备，跳过推送");
+                return;
+            }
+
+            String title = "新评论提醒";
+            String content = String.format("%s 评论了你的膳食记录", commenterName);
+
+            // 创建推送记录
+            PushRecord pushRecord = createPushRecord(
+                    PushRecord.PushType.COMMENT_NOTIFICATION,
+                    title, content, List.of(recordOwnerId), devices, mealRecordId);
+
+            // 发送推送
+            sendPushNotification(pushRecord, title, content, createCommentExtras(mealRecordId));
+
+            log.info("成功发送评论通知，评论者: {}, 记录发布者: {}", commenterName, recordOwnerId);
+
+        } catch (Exception e) {
+            log.error("发送评论通知失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 发送点赞通知给膳食记录发布者
+     */
+    public void sendLikeNotification(String likerName, String mealRecordId, String recordOwnerId) {
+        if (jPushClient == null) {
+            log.warn("JPush客户端未初始化，跳过推送");
+            return;
+        }
+
+        try {
+            // 获取记录发布者的启用推送设备
+            List<UserDevice> devices = userDeviceService.getUsersMealRecordEnabledDevices(List.of(recordOwnerId));
+
+            if (devices.isEmpty()) {
+                log.info("记录发布者没有启用推送的设备，跳过推送");
+                return;
+            }
+
+            String title = "新点赞提醒";
+            String content = String.format("%s 赞了你的膳食记录", likerName);
+
+            // 创建推送记录
+            PushRecord pushRecord = createPushRecord(
+                    PushRecord.PushType.LIKE_NOTIFICATION,
+                    title, content, List.of(recordOwnerId), devices, mealRecordId);
+
+            // 发送推送
+            sendPushNotification(pushRecord, title, content, createLikeExtras(mealRecordId));
+
+            log.info("成功发送点赞通知，点赞者: {}, 记录发布者: {}", likerName, recordOwnerId);
+
+        } catch (Exception e) {
+            log.error("发送点赞通知失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * 创建推送记录
      */
     private PushRecord createPushRecord(PushRecord.PushType pushType, String title, String content,
@@ -250,6 +322,28 @@ public class JPushService {
         Map<String, String> extras = new HashMap<>();
         extras.put("type", "reminder");
         extras.put("action", "create_meal_record");
+        return extras;
+    }
+
+    /**
+     * 创建评论推送的额外数据
+     */
+    private Map<String, String> createCommentExtras(String mealRecordId) {
+        Map<String, String> extras = new HashMap<>();
+        extras.put("type", "comment");
+        extras.put("meal_record_id", mealRecordId);
+        extras.put("action", "view_meal_record");
+        return extras;
+    }
+
+    /**
+     * 创建点赞推送的额外数据
+     */
+    private Map<String, String> createLikeExtras(String mealRecordId) {
+        Map<String, String> extras = new HashMap<>();
+        extras.put("type", "like");
+        extras.put("meal_record_id", mealRecordId);
+        extras.put("action", "view_meal_record");
         return extras;
     }
 

@@ -36,6 +36,7 @@ public class MealRecordService {
     private final NutritionistCommentService nutritionistCommentService;
     private final JPushService jPushService;
     private final FamilyService familyService;
+    private final LikeNotificationHistoryRepository likeNotificationHistoryRepository;
 
     /**
      * 创建膳食记录
@@ -163,6 +164,7 @@ public class MealRecordService {
             // 更新点赞数
             record.setLikesCount(Math.max(0, record.getLikesCount() - 1));
             log.info("用户 {} 取消点赞记录 {}", user.getPhone(), recordId);
+            // 取消点赞不发送通知
         } else {
             // 添加点赞
             RecordLike like = RecordLike.builder()
@@ -174,6 +176,9 @@ public class MealRecordService {
             // 更新点赞数
             record.setLikesCount(record.getLikesCount() + 1);
             log.info("用户 {} 点赞记录 {}", user.getPhone(), recordId);
+
+            // 检查是否需要发送点赞通知
+            sendLikeNotificationIfNeeded(record, user);
         }
 
         mealRecordRepository.save(record);
@@ -209,6 +214,9 @@ public class MealRecordService {
         // 更新评论数
         record.setCommentsCount(record.getCommentsCount() + 1);
         mealRecordRepository.save(record);
+
+        // 检查是否需要发送评论通知
+        sendCommentNotificationIfNeeded(record, user, username);
 
         log.info("评论添加成功: {}", savedComment.getId());
         return savedComment;
@@ -380,5 +388,95 @@ public class MealRecordService {
         }
 
         return "家人";
+    }
+
+    /**
+     * 检查是否需要发送评论通知
+     */
+    private void sendCommentNotificationIfNeeded(MealRecord record, User commenter, String commenterName) {
+        try {
+            // 如果评论者就是记录发布者，不发送通知
+            if (record.getUserId().equals(commenter.getId())) {
+                log.info("评论者是记录发布者本人，跳过评论通知");
+                return;
+            }
+
+            // 异步发送评论通知
+            new Thread(() -> {
+                try {
+                    jPushService.sendCommentNotification(commenterName, record.getId(), record.getUserId());
+                } catch (Exception e) {
+                    log.error("发送评论推送通知失败: {}", e.getMessage(), e);
+                }
+            }).start();
+
+        } catch (Exception e) {
+            log.error("检查评论通知失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 检查是否需要发送点赞通知
+     */
+    private void sendLikeNotificationIfNeeded(MealRecord record, User liker) {
+        try {
+            // 如果点赞者就是记录发布者，不发送通知
+            if (record.getUserId().equals(liker.getId())) {
+                log.info("点赞者是记录发布者本人，跳过点赞通知");
+                return;
+            }
+
+            // 检查是否已经发送过点赞通知
+            boolean alreadyNotified = likeNotificationHistoryRepository
+                    .existsByRecordIdAndLikerId(record.getId(), liker.getId());
+
+            if (alreadyNotified) {
+                log.info("用户 {} 对记录 {} 的点赞通知已发送过，跳过", liker.getPhone(), record.getId());
+                return;
+            }
+
+            // 获取点赞者的显示名称
+            String likerName = getLikerDisplayName(liker);
+
+            // 记录通知历史
+            LikeNotificationHistory history = LikeNotificationHistory.create(
+                    record.getId(), liker.getId(), record.getUserId());
+            likeNotificationHistoryRepository.save(history);
+
+            // 异步发送点赞通知
+            new Thread(() -> {
+                try {
+                    jPushService.sendLikeNotification(likerName, record.getId(), record.getUserId());
+                } catch (Exception e) {
+                    log.error("发送点赞推送通知失败: {}", e.getMessage(), e);
+                }
+            }).start();
+
+        } catch (Exception e) {
+            log.error("检查点赞通知失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取点赞者的显示名称
+     */
+    private String getLikerDisplayName(User liker) {
+        try {
+            // 尝试获取用户档案中的姓名
+            ProfileDTO profile = profileService.getProfileByUserIdInternal(liker.getId());
+            if (profile != null && profile.getName() != null && !profile.getName().trim().isEmpty()) {
+                return profile.getName();
+            }
+        } catch (Exception e) {
+            log.debug("获取用户档案失败，使用默认名称: {}", e.getMessage());
+        }
+
+        // 如果没有设置姓名，使用手机号的后4位
+        String phone = liker.getPhone();
+        if (phone != null && phone.length() >= 4) {
+            return "用户" + phone.substring(phone.length() - 4);
+        }
+
+        return "用户";
     }
 }

@@ -264,6 +264,14 @@ export default function PushTestScreen() {
           >
             <Text style={styles.buttonText}>测试晚餐提醒</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#28a745' }]}
+            onPress={() => Alert.alert('提示', '评论和点赞推送需要通过实际操作触发：\n\n1. 用老人账号发布膳食记录\n2. 用子女账号评论或点赞\n3. 老人账号应该收到推送通知')}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>📝 评论/点赞推送说明</Text>
+          </TouchableOpacity>
         </View>
 
         {statistics && (

@@ -63,20 +63,22 @@ public class PushRecord {
      * 推送类型枚举
      */
     public enum PushType {
-        MEAL_RECORD_NOTIFICATION, // 膳食记录通知
-        MEAL_REMINDER,           // 膳食提醒
-        SYSTEM_NOTIFICATION      // 系统通知
+        MEAL_RECORD_NOTIFICATION, // 膳食记录通知（发布时推送给子女）
+        MEAL_REMINDER, // 膳食提醒（定时推送）
+        COMMENT_NOTIFICATION, // 评论通知（子女评论时推送给老人）
+        LIKE_NOTIFICATION, // 点赞通知（子女点赞时推送给老人）
+        SYSTEM_NOTIFICATION // 系统通知
     }
 
     /**
      * 推送状态枚举
      */
     public enum PushStatus {
-        PENDING,    // 待发送
-        SENDING,    // 发送中
-        SUCCESS,    // 发送成功
-        FAILED,     // 发送失败
-        PARTIAL     // 部分成功
+        PENDING, // 待发送
+        SENDING, // 发送中
+        SUCCESS, // 发送成功
+        FAILED, // 发送失败
+        PARTIAL // 部分成功
     }
 
     /**

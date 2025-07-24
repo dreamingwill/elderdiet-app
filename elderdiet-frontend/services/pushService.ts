@@ -297,13 +297,19 @@ class PushService {
   private handleNotificationReceived(notification: Notifications.Notification): void {
     // 可以在这里添加自定义逻辑，比如更新应用状态
     const { data } = notification.request.content;
-    
+
     if (data?.type === 'meal_record') {
       // 膳食记录通知
       console.log('收到膳食记录通知');
     } else if (data?.type === 'reminder') {
       // 提醒通知
       console.log('收到提醒通知');
+    } else if (data?.type === 'comment') {
+      // 评论通知
+      console.log('收到评论通知');
+    } else if (data?.type === 'like') {
+      // 点赞通知
+      console.log('收到点赞通知');
     }
   }
 
@@ -314,7 +320,7 @@ class PushService {
     const { data } = response.notification.request.content;
 
     if (data?.action === 'view_meal_record' && data?.meal_record_id) {
-      // 跳转到膳食记录详情页
+      // 跳转到膳食记录详情页（评论、点赞、膳食记录通知都跳转到这里）
       this.navigateToMealRecord(String(data.meal_record_id));
     } else if (data?.action === 'create_meal_record') {
       // 跳转到创建膳食记录页
