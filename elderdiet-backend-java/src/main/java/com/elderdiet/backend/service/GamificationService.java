@@ -199,13 +199,13 @@ public class GamificationService {
     private String getStageDescription(int stage) {
         switch (stage) {
             case 0:
-                return "种子";
-            case 1:
-                return "发芽";
-            case 2:
                 return "幼苗";
+            case 1:
+                return "初生苗";
+            case 2:
+                return "小树苗";
             case 3:
-                return "小树";
+                return "成长中";
             case 4:
                 return "茁壮成长";
             case 5:

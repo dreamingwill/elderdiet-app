@@ -468,6 +468,7 @@ const styles = StyleSheet.create({
   imageSection: {
     backgroundColor: '#fff',
     margin: 16,
+    marginTop: 30,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
   textSection: {
     backgroundColor: '#fff',
     margin: 16,
-    marginTop: 12,
+    marginTop:4,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -575,7 +576,7 @@ const styles = StyleSheet.create({
   privacySection: {
     backgroundColor: '#fff',
     margin: 16,
-    marginTop: 12,
+    marginTop: 0,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
   nutritionistSection: {
     backgroundColor: '#fff',
     margin: 16,
-    marginTop: 12,
+    marginTop: 0,
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -649,7 +650,7 @@ const styles = StyleSheet.create({
   publishButton: {
     backgroundColor: '#007AFF',
     margin: 16,
-    marginTop: 24,
+    marginTop: 8,
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',

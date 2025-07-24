@@ -696,12 +696,14 @@ const styles = StyleSheet.create({
   },
   treeHeader: {
     flexDirection: 'row',
+    backgroundColor: '#f8fff9',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
   treeTitle: {
     fontSize: 20,
+    backgroundColor: '#f8fff9',
     fontWeight: '700',
     color: '#28a745',
   },
