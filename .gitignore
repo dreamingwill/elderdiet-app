@@ -351,4 +351,5 @@ Thumbs.db
 
 # Health article content (膳食知识内容)
 DB/health_article_content/
+DB/health_article_content_2/
 iat_model_zh_java_demo/

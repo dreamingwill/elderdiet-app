@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-阿里云OSS图片上传脚本
-将health_article_content/image目录下的100张图片上传到阿里云OSS
+阿里云OSS图片上传脚本 - 第二批数据
+将health_article_content_2/image目录下的100张图片上传到阿里云OSS
 """
 
 import os
@@ -21,10 +21,10 @@ except ImportError:
 # OSS配置信息 - 根据你的Java配置填入
 OSS_CONFIG = {
     "access_key_id": os.getenv("ALIYUN_OSS_ACCESS_KEY_ID", "your-access-key-id"),
-    "access_key_secret": os.getenv("ALIYUN_OSS_ACCESS_KEY_SECRET", "your-access-key-secret"),
+    "access_key_secret": os.getenv("ALIYUN_OSS_ACCESS_KEY_SECRET", "your-access-key-secret"), 
     "endpoint": "https://oss-cn-shanghai.aliyuncs.com",  # 根据你的配置
     "bucket_name": "elder-diet",  # 根据你的配置
-    "path_prefix": "health-articles/images/"  # 健康文章图片路径
+    "path_prefix": "health-articles/images_batch2/"  # 第二批图片路径
 }
 
 def validate_config():
@@ -37,18 +37,15 @@ def validate_config():
     return True
 
 def upload_images_to_oss():
-    """上传图片到阿里云OSS"""
+    """上传第二批图片到阿里云OSS"""
     
     if not validate_config():
-        print("\n📝 请编辑脚本中的OSS_CONFIG配置信息：")
-        print("   - access_key_id: 阿里云AccessKey ID")
-        print("   - access_key_secret: 阿里云AccessKey Secret")
-        print("   - endpoint: OSS地域节点")
-        print("   - bucket_name: OSS存储桶名称")
-        print("   - path_prefix: 图片存储路径前缀")
+        print("\n📝 请设置环境变量：")
+        print("   export ALIYUN_OSS_ACCESS_KEY_ID='你的AccessKey ID'")
+        print("   export ALIYUN_OSS_ACCESS_KEY_SECRET='你的AccessKey Secret'")
         return None
     
-    # 图片目录
+    # 第二批图片目录
     image_dir = Path("health_article_content_2/image")
     if not image_dir.exists():
         print(f"❌ 图片目录不存在: {image_dir}")
@@ -88,7 +85,7 @@ def upload_images_to_oss():
             print(f"📤 [{i}/{len(image_files)}] 上传 {image_file.name}...")
             bucket.put_object_from_file(object_name, str(image_file))
             
-            # 构建访问URL - 使用Java配置中的base-url格式
+            # 构建访问URL
             url = f"https://{OSS_CONFIG['bucket_name']}.{OSS_CONFIG['endpoint'].replace('https://', '')}/{object_name}"
             
             # 记录映射关系（去掉扩展名作为key）
@@ -102,7 +99,7 @@ def upload_images_to_oss():
             failed_uploads.append(image_file.name)
     
     # 保存URL映射到JSON文件
-    output_file = "image_urls.json"
+    output_file = "image_urls_batch2.json"
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(uploaded_urls, f, ensure_ascii=False, indent=2)
     
@@ -119,7 +116,7 @@ def upload_images_to_oss():
     return uploaded_urls
 
 if __name__ == "__main__":
-    print("🚀 开始上传图片到阿里云OSS...")
+    print("🚀 开始上传第二批图片到阿里云OSS...")
     result = upload_images_to_oss()
     
     if result:
