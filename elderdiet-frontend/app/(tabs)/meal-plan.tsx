@@ -198,17 +198,13 @@ export default function MealPlanScreen() {
 
     try {
       setRecordsError(null);
-      const page = refresh ? 1 : currentPage;
+      // loadFeed 始终加载第1页，用于初始加载和刷新
+      const page = 1;
       const response = await mealRecordsAPI.getFeed(token, page, pageSize);
 
       if (response.success && response.data) {
-        if (refresh) {
-          setRecords(response.data.records);
-          setCurrentPage(1);
-        } else {
-          setRecords(response.data.records);
-        }
-
+        setRecords(response.data.records);
+        setCurrentPage(1);
         setHasMore(response.data.hasMore);
         setTotalRecords(response.data.totalRecords);
       } else {
@@ -223,7 +219,7 @@ export default function MealPlanScreen() {
       setHasMore(false);
       setTotalRecords(0);
     }
-  }, [token, currentPage, pageSize]);
+  }, [token, pageSize]);
 
   const loadMoreFeed = useCallback(async () => {
     if (!token || !hasMore || isLoadingMoreRecords) return;
@@ -328,7 +324,7 @@ export default function MealPlanScreen() {
       loadProfileCompleteness();
       loadFeed().finally(() => setIsLoadingRecords(false));
     }
-  }, [token, authLoading, loadFeed]);
+  }, [token, authLoading]);
   
   // 页面重新获取焦点时刷新树状态和健康档案完整性（从拍照打卡页面或编辑档案页面返回时）
   useFocusEffect(
@@ -338,7 +334,7 @@ export default function MealPlanScreen() {
         loadProfileCompleteness();
         loadFeed();
       }
-    }, [token, loadFeed])
+    }, [token])
   );
 
   // 获取当前日期

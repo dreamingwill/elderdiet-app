@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   visibilityBadgeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   contentSection: {

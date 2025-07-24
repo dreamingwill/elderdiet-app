@@ -234,7 +234,7 @@ public class MealRecordService {
 
         // 计算分页信息
         int totalPages = recordPage.getTotalPages();
-        boolean hasMore = page < totalPages;
+        boolean hasMore = recordPage.hasNext(); // 使用Spring Data的hasNext()方法，更准确
 
         return new FeedResponse(records, page, totalPages, totalRecords, hasMore);
     }
