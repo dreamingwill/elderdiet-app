@@ -254,6 +254,24 @@ export const authAPI = {
     });
   },
 
+  // 修改密码
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+    token: string
+  ): Promise<ApiResponse<void>> => {
+    return request('/auth/change-password', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+  },
+
   // 退出登录
   logout: async (token: string): Promise<ApiResponse> => {
     return request('/auth/logout', {

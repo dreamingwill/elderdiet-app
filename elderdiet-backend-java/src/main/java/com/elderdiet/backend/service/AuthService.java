@@ -1,6 +1,7 @@
 package com.elderdiet.backend.service;
 
 import com.elderdiet.backend.dto.AuthResponse;
+import com.elderdiet.backend.dto.ChangePasswordRequest;
 import com.elderdiet.backend.dto.LoginRequest;
 import com.elderdiet.backend.dto.RegisterRequest;
 import com.elderdiet.backend.dto.UserInfoResponse;
@@ -121,5 +122,26 @@ public class AuthService {
          */
         public String getUserIdFromToken(String token) {
                 return jwtUtil.getUidFromToken(token);
+        }
+
+        /**
+         * 修改密码
+         */
+        public void changePassword(String userId, ChangePasswordRequest request) {
+                log.info("用户修改密码请求: {}", userId);
+
+                // 查找用户
+                User user = userService.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+                // 验证当前密码
+                if (!userService.verifyPassword(user, request.getCurrent_password())) {
+                        throw new BadCredentialsException("当前密码错误");
+                }
+
+                // 更新密码
+                userService.updatePassword(user, request.getNew_password());
+
+                log.info("用户修改密码成功: {}", userId);
         }
 }

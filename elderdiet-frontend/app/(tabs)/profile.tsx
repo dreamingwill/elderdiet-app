@@ -628,6 +628,16 @@ export default function MeScreen() {
         
         <View style={styles.accountInfo}>
           <Text style={styles.phoneText}>手机号: {phone}</Text>
+
+          {/* 修改密码按钮 */}
+          <TouchableOpacity
+            style={styles.changePasswordButton}
+            onPress={() => router.push('change-password' as any)}
+          >
+            <Ionicons name="key-outline" size={20} color="#4CAF50" />
+            <Text style={styles.changePasswordText}>修改密码</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color="#fff" />
             <Text style={styles.signOutText}>退出登录</Text>
@@ -1009,6 +1019,23 @@ const styles = StyleSheet.create({
   phoneText: {
     fontSize: 14,
     color: '#666',
+  },
+  changePasswordButton: {
+    backgroundColor: 'white',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  changePasswordText: {
+    fontSize: 16,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
   signOutButton: {
     backgroundColor: '#ff4757',

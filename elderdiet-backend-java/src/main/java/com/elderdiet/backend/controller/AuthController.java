@@ -1,6 +1,7 @@
 package com.elderdiet.backend.controller;
 
 import com.elderdiet.backend.dto.*;
+import com.elderdiet.backend.security.JwtAuthenticationToken;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +24,16 @@ import jakarta.validation.Valid;
 @RequiredArgsConstructor
 @Validated
 public class AuthController {
-    
+
     private final AuthService authService;
-    
+
     /**
      * 用户注册
      * POST /api/v1/auth/register
      */
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<AuthResponse>> register(
-            @Valid @RequestBody RegisterRequest request
-    ) {
+            @Valid @RequestBody RegisterRequest request) {
         try {
             AuthResponse authResponse = authService.register(request);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -48,15 +48,14 @@ public class AuthController {
                     .body(ApiResponse.error("服务器内部错误"));
         }
     }
-    
+
     /**
      * 用户登录
      * POST /api/v1/auth/login
      */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
-            @Valid @RequestBody LoginRequest request
-    ) {
+            @Valid @RequestBody LoginRequest request) {
         try {
             AuthResponse authResponse = authService.login(request);
             return ResponseEntity.ok(ApiResponse.success("登录成功", authResponse));
@@ -70,15 +69,14 @@ public class AuthController {
                     .body(ApiResponse.error("服务器内部错误"));
         }
     }
-    
+
     /**
      * 获取当前用户信息
      * GET /api/v1/auth/me
      */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserInfoResponse>> getCurrentUser(
-            Authentication authentication
-    ) {
+            Authentication authentication) {
         try {
             User user = (User) authentication.getPrincipal();
             UserInfoResponse userInfo = authService.getCurrentUser(user.getId());
@@ -89,7 +87,7 @@ public class AuthController {
                     .body(ApiResponse.error("用户不存在"));
         }
     }
-    
+
     /**
      * 用户退出登录
      * POST /api/v1/auth/logout
@@ -100,4 +98,35 @@ public class AuthController {
         // 这里可以实现token黑名单等高级功能
         return ResponseEntity.ok(ApiResponse.success("退出登录成功"));
     }
-} 
+
+    /**
+     * 修改密码
+     * POST /api/v1/auth/change-password
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        try {
+            // 从认证信息中获取用户ID
+            String userId;
+            if (authentication instanceof JwtAuthenticationToken) {
+                userId = (String) authentication.getPrincipal();
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("认证信息无效"));
+            }
+
+            authService.changePassword(userId, request);
+            return ResponseEntity.ok(ApiResponse.success("密码修改成功"));
+        } catch (BadCredentialsException e) {
+            log.error("修改密码失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("当前密码错误"));
+        } catch (Exception e) {
+            log.error("修改密码过程中发生错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("服务器内部错误"));
+        }
+    }
+}

@@ -87,6 +87,20 @@ public class UserService implements UserDetailsService {
     }
 
     /**
+     * 更新用户密码
+     */
+    public void updatePassword(User user, String newPassword) {
+        // 加密新密码
+        String encodedPassword = PasswordUtil.encode(newPassword);
+
+        // 更新用户密码
+        user.setPasswordHash(encodedPassword);
+        userRepository.save(user);
+
+        log.info("用户密码更新成功: {}", user.getPhone());
+    }
+
+    /**
      * 更新用户信息
      */
     public User updateUser(User user) {
