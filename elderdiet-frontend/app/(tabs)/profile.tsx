@@ -632,7 +632,7 @@ export default function MeScreen() {
           {/* 修改密码按钮 */}
           <TouchableOpacity
             style={styles.changePasswordButton}
-            onPress={() => router.push('change-password' as any)}
+            onPress={() => router.push('/change-password')}
           >
             <Ionicons name="key-outline" size={20} color="#4CAF50" />
             <Text style={styles.changePasswordText}>修改密码</Text>

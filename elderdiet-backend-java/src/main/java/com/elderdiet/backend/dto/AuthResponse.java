@@ -13,9 +13,9 @@ import lombok.Builder;
 @AllArgsConstructor
 @Builder
 public class AuthResponse {
-    
+
     private String token;
     private String uid;
     private String phone;
     private String role;
-} 
+}
