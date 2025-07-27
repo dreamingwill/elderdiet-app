@@ -126,6 +126,11 @@ export default function LoginScreen() {
     router.push('/(auth)/register');
   };
 
+  // 跳转到忘记密码页面
+  const handleForgotPasswordRedirect = () => {
+    router.push('/(auth)/forgot-password');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -193,13 +198,20 @@ export default function LoginScreen() {
                 <Text style={styles.registerLinkButton}>立即注册</Text>
               </TouchableOpacity>
             </View>
+
+            {/* 忘记密码链接 */}
+            <View style={styles.forgotPasswordContainer}>
+              <TouchableOpacity onPress={handleForgotPasswordRedirect}>
+                <Text style={styles.forgotPasswordText}>忘记密码？</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* 开发环境提示 */}
           {__DEV__ && (
             <View style={styles.devTip}>
               <Text style={styles.devTipText}>
-                开发模式：需要先注册账号，然后使用手机号+密码登录
+                需要先注册账号，然后使用手机号+密码登录
               </Text>
             </View>
           )}
@@ -322,6 +334,15 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  forgotPasswordContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textDecorationLine: 'underline',
   },
   devTip: {
     marginTop: 24,
