@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen() {
     }
     
     if (relatedPhone.length !== 11 && relatedPhone !== '18100010001') {
-      setErrorMessage('请输入正确的关联手机号或特殊号码');
+      setErrorMessage('请输入正确的关联手机号');
       return;
     }
 
@@ -119,9 +119,9 @@ export default function ForgotPasswordScreen() {
   const renderVerifyStep = () => (
     <View style={styles.form}>
       <Text style={styles.stepTitle}>验证身份</Text>
-      <Text style={styles.stepDescription}>
+      {/* <Text style={styles.stepDescription}>
         请输入您的手机号和关联手机号来验证身份
-      </Text>
+      </Text> */}
 
       {/* 本人手机号 */}
       <View style={styles.inputContainer}>
@@ -142,7 +142,7 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.label}>关联手机号</Text>
         <TextInput
           style={styles.input}
-          placeholder="家人手机号或特殊号码18100010001"
+          placeholder="家人手机号"
           placeholderTextColor="#999"
           value={relatedPhone}
           onChangeText={(text) => handlePhoneChange(text, setRelatedPhone)}
@@ -152,7 +152,8 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.helpText}>
           老人用户：输入子女手机号{'\n'}
           子女用户：输入老人手机号{'\n'}
-          后门权限：输入18100010001
+          如无法验证身份，请尝试联系后台人员解决
+          {/* 后门权限：输入18100010001 */}
         </Text>
       </View>
 
@@ -245,9 +246,9 @@ export default function ForgotPasswordScreen() {
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={styles.title}>忘记密码</Text>
-              <Text style={styles.subtitle}>
+              {/* <Text style={styles.subtitle}>
                 {step === 'verify' ? '验证身份信息' : '设置新密码'}
-              </Text>
+              </Text> */}
             </View>
 
             {step === 'verify' ? renderVerifyStep() : renderResetStep()}
