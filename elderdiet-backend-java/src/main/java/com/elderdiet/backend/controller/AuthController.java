@@ -129,4 +129,46 @@ public class AuthController {
                     .body(ApiResponse.error("服务器内部错误"));
         }
     }
+
+    /**
+     * 验证关联关系（忘记密码第一步）
+     * POST /api/v1/auth/verify-relationship
+     */
+    @PostMapping("/verify-relationship")
+    public ResponseEntity<ApiResponse<VerifyRelationshipResponse>> verifyRelationship(
+            @Valid @RequestBody VerifyRelationshipRequest request) {
+        try {
+            VerifyRelationshipResponse response = authService.verifyRelationship(request);
+            return ResponseEntity.ok(ApiResponse.success("关联关系验证成功", response));
+        } catch (RuntimeException e) {
+            log.error("验证关联关系失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("验证关联关系过程中发生错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("服务器内部错误"));
+        }
+    }
+
+    /**
+     * 重置密码（忘记密码第二步）
+     * POST /api/v1/auth/reset-password
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            authService.resetPassword(request);
+            return ResponseEntity.ok(ApiResponse.success("密码重置成功"));
+        } catch (RuntimeException e) {
+            log.error("重置密码失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("重置密码过程中发生错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("服务器内部错误"));
+        }
+    }
 }

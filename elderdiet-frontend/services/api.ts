@@ -297,8 +297,8 @@ export const authAPI = {
     return request('/auth/verify-relationship', {
       method: 'POST',
       body: JSON.stringify({
-        userPhone,
-        relatedPhone,
+        user_phone: userPhone,
+        related_phone: relatedPhone,
       }),
     });
   },
@@ -312,9 +312,9 @@ export const authAPI = {
     return request('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify({
-        userPhone,
-        relatedPhone,
-        newPassword,
+        user_phone: userPhone,
+        related_phone: relatedPhone,
+        new_password: newPassword,
       }),
     });
   },
