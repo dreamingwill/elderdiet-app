@@ -915,6 +915,7 @@ const styles = StyleSheet.create({
 
   // 菜品列表样式
   dishesContainer: {
+    backgroundColor: '#e3eddd',
     marginTop: 16,
   },
 
