@@ -257,7 +257,7 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
         <View style={styles.nutritionistSection}>
           <View style={styles.nutritionistHeader}>
             <Ionicons name="medical" size={16} color="#28a745" />
-            <Text style={styles.nutritionistTitle}>营养师评价</Text>
+            <Text style={styles.nutritionistTitle}>AI营养师评价</Text>
             {isCheckingComment && !localRecord.nutritionist_comment && (
               <ActivityIndicator size="small" color="#28a745" style={styles.loadingIndicator} />
             )}

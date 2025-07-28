@@ -908,6 +908,7 @@ const styles = StyleSheet.create({
 
   // 膳食方案容器
   mealPlanContainer: {
+    backgroundColor: '#e3eddd',
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

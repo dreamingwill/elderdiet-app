@@ -84,7 +84,7 @@ public class NutritionistCommentService {
         prompt.append("2. 如果图片中没有食物的话，可以不提及图片内容\n");
         prompt.append("3. 语气正向积极，充满鼓励\n");
         prompt.append("4. 语言通俗易懂，适合老年人理解\n");
-        prompt.append("5. 字数严格控制在50字以内，避免使用专业术语\n\n");
+        prompt.append("5. 字数严格控制在70～100字以内，避免使用专业术语\n\n");
 
         if (userProfile != null) {
             prompt.append("用户健康信息：\n");
@@ -114,7 +114,7 @@ public class NutritionistCommentService {
 
         // 添加文字提示
         StringBuilder textPrompt = new StringBuilder();
-        textPrompt.append("请分析这份膳食记录并给出50字以内的正向鼓励评价：\n\n");
+        textPrompt.append("请分析这份膳食记录并给出80～120字以内的正向鼓励评价：\n\n");
 
         // 添加文字描述
         if (record.getCaption() != null && !record.getCaption().trim().isEmpty()) {
@@ -126,7 +126,7 @@ public class NutritionistCommentService {
         textPrompt.append("2. 如果图片中没有食物的话，可以不提及图片内容\n");
         textPrompt.append("3. 给予正向鼓励\n");
         textPrompt.append("4. 语言要温暖、通俗易懂\n\n");
-        textPrompt.append("评价要求：严格控制在50字以内，语气积极正面。");
+        textPrompt.append("评价要求：严格控制在80～120字以内，语气积极正面。");
 
         contentItems.add(AiApiRequest.ContentItem.builder()
                 .type("text")
@@ -214,7 +214,7 @@ public class NutritionistCommentService {
             // 确保评论不超过40字
             // if (aiResponse != null && aiResponse.length() > 40) {
             // aiResponse = aiResponse.substring(0, 40);
-            // log.info("评论超过50字，已截断");
+            // log.info("评论超过80～120字，已截断");
             // }
 
             return aiResponse;
