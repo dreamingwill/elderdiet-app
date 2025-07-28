@@ -6,21 +6,35 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     },
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
       },
       "env": {
         "NODE_ENV": "production"
       }
     }
   },
-  "submit": {
-    "production": {}
-  }
+      "submit": {
+      "production": {
+        "ios": {
+          "appleId": "894945409@qq.com",
+          "ascAppId": "6749223287"
+        }
+      }
+    }
 }

@@ -14,17 +14,39 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true ,
-      "bundleIdentifier": "com.zeroh12.ElderDiet"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zeroh12.ElderDiet",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This app uses tracking to provide personalized content.",
+        "NSCameraUsageDescription": "This app uses the camera to take photos for meal records.",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for meal records.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice input features.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "8.153.204.247": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSIncludesSubdomains": false
+            },
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSIncludesSubdomains": false
+            }
+          }
+        }
+      }
     },
-      "android": {
-    "adaptiveIcon": {
-      "foregroundImage": "./assets/images/my-adaptive-icon.png",
-      "backgroundColor": "#ffffff"
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/my-adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.zeroh12.ElderDiet"
     },
-    "edgeToEdgeEnabled": true,
-    "package": "com.zeroh12.ElderDiet"
-  },
     "web": {
       "bundler": "metro",
       "output": "static",
