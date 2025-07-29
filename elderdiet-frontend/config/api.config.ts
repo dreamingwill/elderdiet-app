@@ -3,18 +3,19 @@ export const API_CONFIG = {
   // 开发环境
   development: {
     //baseURL: 'http://localhost:3001/api/v1',
-    baseURL: 'http://8.153.204.247:3001/api/v1',
+    //baseURL: 'http://8.153.204.247:3001/api/v1',
+    baseURL: 'https://api06.dxdu.cn/api/v1',
     timeout: 30000, // 增加到30秒，适应AI生成时间
   },
   // 生产环境 - HTTP (临时)
   production: {
-    baseURL: 'http://8.153.204.247:3001/api/v1',
+    baseURL: 'https://api06.dxdu.cn/api/v1',
     //baseURL: 'http://localhost:3001/api/v1',
     timeout: 45000, // 增加到45秒，生产环境更保守
   },
   // 生产环境 - HTTPS (推荐)
   productionSecure: {
-    baseURL: 'https://api.elderdiet.me/api/v1',
+    baseURL: 'https://api.elderdiet.me/api/v1', // 没有IPC备案
     timeout: 45000, // 增加到45秒，生产环境更保守
   },
 };
