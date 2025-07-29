@@ -2,7 +2,7 @@
   "expo": {
     "name": "ElderDiet",
     "slug": "ElderDiet",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/my-icon.png",
     "scheme": "elderdiet",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zeroh12.ElderDiet",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This app uses tracking to provide personalized content.",
         "NSCameraUsageDescription": "This app uses the camera to take photos for meal records.",
