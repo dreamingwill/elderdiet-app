@@ -325,7 +325,7 @@ export default function DiscoveryScreen() {
             )}
 
             {/* 营养分类 */}
-            <View style={styles.nutritionCategoriesContainer}>
+            {/* <View style={styles.nutritionCategoriesContainer}>
               <Text style={styles.sectionTitle}>健康专题</Text>
               <FlatList
                 data={nutritionCategories}
@@ -335,7 +335,7 @@ export default function DiscoveryScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.nutritionCategoriesList}
               />
-            </View>
+            </View> */}
 
             {/* 文章列表 */}
             <View style={styles.articlesSection}>

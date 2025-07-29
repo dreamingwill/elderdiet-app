@@ -24,8 +24,29 @@ interface TreeStatusData {
   today_water_count: number; // 新增字段：今日浇水次数
 }
 
+// 根据当前时间获取默认餐次
+const getDefaultMealType = (): 'breakfast' | 'lunch' | 'dinner' => {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  // 0:00 - 9:30 (0 - 570分钟) 显示早餐
+  if (totalMinutes >= 0 && totalMinutes < 570) {
+    return 'breakfast';
+  }
+  // 9:30 - 14:00 (570 - 840分钟) 显示午餐
+  else if (totalMinutes >= 570 && totalMinutes < 960) {
+    return 'lunch';
+  }
+  // 14:00 之后显示晚餐
+  else {
+    return 'dinner';
+  }
+};
+
 export default function MealPlanScreen() {
-  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>('lunch');
+  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner'>(getDefaultMealType());
   const [currentMealPlan, setCurrentMealPlan] = useState<APIMealPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
