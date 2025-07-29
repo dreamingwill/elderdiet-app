@@ -382,7 +382,7 @@ export default function CreatePostScreen() {
                   color="#34c759"
                 />
                 <Text style={styles.nutritionistLabel}>
-                  分享给营养师
+                  分享给AI营养师
                 </Text>
               </View>
               <Text style={styles.nutritionistHint}>

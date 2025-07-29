@@ -1,6 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { authStorage } from '../utils/authStorage';
-import { authAPI } from '../services/api';
+import { authAPI, setTokenExpiredHandler } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pushService } from '../services/pushService';
 
@@ -23,6 +23,7 @@ interface UserContextType {
   signIn: (phone: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
+  handleTokenExpired: () => Promise<void>;
   setRole: (role: UserRole | null) => void; // 新增
 }
 
@@ -37,6 +38,38 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = role !== null && uid !== null && token !== null;
 
+  const clearUserData = async () => {
+    try {
+      // 清除认证数据
+    await authStorage.clearAuthData();
+
+      // 清除聊天记录（所有用户的聊天记录）
+      const allKeys = await AsyncStorage.getAllKeys();
+      const chatKeys = allKeys.filter(key => key.startsWith('@chat_messages_'));
+
+      if (chatKeys.length > 0) {
+        await AsyncStorage.multiRemove(chatKeys);
+        console.log('Cleared chat messages for all users');
+      }
+    } catch (error) {
+      console.error('Failed to clear user data:', error);
+    }
+  };
+
+  const handleTokenExpired = useCallback(async () => {
+    try {
+      console.log('Token已过期，清除用户数据');
+      // 清除本地存储（包括聊天记录）
+      await clearUserData();
+      setTokenState(null);
+      setRoleState(null);
+      setUidState(null);
+      setPhoneState(null);
+    } catch (error) {
+      console.error('Failed to handle token expiration:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // 从安全存储加载用户数据
     const loadUserData = async () => {
@@ -47,18 +80,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedPhone = await authStorage.getItem('userPhone');
 
         if (savedToken && savedRole && savedUid && savedPhone) {
-          // 验证token是否仍然有效
-          try {
-            await authAPI.me(savedToken);
-            setTokenState(savedToken);
-            setRoleState(savedRole as UserRole);
-            setUidState(savedUid);
-            setPhoneState(savedPhone);
-          } catch (error) {
-            // Token无效，清除存储的数据
-            console.log('Token已过期，清除用户数据');
-            await clearUserData();
-          }
+          // 直接恢复状态，不进行token验证
+          // token验证将在首次API调用时进行
+          setTokenState(savedToken);
+          setRoleState(savedRole as UserRole);
+          setUidState(savedUid);
+          setPhoneState(savedPhone);
+          console.log('用户状态已从本地存储恢复');
         }
       } catch (error) {
         console.error('Failed to load user data:', error);
@@ -70,6 +98,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUserData();
   }, []);
 
+  // 注册token过期处理器
+  useEffect(() => {
+    setTokenExpiredHandler(handleTokenExpired);
+  }, [handleTokenExpired]);
+
   const saveUserData = async (userData: UserData) => {
     await authStorage.setItem('userToken', userData.token);
     await authStorage.setItem('userRole', userData.role);
@@ -77,23 +110,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await authStorage.setItem('userPhone', userData.phone);
   };
 
-  const clearUserData = async () => {
-    try {
-      // 清除认证数据
-    await authStorage.clearAuthData();
-      
-      // 清除聊天记录（所有用户的聊天记录）
-      const allKeys = await AsyncStorage.getAllKeys();
-      const chatKeys = allKeys.filter(key => key.startsWith('@chat_messages_'));
-      
-      if (chatKeys.length > 0) {
-        await AsyncStorage.multiRemove(chatKeys);
-        console.log('Cleared chat messages for all users');
-      }
-    } catch (error) {
-      console.error('Failed to clear user data:', error);
-    }
-  };
+
 
   const signUp = async (phone: string, password: string, role: UserRole) => {
     try {
@@ -180,18 +197,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+
+
   return (
-    <UserContext.Provider value={{ 
-      role, 
-      uid, 
+    <UserContext.Provider value={{
+      role,
+      uid,
       phone,
       token,
-      isAuthenticated, 
+      isAuthenticated,
       signUp,
-      signIn, 
-      signOut, 
+      signIn,
+      signOut,
       isLoading,
       setRole: setRoleState, // 新增
+      handleTokenExpired,
     }}>
       {children}
     </UserContext.Provider>

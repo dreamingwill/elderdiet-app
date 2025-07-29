@@ -1,5 +1,13 @@
 // API基础配置
 import { API_BASE_URL, API_TIMEOUT } from '@/config/api.config';
+
+// Token过期处理器
+let tokenExpiredHandler: (() => Promise<void>) | null = null;
+
+export const setTokenExpiredHandler = (handler: () => Promise<void>) => {
+  tokenExpiredHandler = handler;
+};
+
 // 请求配置
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -79,6 +87,15 @@ async function requestWithTimeout<T>(
     const data = await response.json();
 
     if (!response.ok) {
+      // 检查是否是认证错误
+      if (response.status === 401 || response.status === 403) {
+        console.log('检测到认证错误，状态码:', response.status);
+        // 如果是认证错误且有token过期处理器，调用它
+        if (tokenExpiredHandler && config.headers && 'Authorization' in config.headers) {
+          console.log('调用token过期处理器');
+          await tokenExpiredHandler();
+        }
+      }
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
 
@@ -87,6 +104,13 @@ async function requestWithTimeout<T>(
     if (error.name === 'AbortError') {
       throw new Error('请求超时，请检查网络连接');
     }
+
+    // 检查是否是网络错误
+    if (error.message.includes('fetch') || error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      console.log('检测到网络错误，不清除token');
+      throw new Error('网络连接失败，请检查网络设置');
+    }
+
     console.error('API request failed:', error);
     throw error;
   }
