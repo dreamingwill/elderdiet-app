@@ -82,7 +82,7 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
 
 const styles = StyleSheet.create({
   dishItem: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,

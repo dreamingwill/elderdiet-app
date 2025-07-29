@@ -374,10 +374,12 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
 
 const styles = StyleSheet.create({
   postCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
+    marginTop:12,
+    marginHorizontal: 16,
     borderRadius: 16,
     marginBottom: 16,
-    paddingHorizontal: 16,
+    paddingHorizontal:8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -386,6 +388,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   userHeader: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -393,11 +396,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   userInfo: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
   userDetails: {
+    backgroundColor: '#F7F8FA',
     flex: 1,
     marginLeft: 12,
   },
@@ -446,6 +451,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   contentSection: {
+    backgroundColor: '#F7F8FA',
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
@@ -455,6 +461,7 @@ const styles = StyleSheet.create({
     color: '#212529',
   },
   imageGrid: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     marginTop: 8,
     marginLeft: 10,  // 添加左边距
@@ -483,7 +490,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   commentsSection: {
-    paddingHorizontal: 16,
+    backgroundColor: '#F7F8FA',
+    paddingHorizontal: 8,
     paddingBottom: 8,
     borderTopWidth: 1,
     borderTopColor: '#f8f8f8ff',
@@ -491,7 +499,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   commentItem: {
-    backgroundColor: '#f8f8f8ff',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
     padding: 8,
     marginBottom: 6,
@@ -499,13 +507,13 @@ const styles = StyleSheet.create({
     borderLeftColor: '#73d478ff',
   },
   commentHeader: {
-    backgroundColor: '#f8f8f8ff',
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
   commentUserInfo: {
-    backgroundColor: '#f8f8f8ff',
+    backgroundColor: '#ffffff',
     marginLeft: 6,
     flex: 1,
   },
@@ -531,6 +539,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   actionSection: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     marginTop: 8,
     justifyContent: 'flex-start',
@@ -560,7 +569,7 @@ const styles = StyleSheet.create({
   },
   nutritionistSection: {
     backgroundColor: '#f8fff8',
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     marginTop: 12,
     borderRadius: 12,
     padding: 12,

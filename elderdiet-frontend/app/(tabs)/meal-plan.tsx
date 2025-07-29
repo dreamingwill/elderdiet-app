@@ -777,7 +777,7 @@ export default function MealPlanScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
   },
   scrollContainer: {
     flex: 1,
@@ -786,6 +786,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
+    backgroundColor: '#F7F8FA',
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -798,11 +799,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   headerTopRow: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerLeft: {
+    backgroundColor: '#F7F8FA',
     flex: 1,
   },
   currentDate: {
@@ -816,6 +819,7 @@ const styles = StyleSheet.create({
     color: '#212529',
   },
   headerActions: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -904,7 +908,7 @@ const styles = StyleSheet.create({
   // 三餐导航样式
   mealTabs: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
@@ -1128,7 +1132,7 @@ const styles = StyleSheet.create({
 
   // 家庭分享墙头部样式
   familySharingHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,

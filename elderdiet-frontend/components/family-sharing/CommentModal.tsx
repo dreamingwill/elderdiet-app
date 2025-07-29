@@ -256,14 +256,14 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     height: height * 0.75, // 占据屏幕3/4高度
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
   },
   dragIndicator: {
     width: 40,
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    backgroundColor: '#F7F8FA',
   },
   textInput: {
     flex: 1,
