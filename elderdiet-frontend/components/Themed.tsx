@@ -26,6 +26,10 @@ export function useThemeColor(
   if (colorFromProps) {
     return colorFromProps;
   } else {
+    // For background color in dark mode, return "#F7F8FA" instead of black
+    if (theme === 'dark' && colorName === 'background') {
+      return '#F7F8FA';
+    }
     return Colors[theme][colorName];
   }
 }

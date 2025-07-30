@@ -10,8 +10,8 @@ export default {
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
+    text: '#000', // Changed text color to black for dark mode since we're using a light background
+    background: '#F7F8FA', // Changed from '#000' to '#F7F8FA'
     tint: tintColorDark,
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,

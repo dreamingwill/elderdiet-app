@@ -261,6 +261,18 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     overflow: 'hidden',
   },
+  modalContent: {
+    backgroundColor: '#F7F8FA',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F7F8FA',
@@ -307,7 +319,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   commentsList: {
-    padding: 16,
+    flex: 1,
+    backgroundColor: '#F7F8FA',
   },
   emptyList: {
     flex: 1,
@@ -315,8 +328,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    padding: 20,
+    backgroundColor: '#F7F8FA',
   },
   emptyText: {
     fontSize: 18,

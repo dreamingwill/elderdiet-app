@@ -383,7 +383,7 @@ export default function DiscoveryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8FA',
   },
   // 新增：固定顶部导航栏样式
   fixedHeader: {
@@ -637,9 +637,11 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   articleItem: {
-    backgroundColor: 'white',
+    backgroundColor: '#F7F8FA',
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     marginBottom: 16,
   },
   articleHeader: {
@@ -661,9 +663,10 @@ const styles = StyleSheet.create({
   },
   // 新增：加载和错误状态样式
   loadingContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 40,
+    alignItems: 'center',
+    backgroundColor: '#F7F8FA',
   },
   loadingText: {
     marginTop: 12,
@@ -671,9 +674,11 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   errorContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 40,
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F7F8FA',
   },
   errorText: {
     fontSize: 16,

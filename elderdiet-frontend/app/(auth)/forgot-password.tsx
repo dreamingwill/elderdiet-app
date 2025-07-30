@@ -269,7 +269,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fa',
+    backgroundColor: '#F7F8FA',
   },
   keyboardView: {
     flex: 1,

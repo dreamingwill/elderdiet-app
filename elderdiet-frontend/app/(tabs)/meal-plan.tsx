@@ -859,6 +859,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#F7F8FA', // Adding explicit background color
   },
   loadingText: {
     fontSize: 16,
@@ -870,6 +871,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#F7F8FA', // Adding explicit background color
   },
   errorText: {
     fontSize: 16,
@@ -891,6 +893,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#F7F8FA', // Adding explicit background color
   },
   emptyText: {
     fontSize: 18,
@@ -1023,6 +1026,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   treeContentContainer: {
+    backgroundColor: '#F7F8FA',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1032,6 +1036,7 @@ const styles = StyleSheet.create({
     height: width * 0.6,
   },
   treeLoadingContainer: {
+    backgroundColor: '#F7F8FA',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 30,

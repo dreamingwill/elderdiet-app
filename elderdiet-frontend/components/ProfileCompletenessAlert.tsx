@@ -77,8 +77,15 @@ export default function ProfileCompletenessAlert({
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 20,
-    marginVertical: 12,
+    backgroundColor: '#F7F8FA',
+    margin: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   alertCard: {
     backgroundColor: '#f8fff9',

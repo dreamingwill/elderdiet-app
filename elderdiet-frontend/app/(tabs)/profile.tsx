@@ -765,7 +765,7 @@ export default function MeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F7F8FA',
   },
   header: {
     backgroundColor: 'white',
@@ -842,6 +842,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     alignItems: 'center',
     paddingVertical: 20,
+    backgroundColor: '#F7F8FA',
   },
   errorText: {
     fontSize: 14,
@@ -851,6 +852,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     gap: 8,
+    backgroundColor: '#F7F8FA',
   },
   loadingText: {
     fontSize: 14,
@@ -1141,6 +1143,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     gap: 8,
+    backgroundColor: '#F7F8FA',
   },
   familyLoadingText: {
     fontSize: 14,
@@ -1150,6 +1153,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     gap: 8,
+    backgroundColor: '#F7F8FA',
   },
   emptyFamilyText: {
     fontSize: 16,
