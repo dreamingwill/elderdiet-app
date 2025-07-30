@@ -3,6 +3,7 @@ package com.elderdiet.backend.controller;
 import com.elderdiet.backend.dto.ApiResponse;
 import com.elderdiet.backend.service.JPushService;
 import com.elderdiet.backend.service.PushSchedulerService;
+import com.elderdiet.backend.service.UserDeviceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class PushTestController {
 
     private final PushSchedulerService pushSchedulerService;
     private final JPushService jPushService;
+    private final UserDeviceService userDeviceService;
 
     /**
      * 手动触发午餐提醒推送
@@ -53,6 +55,22 @@ public class PushTestController {
             log.error("触发晚餐提醒推送失败: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("触发晚餐提醒推送失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 紧急清理重复设备记录
+     */
+    @PostMapping("/cleanup-duplicate-devices")
+    @PreAuthorize("hasAuthority('ROLE_ELDER') or hasAuthority('ROLE_CHILD')")
+    public ResponseEntity<ApiResponse<Void>> cleanupDuplicateDevices() {
+        try {
+            userDeviceService.emergencyCleanupDuplicateTokens();
+            return ResponseEntity.ok(ApiResponse.success("重复设备记录清理完成"));
+        } catch (Exception e) {
+            log.error("清理重复设备记录失败: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("清理重复设备记录失败: " + e.getMessage()));
         }
     }
 

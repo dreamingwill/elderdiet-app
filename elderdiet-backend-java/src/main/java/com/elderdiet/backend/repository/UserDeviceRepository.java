@@ -37,6 +37,11 @@ public interface UserDeviceRepository extends MongoRepository<UserDevice, String
     Optional<UserDevice> findByDeviceToken(String deviceToken);
 
     /**
+     * 根据设备Token查找所有设备（处理重复情况）
+     */
+    List<UserDevice> findAllByDeviceToken(String deviceToken);
+
+    /**
      * 查找启用膳食记录推送的设备
      */
     @Query("{'userId': ?0, 'pushEnabled': true, 'mealRecordPushEnabled': true}")

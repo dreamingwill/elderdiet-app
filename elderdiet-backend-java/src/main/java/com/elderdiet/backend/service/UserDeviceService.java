@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -34,15 +35,17 @@ public class UserDeviceService {
         log.info("用户 {} 注册设备，Token: {}, 平台: {}",
                 user.getPhone(), request.getDeviceToken(), request.getPlatform());
 
-        // 第一步：检查这个设备Token是否已经被其他用户使用
-        Optional<UserDevice> deviceFromOtherUser = userDeviceRepository.findByDeviceToken(request.getDeviceToken());
-        if (deviceFromOtherUser.isPresent() && !deviceFromOtherUser.get().getUserId().equals(user.getId())) {
-            // 设备Token被其他用户使用，删除旧记录（设备换主人了）
-            log.info("设备Token {} 从用户 {} 转移到用户 {}",
-                    request.getDeviceToken(),
-                    deviceFromOtherUser.get().getUserId(),
-                    user.getId());
-            userDeviceRepository.delete(deviceFromOtherUser.get());
+        // 第一步：检查这个设备Token是否已经被其他用户使用（处理重复记录）
+        List<UserDevice> devicesWithSameToken = userDeviceRepository.findAllByDeviceToken(request.getDeviceToken());
+        for (UserDevice device : devicesWithSameToken) {
+            if (!device.getUserId().equals(user.getId())) {
+                // 设备Token被其他用户使用，删除旧记录（设备换主人了）
+                log.info("设备Token {} 从用户 {} 转移到用户 {}",
+                        request.getDeviceToken(),
+                        device.getUserId(),
+                        user.getId());
+                userDeviceRepository.delete(device);
+            }
         }
 
         // 第二步：查找当前用户是否已有相同的设备Token
@@ -176,11 +179,19 @@ public class UserDeviceService {
      */
     @Transactional
     public void updateDeviceActiveTime(String deviceToken) {
-        userDeviceRepository.findByDeviceToken(deviceToken)
-                .ifPresent(device -> {
-                    device.updateLastActiveTime();
-                    userDeviceRepository.save(device);
-                });
+        try {
+            // 处理可能的重复记录情况
+            List<UserDevice> devices = userDeviceRepository.findAllByDeviceToken(deviceToken);
+            for (UserDevice device : devices) {
+                device.updateLastActiveTime();
+                userDeviceRepository.save(device);
+            }
+            if (!devices.isEmpty()) {
+                log.debug("更新了 {} 个设备的活跃时间", devices.size());
+            }
+        } catch (Exception e) {
+            log.debug("更新设备活跃时间失败: {}", e.getMessage());
+        }
     }
 
     /**
@@ -290,5 +301,48 @@ public class UserDeviceService {
      */
     public long getTotalDeviceCount() {
         return userDeviceRepository.count();
+    }
+
+    /**
+     * 紧急清理重复的 deviceToken 记录
+     */
+    @Transactional
+    public void emergencyCleanupDuplicateTokens() {
+        try {
+            log.info("开始紧急清理重复的 deviceToken 记录");
+
+            List<UserDevice> allDevices = userDeviceRepository.findAll();
+            Map<String, List<UserDevice>> tokenGroups = allDevices.stream()
+                    .collect(Collectors.groupingBy(UserDevice::getDeviceToken));
+
+            int duplicateCount = 0;
+            for (Map.Entry<String, List<UserDevice>> entry : tokenGroups.entrySet()) {
+                List<UserDevice> devices = entry.getValue();
+                if (devices.size() > 1) {
+                    // 保留最新的一个，删除其他的
+                    devices.sort((a, b) -> {
+                        LocalDateTime timeA = a.getLastActiveAt() != null ? a.getLastActiveAt() : LocalDateTime.MIN;
+                        LocalDateTime timeB = b.getLastActiveAt() != null ? b.getLastActiveAt() : LocalDateTime.MIN;
+                        return timeB.compareTo(timeA);
+                    });
+
+                    // 删除除了第一个（最新的）之外的所有记录
+                    for (int i = 1; i < devices.size(); i++) {
+                        UserDevice deviceToDelete = devices.get(i);
+                        log.info("删除重复的设备记录: Token={}, User={}, LastActive={}",
+                                deviceToDelete.getDeviceToken().substring(0, 10) + "...",
+                                deviceToDelete.getUserId(),
+                                deviceToDelete.getLastActiveAt());
+                        userDeviceRepository.delete(deviceToDelete);
+                        duplicateCount++;
+                    }
+                }
+            }
+
+            log.info("紧急清理完成，删除了 {} 个重复记录", duplicateCount);
+
+        } catch (Exception e) {
+            log.error("紧急清理重复记录失败: {}", e.getMessage(), e);
+        }
     }
 }
