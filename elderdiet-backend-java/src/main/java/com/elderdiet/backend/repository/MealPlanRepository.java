@@ -82,4 +82,15 @@ public interface MealPlanRepository extends MongoRepository<MealPlan, String> {
      */
     @Query("{ 'userId': ?0, 'planDate': { '$gte': ?1, '$lte': ?2 } }")
     long countByUserIdAndPlanDateBetween(String userId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 根据用户ID和日期范围统计膳食计划，按计划日期倒序
+     */
+    List<MealPlan> findByUserIdAndPlanDateBetweenOrderByPlanDateDesc(String userId, LocalDate startDate,
+            LocalDate endDate);
+
+    /**
+     * 查找用户最近的5个膳食计划，按计划日期倒序
+     */
+    List<MealPlan> findTop5ByUserIdOrderByPlanDateDesc(String userId);
 }
