@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput, Switch, Dimensions } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput, Switch, Dimensions, Linking } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
@@ -16,7 +16,7 @@ const IMAGE_COMPRESSION_CONFIG = {
   maxWidth: 1200,      // 最大宽度
   maxHeight: 1200,     // 最大高度
   quality: 0.8,        // 压缩质量
-  maxSizeKB: 500,      // 最大文件大小(KB)
+  maxSizeKB: 2000,      // 最大文件大小(KB)
 };
 
 export default function CreatePostScreen() {
@@ -27,6 +27,32 @@ export default function CreatePostScreen() {
   const [shareWithNutritionist, setShareWithNutritionist] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+
+  useEffect(() => {
+    // 组件加载时检查权限
+    (async () => {
+      // 检查相机权限
+      const cameraPermission = await ImagePicker.getCameraPermissionsAsync();
+      // 检查相册权限
+      const libraryPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+      
+      console.log('相机权限状态:', cameraPermission.status);
+      console.log('相册权限状态:', libraryPermission.status);
+      
+      // 如果权限未授予，尝试请求
+      if (!cameraPermission.granted) {
+        console.log('尝试请求相机权限');
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        console.log('相机权限请求结果:', status);
+      }
+      
+      if (!libraryPermission.granted) {
+        console.log('尝试请求相册权限');
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log('相册权限请求结果:', status);
+      }
+    })();
+  }, []);
 
   // 压缩图片函数
   const compressImage = useCallback(async (uri: string): Promise<string> => {
@@ -84,6 +110,21 @@ export default function CreatePostScreen() {
     if (isCompressing) return; // 防止重复操作
 
     try {
+      // 先请求相册权限
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          '需要照片库权限',
+          '请在设备的设置中允许此应用访问照片',
+          [
+            { text: '取消', style: 'cancel' },
+            { text: '去设置', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
@@ -120,6 +161,21 @@ export default function CreatePostScreen() {
     if (isCompressing) return; // 防止重复操作
 
     try {
+      // 先请求相机权限
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          '需要相机权限',
+          '请在设备的设置中允许此应用使用相机',
+          [
+            { text: '取消', style: 'cancel' },
+            { text: '去设置', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         quality: 0.8,
