@@ -234,26 +234,63 @@ public class JPushService {
     }
 
     /**
+     * 过滤iOS设备，只保留Android设备
+     * 用于防止iOS设备接收推送导致崩溃
+     */
+    private List<String> filterOutIOSDevices(List<String> deviceTokens, List<UserDevice> devices) {
+        // 创建deviceToken到platform的映射
+        Map<String, UserDevice.DevicePlatform> tokenToPlatformMap = new HashMap<>();
+        for (UserDevice device : devices) {
+            tokenToPlatformMap.put(device.getDeviceToken(), device.getPlatform());
+        }
+
+        // 只保留Android设备的token
+        return deviceTokens.stream()
+                .filter(token -> {
+                    UserDevice.DevicePlatform platform = tokenToPlatformMap.get(token);
+                    return platform == UserDevice.DevicePlatform.ANDROID;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 发送推送通知
      */
     private void sendPushNotification(PushRecord pushRecord, String title, String content,
             Map<String, String> extras) {
         try {
+            // 记录开始发送推送
+            log.info("开始发送推送通知，标题: {}, 目标设备数: {} (iOS设备将被过滤掉以避免崩溃)",
+                    title, pushRecord.getDeviceTokens().size());
+
             // 保存推送记录
             pushRecord = pushRecordRepository.save(pushRecord);
             pushRecord.markAsSending();
             pushRecordRepository.save(pushRecord);
 
+            // 获取设备信息以过滤iOS设备
+            List<UserDevice> devices = userDeviceService.findDevicesByTokens(pushRecord.getDeviceTokens());
+
+            // 过滤掉iOS设备，只向Android设备发送推送
+            List<String> androidDeviceTokens = filterOutIOSDevices(pushRecord.getDeviceTokens(), devices);
+
+            // 如果没有Android设备，则标记为成功并返回
+            if (androidDeviceTokens.isEmpty()) {
+                pushRecord.markAsSuccess("No Android devices to send", 0);
+                log.info("没有Android设备接收推送，跳过发送");
+                return;
+            }
+
             // 构建推送载荷
-            PushPayload payload = buildPushPayload(pushRecord.getDeviceTokens(), title, content, extras);
+            PushPayload payload = buildPushPayload(androidDeviceTokens, title, content, extras);
 
             // 发送推送
             PushResult result = jPushClient.sendPush(payload);
 
             if (result.isResultOK()) {
-                pushRecord.markAsSuccess(String.valueOf(result.msg_id), pushRecord.getTargetCount());
+                pushRecord.markAsSuccess(String.valueOf(result.msg_id), androidDeviceTokens.size());
                 log.info("推送发送成功，消息ID: {}, 目标设备数: {}",
-                        result.msg_id, pushRecord.getTargetCount());
+                        result.msg_id, androidDeviceTokens.size());
             } else {
                 pushRecord.markAsFailed("推送发送失败: " + result.getOriginalContent());
                 log.error("推送发送失败: {}", result.getOriginalContent());
@@ -272,8 +309,9 @@ public class JPushService {
      */
     private PushPayload buildPushPayload(List<String> deviceTokens, String title, String content,
             Map<String, String> extras) {
+        // 修改: 只针对Android平台发送推送，禁用iOS推送以避免iOS设备崩溃问题
         return PushPayload.newBuilder()
-                .setPlatform(Platform.android_ios())
+                .setPlatform(Platform.android()) // 只针对Android平台
                 .setAudience(Audience.registrationId(deviceTokens))
                 .setNotification(buildNotification(title, content, extras))
                 .setMessage(Message.content(content))
@@ -288,17 +326,12 @@ public class JPushService {
      * 构建通知内容
      */
     private Notification buildNotification(String title, String content, Map<String, String> extras) {
+        // 修改: 只构建Android通知，不再构建iOS通知
         return Notification.newBuilder()
                 .setAlert(content)
                 .addPlatformNotification(AndroidNotification.newBuilder()
                         .setTitle(title)
                         .setAlert(content)
-                        .addExtras(extras)
-                        .build())
-                .addPlatformNotification(IosNotification.newBuilder()
-                        .setAlert(content)
-                        .setSound("default")
-                        .setBadge(1)
                         .addExtras(extras)
                         .build())
                 .build();

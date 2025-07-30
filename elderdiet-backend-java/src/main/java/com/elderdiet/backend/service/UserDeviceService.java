@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 /**
  * 用户设备服务类
@@ -344,5 +345,16 @@ public class UserDeviceService {
         } catch (Exception e) {
             log.error("紧急清理重复记录失败: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * 根据设备Token列表查找设备
+     */
+    public List<UserDevice> findDevicesByTokens(List<String> deviceTokens) {
+        List<UserDevice> result = new ArrayList<>();
+        for (String token : deviceTokens) {
+            userDeviceRepository.findAllByDeviceToken(token).forEach(result::add);
+        }
+        return result;
     }
 }
