@@ -3,6 +3,7 @@ package com.elderdiet.backend;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * ElderDiet后端应用主类
@@ -12,6 +13,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
  */
 @SpringBootApplication
 @EnableMongoAuditing
+@EnableScheduling
 public class ElderDietBackendApplication {
 
     public static void main(String[] args) {
@@ -21,4 +23,4 @@ public class ElderDietBackendApplication {
         System.out.println("📊 应用信息: http://localhost:3001/actuator/info");
         System.out.println("🌍 环境: " + System.getProperty("spring.profiles.active", "dev"));
     }
-} 
+}

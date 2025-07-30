@@ -93,4 +93,7 @@ public interface MealPlanRepository extends MongoRepository<MealPlan, String> {
      * 查找用户最近的5个膳食计划，按计划日期倒序
      */
     List<MealPlan> findTop5ByUserIdOrderByPlanDateDesc(String userId);
+
+    Optional<MealPlan> findByUserIdAndPlanDate(String userId, LocalDate date);
+
 }

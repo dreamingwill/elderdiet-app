@@ -33,6 +33,16 @@ public class MealPlanService {
     private final ProfileRepository profileRepository;
     private final MealRecommendationService mealRecommendationService;
 
+    public MealPlan getMealPlan(String userId, LocalDate date) {
+        log.info("获取用户 {} 的膳食计划，日期: {}", userId, date);
+        return mealPlanRepository.findByUserIdAndPlanDate(userId, date)
+                .orElse(null);
+    }
+
+    public boolean checkIfMealPlanExists(String userId, LocalDate date) {
+        return mealPlanRepository.findByUserIdAndPlanDate(userId, date).isPresent();
+    }
+
     /**
      * 生成膳食计划
      */
