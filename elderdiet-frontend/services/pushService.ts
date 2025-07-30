@@ -42,6 +42,8 @@ class PushService {
   private maxRetries = 3;
   private useJPush = true; // 重新启用JPush，现在Config Plugin已修复
   private jpushAvailable = false; // JPush可用性状态
+  private isInitialized = false; // 防止重复初始化
+  private isRegistering = false; // 防止重复注册
 
   /**
    * 检查JPush是否可用
@@ -81,6 +83,12 @@ class PushService {
     try {
       console.log('🚀 开始初始化推送服务...');
 
+      // 防止重复初始化
+      if (this.isInitialized) {
+        console.log('⚠️ 推送服务已经初始化，跳过重复初始化');
+        return;
+      }
+
       if (this.useJPush) {
         // 检查JPush可用性
         this.jpushAvailable = await this.checkJPushAvailability();
@@ -90,6 +98,7 @@ class PushService {
           console.log('📱 使用JPush获取Registration ID...');
           try {
             await jpushService.initialize();
+            this.isInitialized = true;
           } catch (jpushError) {
             console.log('❌ JPush初始化失败，降级到Expo推送:', jpushError);
             this.jpushAvailable = false; // 标记为不可用
@@ -108,6 +117,7 @@ class PushService {
       console.log('✅ 推送服务初始化完成');
     } catch (error) {
       console.error('❌ 推送服务初始化失败:', error);
+      this.isInitialized = false; // 确保失败时可以重试
     }
   }
 
@@ -129,6 +139,7 @@ class PushService {
 
     // 设置通知监听器
     this.setupNotificationListeners();
+    this.isInitialized = true;
   }
 
   /**
@@ -182,29 +193,40 @@ class PushService {
    * 带重试机制的设备注册
    */
   async registerDeviceToBackendWithRetry(): Promise<void> {
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
-      try {
-        console.log(`🔄 尝试注册设备到后端 (${attempt}/${this.maxRetries})...`);
-        
-        const success = await this.registerDeviceToBackend();
-        if (success) {
-          console.log('✅ 设备注册成功');
-          return;
-        }
-        
-        if (attempt < this.maxRetries) {
-          console.log(`⏳ 等待 ${attempt * 2} 秒后重试...`);
-          await new Promise(resolve => setTimeout(resolve, attempt * 2000));
-        }
-      } catch (error) {
-        console.error(`❌ 第 ${attempt} 次注册尝试失败:`, error);
-        if (attempt === this.maxRetries) {
-          throw error;
+    // 防止重复注册
+    if (this.isRegistering) {
+      console.log('⚠️ 设备注册正在进行中，跳过重复请求');
+      return;
+    }
+
+    this.isRegistering = true;
+    try {
+      for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+        try {
+          console.log(`🔄 尝试注册设备到后端 (${attempt}/${this.maxRetries})...`);
+          
+          const success = await this.registerDeviceToBackend();
+          if (success) {
+            console.log('✅ 设备注册成功');
+            return;
+          }
+          
+          if (attempt < this.maxRetries) {
+            console.log(`⏳ 等待 ${attempt * 2} 秒后重试...`);
+            await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+          }
+        } catch (error) {
+          console.error(`❌ 第 ${attempt} 次注册尝试失败:`, error);
+          if (attempt === this.maxRetries) {
+            throw error;
+          }
         }
       }
+      
+      console.error('❌ 所有注册尝试都失败了');
+    } finally {
+      this.isRegistering = false;
     }
-    
-    console.error('❌ 所有注册尝试都失败了');
   }
 
   /**
@@ -467,14 +489,36 @@ class PushService {
   }
 
   /**
-   * 清理监听器
+   * 清理推送服务
    */
   cleanup(): void {
-    if (this.notificationListener) {
-      this.notificationListener.remove();
-    }
-    if (this.responseListener) {
-      this.responseListener.remove();
+    try {
+      console.log('🧹 清理推送服务...');
+      
+      // 清理通知监听器
+      if (this.notificationListener) {
+        this.notificationListener.remove();
+        this.notificationListener = null;
+      }
+      if (this.responseListener) {
+        this.responseListener.remove();
+        this.responseListener = null;
+      }
+      
+      // 清理JPush服务
+      if (this.jpushAvailable) {
+        jpushService.cleanup();
+      }
+      
+      // 重置状态
+      this.isInitialized = false;
+      this.isRegistering = false;
+      this.expoPushToken = null;
+      this.jpushAvailable = false;
+      
+      console.log('✅ 推送服务清理完成');
+    } catch (error) {
+      console.error('❌ 推送服务清理失败:', error);
     }
   }
 }

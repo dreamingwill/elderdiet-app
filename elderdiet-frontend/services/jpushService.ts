@@ -18,15 +18,17 @@ interface DeviceRegistration {
 
 class JPushService {
   private registrationId: string | null = null;
-  private initializationRetryCount = 0;
   private maxRetries = 3;
+  private isInitialized = false;
+  private notificationListeners: any[] = []; // 新增：跟踪所有监听器
 
   /**
    * 检查JPush是否可用
    */
   isJPushAvailable(): boolean {
     try {
-      return JPush !== null && typeof JPush.init === 'function';
+      const JPush = require('jpush-react-native').default;
+      return JPush != null;
     } catch (error) {
       return false;
     }
@@ -38,6 +40,12 @@ class JPushService {
   async initialize(): Promise<void> {
     try {
       console.log('🚀 开始初始化JPush服务...');
+
+      // 防止重复初始化
+      if (this.isInitialized) {
+        console.log('⚠️ JPush服务已经初始化，跳过重复初始化');
+        return;
+      }
 
       if (!Device.isDevice) {
         console.log('⚠️ JPush只能在真实设备上使用（当前是模拟器）');
@@ -66,9 +74,12 @@ class JPushService {
       // 设置通知监听器
       this.setupNotificationListeners();
       
+      this.isInitialized = true;
       console.log('✅ JPush服务初始化完成');
     } catch (error) {
       console.error('❌ JPush服务初始化失败:', error);
+      // 确保初始化标志不会卡住
+      this.isInitialized = false;
     }
   }
 
@@ -132,43 +143,142 @@ class JPushService {
    * 设置通知监听器
    */
   private setupNotificationListeners(): void {
-    // 监听通知点击事件
-    JPush.addNotificationListener((result) => {
-      console.log('📱 收到通知:', result);
-      // 处理通知点击逻辑
-      this.handleNotificationClick(result);
-    });
+    try {
+      // 先清理现有监听器
+      this.clearNotificationListeners();
 
-    // 监听自定义消息
-    JPush.addCustomMessageListener((result) => {
-      console.log('📱 收到自定义消息:', result);
-      // 处理自定义消息逻辑
-    });
+      const JPush = require('jpush-react-native').default;
 
-    // 监听本地通知
-    JPush.addLocalNotificationListener((result) => {
-      console.log('📱 收到本地通知:', result);
-    });
+      // 监听通知点击事件
+      const notificationListener = JPush.addNotificationListener((result: any) => {
+        console.log('📱 收到通知:', result);
+        // 安全地处理通知点击逻辑
+        this.safeHandleNotificationClick(result);
+      });
+      this.notificationListeners.push(notificationListener);
+
+      // 监听自定义消息
+      const customMessageListener = JPush.addCustomMessageListener((result: any) => {
+        console.log('📱 收到自定义消息:', result);
+        // 处理自定义消息逻辑
+        this.safeHandleCustomMessage(result);
+      });
+      this.notificationListeners.push(customMessageListener);
+
+      // 监听本地通知  
+      const localNotificationListener = JPush.addLocalNotificationListener((result: any) => {
+        console.log('📱 收到本地通知:', result);
+        this.safeHandleLocalNotification(result);
+      });
+      this.notificationListeners.push(localNotificationListener);
+
+      console.log('✅ 通知监听器设置完成');
+    } catch (error) {
+      console.error('❌ 设置通知监听器失败:', error);
+    }
   }
 
   /**
-   * 处理通知点击
+   * 安全地处理通知点击
    */
-  private handleNotificationClick(notification: any): void {
+  private safeHandleNotificationClick(notification: any): void {
     try {
-      const extras = notification.extras;
+      // 添加null检查
+      if (!notification) {
+        console.warn('⚠️ 通知对象为null，跳过处理');
+        return;
+      }
+
+      const extras = notification.extras || {};
       
-      if (extras?.type === 'meal_record') {
+      if (extras.type === 'meal_record') {
         // 跳转到膳食记录详情页
         console.log('🍽️ 跳转到膳食记录:', extras.mealRecordId);
         // 这里可以使用导航跳转到相应页面
-      } else if (extras?.type === 'reminder') {
+      } else if (extras.type === 'reminder') {
         // 跳转到膳食记录页面
         console.log('⏰ 跳转到膳食记录页面');
         // 这里可以使用导航跳转到相应页面
+      } else if (extras.type === 'comment') {
+        // 处理评论通知
+        console.log('💬 收到评论通知:', extras.mealRecordId);
+      } else if (extras.type === 'like') {
+        // 处理点赞通知
+        console.log('👍 收到点赞通知:', extras.mealRecordId);
+      } else {
+        console.log('📱 收到未知类型通知:', extras.type);
       }
     } catch (error) {
       console.error('❌ 处理通知点击失败:', error);
+      // 不抛出错误，避免崩溃
+    }
+  }
+
+  /**
+   * 安全地处理自定义消息
+   */
+  private safeHandleCustomMessage(message: any): void {
+    try {
+      if (!message) return;
+      // 处理自定义消息逻辑
+      console.log('处理自定义消息:', message);
+    } catch (error) {
+      console.error('❌ 处理自定义消息失败:', error);
+    }
+  }
+
+  /**
+   * 安全地处理本地通知
+   */
+  private safeHandleLocalNotification(notification: any): void {
+    try {
+      if (!notification) return;
+      // 处理本地通知逻辑
+      console.log('处理本地通知:', notification);
+    } catch (error) {
+      console.error('❌ 处理本地通知失败:', error);
+    }
+  }
+
+  /**
+   * 清理通知监听器
+   */
+  private clearNotificationListeners(): void {
+    try {
+      // 清理所有现有监听器
+      this.notificationListeners.forEach((listener, index) => {
+        try {
+          if (listener && typeof listener.remove === 'function') {
+            listener.remove();
+          }
+        } catch (error) {
+          console.warn(`清理监听器 ${index} 失败:`, error);
+        }
+      });
+      this.notificationListeners = [];
+      console.log('✅ 已清理所有通知监听器');
+    } catch (error) {
+      console.error('❌ 清理监听器失败:', error);
+    }
+  }
+
+  /**
+   * 清理服务
+   */
+  cleanup(): void {
+    try {
+      console.log('🧹 清理JPush服务...');
+      
+      // 清理通知监听器
+      this.clearNotificationListeners();
+      
+      // 重置状态
+      this.isInitialized = false;
+      this.registrationId = null;
+      
+      console.log('✅ JPush服务清理完成');
+    } catch (error) {
+      console.error('❌ JPush服务清理失败:', error);
     }
   }
 

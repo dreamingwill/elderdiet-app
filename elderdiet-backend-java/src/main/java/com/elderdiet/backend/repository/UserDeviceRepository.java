@@ -79,4 +79,14 @@ public interface UserDeviceRepository extends MongoRepository<UserDevice, String
      * 检查设备Token是否存在
      */
     boolean existsByDeviceToken(String deviceToken);
+
+    /**
+     * 根据用户ID和平台查找设备
+     */
+    List<UserDevice> findByUserIdAndPlatform(String userId, UserDevice.DevicePlatform platform);
+
+    /**
+     * 统计指定时间之前不活跃的设备数量
+     */
+    long countByLastActiveAtBefore(LocalDateTime dateTime);
 }
