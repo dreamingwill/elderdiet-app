@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
     right: 16,
   },
   contentContainer: {
+    backgroundColor: '#e3eddd',
     paddingRight: 40,
     marginBottom: 12,
   },

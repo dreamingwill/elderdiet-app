@@ -513,7 +513,7 @@ export default function MealPlanScreen() {
 
                 {/* 营养总结和提示 */}
                 <View style={styles.recommendationCard}>
-                  <Text style={styles.nutritionLabel}>【营养均衡】</Text>
+                  <Text style={styles.nutritionLabel}>【营养小贴士】</Text>
                   <Text style={styles.recommendationText}>
                     {getCurrentMealSummary()}
                   </Text>
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#F7F8FA', // Adding explicit background color
+    backgroundColor: '#e3eddd', // Adding explicit background color
   },
   emptyText: {
     fontSize: 18,
@@ -1026,7 +1026,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   treeContentContainer: {
-    backgroundColor: '#F7F8FA',
+    backgroundColor: '#f8fff9',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
