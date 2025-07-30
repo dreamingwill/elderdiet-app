@@ -1,3 +1,15 @@
 {
-  "expo": {}
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "b08e5d7e-0355-4622-9d6c-31fb15673fad"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.zeroh12.elderdietapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
 }

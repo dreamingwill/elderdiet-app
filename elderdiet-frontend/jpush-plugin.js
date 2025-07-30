@@ -1,11 +1,29 @@
-const { withAndroidManifest } = require('@expo/config-plugins');
+const { withAndroidManifest, withInfoPlist } = require('@expo/config-plugins');
 
 const JPUSH_APP_KEY = 'fe2833d9f5871fd5f212dc84';
 
 const withJPush = (config) => {
-  console.log('🔧 配置JPush Config Plugin...');
+  console.log('🔧 配置JPush Config Plugin (iOS & Android)...');
   
-  // 只需要添加JPush的meta-data配置，其他的jpush-react-native包已经提供
+  // 配置iOS Info.plist
+  config = withInfoPlist(config, (config) => {
+    const infoPlist = config.modResults;
+    
+    // 确保infoPlist对象存在
+    if (infoPlist) {
+      // 添加JPush配置
+      infoPlist.JPUSH_APPKEY = JPUSH_APP_KEY;
+      infoPlist.JPUSH_CHANNEL = 'developer-default';
+      
+      console.log(`✅ 配置JPush for iOS with AppKey: ${JPUSH_APP_KEY}`);
+    } else {
+      console.warn('⚠️ Info.plist对象不存在，跳过iOS配置');
+    }
+    
+    return config;
+  });
+  
+  // 配置Android AndroidManifest.xml
   config = withAndroidManifest(config, (config) => {
     const androidManifest = config.modResults;
     const application = androidManifest.manifest.application[0];
@@ -44,11 +62,11 @@ const withJPush = (config) => {
       application['meta-data'].push(jpushChannel);
     }
     
-    console.log('✅ 仅添加JPush meta-data配置，其他配置由jpush-react-native包提供');
+    console.log(`✅ 配置JPush for Android with AppKey: ${JPUSH_APP_KEY}`);
     return config;
   });
 
-  console.log('✅ JPush Config Plugin配置完成');
+  console.log('✅ JPush Config Plugin配置完成 (iOS & Android)');
   return config;
 };
 
