@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -171,7 +172,13 @@ public class MealRecordService {
                     log.info("用户 {} 通过家庭关系找到 {} 个关联老人", user.getPhone(), relatedElderIds.size());
 
                     // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录
-                    records = mealRecordRepository.findTop30OwnAndFamilyVisibleRecords(user.getId(), relatedElderIds);
+                    List<MealRecord> allRecords = mealRecordRepository
+                            .findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(user.getId(), relatedElderIds);
+
+                    // 手动限制结果数量为30条
+                    records = allRecords.stream()
+                            .limit(30)
+                            .collect(Collectors.toList());
                 }
                 break;
 
@@ -204,8 +211,8 @@ public class MealRecordService {
     public FeedResponse getFeedForUser(User user, int page, int limit) {
         log.info("获取用户 {} 的分享墙时间线，页码: {}, 每页数量: {}", user.getPhone(), page, limit);
 
-        // 创建分页对象（页码从0开始）
-        Pageable pageable = PageRequest.of(page - 1, limit);
+        // 创建分页对象（页码从0开始），并添加按创建时间倒序的排序
+        Pageable pageable = PageRequest.of(page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<MealRecord> recordPage;
         long totalRecords = 0;

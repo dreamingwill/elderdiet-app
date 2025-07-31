@@ -83,9 +83,9 @@ public interface MealRecordRepository extends MongoRepository<MealRecord, String
         long countOwnAndFamilyVisibleRecords(String userId, List<String> otherUserIds);
 
         /**
-         * 组合查询：查询用户自己的所有记录和其他用户的FAMILY可见记录（不分页，限制30条）
+         * 组合查询：查询用户自己的所有记录和其他用户的FAMILY可见记录（按创建时间倒序排序）
          * 使用MongoDB的$or操作符来实现复合条件
          */
         @Query(value = "{ '$or': [ { 'userId': ?0 }, { 'userId': { '$in': ?1 }, 'visibility': 'FAMILY' } ] }", sort = "{ 'createdAt': -1 }")
-        List<MealRecord> findTop30OwnAndFamilyVisibleRecords(String userId, List<String> otherUserIds);
+        List<MealRecord> findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(String userId, List<String> otherUserIds);
 }
