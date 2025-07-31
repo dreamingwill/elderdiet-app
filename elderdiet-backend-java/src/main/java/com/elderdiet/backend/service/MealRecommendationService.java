@@ -275,7 +275,19 @@ public class MealRecommendationService {
         prompt.append("\n");
         prompt.append("替换菜品要求：\n");
         prompt.append("1. **多样性**: 请选择与原菜品及现有菜品不同的食材和烹饪方式。\n");
-        prompt.append("2. **推荐理由**: 必须严格遵循为完整膳食计划定义的 **推荐理由 (recommendationReason)** 的所有要求（结构、字数、范例等），确保高质量输出。\n");
+        prompt.append("2. **推荐理由 (recommendationReason)**：必须严格遵循如下结构、字数和内容要求，风格与完整膳食计划一致：\n");
+        prompt.append("   - **字数要求**：严格控制在 **80到120个汉字** 之间。\n");
+        prompt.append("   - **内容结构**：必须包含三个层面：\n");
+        prompt.append("     1. **中医食疗价值** (约30字): 点明食材性味，解释其如何根据中医理论调理用户身体。\n");
+        prompt.append("     2. **现代营养分析** (约50字): 分析关键营养成分（如优质蛋白、特定维生素、膳食纤维等）及其对用户慢性病（如高血压、糖尿病）的具体益处。\n");
+        prompt.append("     3. **适龄化与个性化** (约30字): 强调菜品的烹饪方式为何适合用户的年龄和消化能力（如软烂、易消化），并结合用户的个人偏好。\n");
+        prompt.append("   - **高质量范例**: \n");
+        prompt.append(
+                "     - **【范例1·鱼类】清蒸鲈鱼**: '鲈鱼性平味甘，有补肝肾、益脾胃的功效。从营养学角度，它富含优质蛋白质和Omega-3脂肪酸，有助于保护心血管、降低血脂，对您的高血压有益。清蒸做法保证了肉质软嫩易消化，完美符合您的口味偏好。'\n");
+        prompt.append(
+                "     - **【范例2·素食】西芹炒百合**: '百合性微寒，能润肺安神；西芹性凉，可平肝清热，有助于调理您因压力引起的血糖波动。此菜富含膳食纤维，能延缓餐后血糖上升，是管理糖尿病的理想菜肴。快炒保持了食材的爽脆，清新不油腻，符合您的清淡口味。'\n");
+        prompt.append(
+                "     - **【范例3·汤品】杜仲核桃猪骨汤**: '杜仲乃补肾强骨之要药，核桃则补肾固精，此汤旨在温补肾阳，对您腰膝酸软的状况有很好的调养效果。猪骨汤富含胶原蛋白和钙质，核桃提供Omega-3脂肪酸，有助于减轻炎症。长时间炖煮使精华融入汤中，温润顺滑，易于消化。'\n");
         prompt.append("\n");
         prompt.append("请严格按照以下JSON格式返回，不要添加任何其他文字：");
         prompt.append(getDishJsonFormat());
@@ -292,14 +304,11 @@ public class MealRecommendationService {
 
         prompt.append("我想要替换").append(targetMeal.getMealTypeLabel()).append("中的").append(originalDish.getName())
                 .append("。");
-
         if (request.getReplaceReason() != null) {
             prompt.append("替换原因：").append(request.getReplaceReason()).append("。");
         }
-
         prompt.append("请推荐一道营养相当、适合我健康状况的菜品。");
-        prompt.append("重要提醒：推荐理由必须严格控制在80~120汉字之间，请仔细计算字数确保符合要求。");
-        prompt.append("请选择与原菜品不同的食材和做法，让膳食更加丰富多样。");
+        prompt.append("请确保推荐理由 (recommendationReason) 的风格、结构、字数与完整膳食计划中的单个菜品完全一致。");
 
         return prompt.toString();
     }

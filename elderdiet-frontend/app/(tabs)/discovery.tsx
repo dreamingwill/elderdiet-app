@@ -490,6 +490,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   articleTitleContainer: {
+    backgroundColor: '#F7F8FA',
     flex: 1,
     marginRight: 12,
   },
@@ -515,6 +516,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   tagsContainer: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
@@ -645,6 +647,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   articleHeader: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
