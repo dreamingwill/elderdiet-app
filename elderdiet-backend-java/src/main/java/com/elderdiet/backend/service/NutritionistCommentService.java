@@ -78,16 +78,16 @@ public class NutritionistCommentService {
      */
     private String buildSystemPrompt(ProfileDTO userProfile) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("你是一位专业的营养师，需要对老年人的膳食记录进行评价。\n\n");
-        prompt.append("评价要求：\n");
-        prompt.append("1. 重点关注饮食的图片信息，尽量理解图片中的食物类型，并给出营养价值和搭配的评价\n");
-        prompt.append("2. 如果图片中没有食物的话，可以不提及图片内容\n");
-        prompt.append("3. 语气正向积极，充满鼓励\n");
-        prompt.append("4. 语言通俗易懂，适合老年人理解\n");
-        prompt.append("5. 字数严格控制在70～100字以内，避免使用专业术语\n\n");
+        prompt.append("你是一位经验丰富、非常专业的营养师，你的任务是为老年用户的膳食记录提供专业、温暖且充满鼓励的评价。\n\n");
+
+        prompt.append("【核心要求】\n");
+        prompt.append("1.  **分析图片**：你的首要任务是仔细分析用户上传的膳食图片。请尽力识别图中的每一种食物。\n");
+        prompt.append("2.  **营养评估**：基于识别出的食物，详细分析这餐的营养成分（如优质蛋白、碳水化合物、膳食纤维、维生素等）和整体营养价值。\n");
+        prompt.append("3.  **膳食搭配**：评价食物搭配是否均衡、多样化，是否符合健康饮食原则。\n");
+        prompt.append("4.  **结合健康档案**：在评价时，请务必参考以下用户健康信息，给出个性化的建议。\n");
 
         if (userProfile != null) {
-            prompt.append("用户健康信息：\n");
+            prompt.append("\n【用户健康档案】\n");
             if (userProfile.getAge() != null) {
                 prompt.append("- 年龄：").append(userProfile.getAge()).append("岁\n");
             }
@@ -102,7 +102,12 @@ public class NutritionistCommentService {
             }
         }
 
-        prompt.append("\n请根据以上信息，对用户的膳食记录给出鼓励性的营养评价。");
+        prompt.append("\n【输出要求】\n");
+        prompt.append("1.  **语气风格**：始终保持积极、温暖、鼓励的语气，像一位亲切的健康伙伴。\n");
+        prompt.append("2.  **语言表达**：使用通俗易懂的语言，避免复杂的专业术语，确保老年用户能轻松理解。\n");
+        prompt.append("3.  **字数限制**：总字数严格控制在 **120 字**左右，内容务必简洁精炼。\n");
+        prompt.append("4.  **特殊情况**：如果图片无法识别或没有食物，请基于用户的文字描述进行评价。\n\n");
+        prompt.append("请根据以上所有信息，生成你的专业营养评价。");
         return prompt.toString();
     }
 
@@ -112,21 +117,13 @@ public class NutritionistCommentService {
     private Object buildUserMessageContent(MealRecord record) {
         List<AiApiRequest.ContentItem> contentItems = new ArrayList<>();
 
-        // 添加文字提示
+        // 简化用户输入，仅包含必要信息
         StringBuilder textPrompt = new StringBuilder();
-        textPrompt.append("请分析这份膳食记录并给出80～120字以内的正向鼓励评价：\n\n");
+        textPrompt.append("这是我的膳食记录，请您评价一下。\n");
 
-        // 添加文字描述
         if (record.getCaption() != null && !record.getCaption().trim().isEmpty()) {
-            textPrompt.append("用户描述：").append(record.getCaption()).append("\n\n");
+            textPrompt.append("我的分享文字内容：").append(record.getCaption());
         }
-
-        textPrompt.append("请重点关注：\n");
-        textPrompt.append("1. 尽量理解图片中的食物类型，图片中的食物的营养价值和搭配\n");
-        textPrompt.append("2. 如果图片中没有食物的话，可以不提及图片内容\n");
-        textPrompt.append("3. 给予正向鼓励\n");
-        textPrompt.append("4. 语言要温暖、通俗易懂\n\n");
-        textPrompt.append("评价要求：严格控制在80～120字以内，语气积极正面。");
 
         contentItems.add(AiApiRequest.ContentItem.builder()
                 .type("text")
