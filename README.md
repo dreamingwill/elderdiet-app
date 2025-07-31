@@ -8,8 +8,10 @@
 
 ### iOS 用户
 
+https://testflight.apple.com/join/4wWTtbBF
+
 1. 下载 **TestFlight** 应用
-2. 加入测试：https://testflight.apple.com/join/4wWTtbBF
+2. 加入测试
 
 ---
 

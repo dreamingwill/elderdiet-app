@@ -159,8 +159,20 @@ public class MealRecordService {
 
         switch (user.getRole()) {
             case ELDER:
-                // 老人用户：查询自己发布的最近30条记录
-                records = mealRecordRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId());
+                // 修改后的老人用户查询逻辑：
+                // 1. 获取关联的其他老人ID列表
+                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录
+                List<String> relatedElderIds = getRelatedElderIds(user.getId());
+
+                if (relatedElderIds.isEmpty()) {
+                    // 如果没有关联的老人，只显示自己的记录
+                    records = mealRecordRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId());
+                } else {
+                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人", user.getPhone(), relatedElderIds.size());
+
+                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录
+                    records = mealRecordRepository.findTop30OwnAndFamilyVisibleRecords(user.getId(), relatedElderIds);
+                }
                 break;
 
             case CHILD:
@@ -200,9 +212,24 @@ public class MealRecordService {
 
         switch (user.getRole()) {
             case ELDER:
-                // 老人用户：查询自己发布的记录
-                recordPage = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
-                totalRecords = mealRecordRepository.countByUserId(user.getId());
+                // 修改后的老人用户查询逻辑：
+                // 1. 获取关联的其他老人ID列表
+                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录
+                List<String> relatedElderIds = getRelatedElderIds(user.getId());
+
+                if (relatedElderIds.isEmpty()) {
+                    // 如果没有关联的老人，只显示自己的记录
+                    recordPage = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+                    totalRecords = mealRecordRepository.countByUserId(user.getId());
+                } else {
+                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人", user.getPhone(), relatedElderIds.size());
+
+                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录
+                    recordPage = mealRecordRepository.findOwnAndFamilyVisibleRecords(
+                            user.getId(), relatedElderIds, pageable);
+                    totalRecords = mealRecordRepository.countOwnAndFamilyVisibleRecords(
+                            user.getId(), relatedElderIds);
+                }
                 break;
 
             case CHILD:
@@ -575,5 +602,37 @@ public class MealRecordService {
         }
 
         return "用户";
+    }
+
+    /**
+     * 获取老人用户通过家庭关系关联的其他老人ID列表
+     */
+    private List<String> getRelatedElderIds(String elderId) {
+        // 查询该老人的所有子女
+        List<FamilyLink> childrenLinks = familyService.getChildrenLinks(elderId);
+        if (childrenLinks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 获取所有子女ID
+        List<String> childIds = childrenLinks.stream()
+                .map(FamilyLink::getChildId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 通过子女查询所有关联的老人
+        List<String> familyParentIds = new ArrayList<>();
+        for (String childId : childIds) {
+            List<FamilyLink> parentLinks = familyService.getParentsLinks(childId);
+            parentLinks.stream()
+                    .map(FamilyLink::getParentId)
+                    .filter(id -> !id.equals(elderId)) // 排除自己
+                    .forEach(familyParentIds::add);
+        }
+
+        // 去重
+        return familyParentIds.stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 }
