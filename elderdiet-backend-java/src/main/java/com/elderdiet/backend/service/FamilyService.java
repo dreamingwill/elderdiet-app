@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 家庭服务类
@@ -142,6 +144,36 @@ public class FamilyService {
 
                 if (child != null) {
                     FamilyMemberDTO member = buildFamilyMemberDTO(child, "child");
+                    if (member != null) {
+                        familyMembers.add(member);
+                    }
+                }
+            }
+
+            // 新增：通过子女获取所有关联的其他老人
+            // 收集所有子女ID
+            List<String> childIds = childrenLinks.stream()
+                    .map(FamilyLink::getChildId)
+                    .collect(Collectors.toList());
+
+            // 获取所有子女关联的老人
+            Set<String> relatedElderIds = new HashSet<>();
+            for (String childId : childIds) {
+                List<FamilyLink> parentLinks = getParentsLinks(childId);
+                // 只添加不是当前用户的老人
+                parentLinks.stream()
+                        .map(FamilyLink::getParentId)
+                        .filter(id -> !id.equals(currentUser.getId())) // 排除自己
+                        .forEach(relatedElderIds::add); // 使用Set自动去重
+            }
+
+            log.info("老人用户 {} 通过子女关联找到 {} 个其他老人", currentUser.getPhone(), relatedElderIds.size());
+
+            // 添加关联老人到家庭成员列表
+            for (String elderId : relatedElderIds) {
+                User elder = userService.findById(elderId).orElse(null);
+                if (elder != null) {
+                    FamilyMemberDTO member = buildFamilyMemberDTO(elder, "related_elder");
                     if (member != null) {
                         familyMembers.add(member);
                     }

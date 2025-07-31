@@ -31,7 +31,7 @@ public class ProfileService {
      * 根据用户ID获取健康档案
      */
     public ProfileDTO getProfileByUserId(String userId) {
-        log.info("获取用户健康档案, userId: {}", userId);
+        // log.info("获取用户健康档案, userId: {}", userId);
 
         Profile profile = profileRepository.findByUserId(userId)
                 .orElse(null);
