@@ -2,7 +2,7 @@
   "expo": {
     "name": "ElderDiet",
     "slug": "ElderDiet",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/my-icon.png",
     "scheme": "elderdiet",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zeroh12.ElderDiet",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserTrackingUsageDescription": "This app uses tracking to provide personalized content.",
@@ -24,19 +24,7 @@
         "NSPhotoLibraryUsageDescription": "This app accesses your photo library to select images for meal records.",
         "NSMicrophoneUsageDescription": "This app uses the microphone for voice input features.",
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": false,
-          "NSExceptionDomains": {
-            "8.153.204.247": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0",
-              "NSIncludesSubdomains": false
-            },
-            "localhost": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0",
-              "NSIncludesSubdomains": false
-            }
-          }
+          "NSAllowsArbitraryLoads": false
         }
       }
     },
