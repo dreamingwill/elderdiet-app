@@ -464,6 +464,9 @@ export interface ReplaceDishRequest {
   meal_plan_id: string;
   meal_type: 'BREAKFAST' | 'LUNCH' | 'DINNER';
   dish_index: number;
+  preferred_ingredient?: string;
+  avoid_ingredient?: string;
+  special_requirement?: string;
 }
 
 export interface LikeMealPlanRequest {

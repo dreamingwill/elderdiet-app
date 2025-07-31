@@ -2,28 +2,41 @@ import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Dish } from '@/services/api';
+import DishReplaceModal from './DishReplaceModal';
 
 interface DishItemProps {
   dish: Dish;
   index: number;
   mealType: 'breakfast' | 'lunch' | 'dinner';
-  onReplace: (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number) => Promise<void>;
+  onReplace: (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number, preferences?: {
+    preferred_ingredient?: string;
+    avoid_ingredient?: string;
+    special_requirement?: string;
+  }) => Promise<void>;
 }
 
 const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
 
   const toggleExpanded = () => {
     setIsExpanded(!isExpanded);
   };
 
-  const handleReplace = async () => {
+  const handleReplace = () => {
     if (isReplacing) return; // 防止重复点击
+    setShowReplaceModal(true);
+  };
 
+  const handleReplaceConfirm = async (preferences: {
+    preferred_ingredient?: string;
+    avoid_ingredient?: string;
+    special_requirement?: string;
+  }) => {
     setIsReplacing(true);
     try {
-      await onReplace(mealType, index);
+      await onReplace(mealType, index, preferences);
     } finally {
       setIsReplacing(false);
     }
@@ -36,47 +49,57 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     : dish.recommendation_reason.substring(0, 32) + '...';
 
   return (
-    <View style={styles.dishItem}>
-      {/* 菜品名称和更换按钮 */}
-      <View style={styles.dishHeader}>
-        <Text style={styles.dishName}>{dish.name}</Text>
-        <TouchableOpacity
-          style={[
-            styles.changeButton,
-            isReplacing && styles.changeButtonDisabled
-          ]}
-          onPress={handleReplace}
-          disabled={isReplacing}
-          testID="replace-button"
-        >
-          {isReplacing ? (
-            <ActivityIndicator size="small" color="#666" testID="loading-indicator" />
-          ) : (
-            <Ionicons name="refresh" size={18} color="#666" />
-          )}
-        </TouchableOpacity>
-      </View>
-      
-      {/* 推荐理由 */}
-      <View style={styles.recommendationContainer}>
-        <Text style={styles.recommendationText}>{displayText}</Text>
-        {shouldShowExpandButton && (
-          <TouchableOpacity 
-            style={styles.expandButton}
-            onPress={toggleExpanded}
+    <>
+      <View style={styles.dishItem}>
+        {/* 菜品名称和更换按钮 */}
+        <View style={styles.dishHeader}>
+          <Text style={styles.dishName}>{dish.name}</Text>
+          <TouchableOpacity
+            style={[
+              styles.changeButton,
+              isReplacing && styles.changeButtonDisabled
+            ]}
+            onPress={handleReplace}
+            disabled={isReplacing}
+            testID="replace-button"
           >
-            <Text style={styles.expandButtonText}>
-              {isExpanded ? '收起' : '展开'}
-            </Text>
-            <Ionicons 
-              name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-              size={12} 
-              color="#007bff" 
-            />
+            {isReplacing ? (
+              <ActivityIndicator size="small" color="#666" testID="loading-indicator" />
+            ) : (
+              <Ionicons name="refresh" size={18} color="#666" />
+            )}
           </TouchableOpacity>
-        )}
+        </View>
+        
+        {/* 推荐理由 */}
+        <View style={styles.recommendationContainer}>
+          <Text style={styles.recommendationText}>{displayText}</Text>
+          {shouldShowExpandButton && (
+            <TouchableOpacity 
+              style={styles.expandButton}
+              onPress={toggleExpanded}
+            >
+              <Text style={styles.expandButtonText}>
+                {isExpanded ? '收起' : '展开'}
+              </Text>
+              <Ionicons 
+                name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                size={12} 
+                color="#007bff" 
+              />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
+
+      {/* 菜品更换偏好模态窗口 */}
+      <DishReplaceModal
+        visible={showReplaceModal}
+        dishName={dish.name}
+        onClose={() => setShowReplaceModal(false)}
+        onConfirm={handleReplaceConfirm}
+      />
+    </>
   );
 };
 

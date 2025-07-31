@@ -150,7 +150,7 @@ public class Profile {
             case "normal":
                 return "正常";
             case "overweight":
-                return "超重";
+                return "偏重";
             case "obese":
                 return "肥胖";
             default:

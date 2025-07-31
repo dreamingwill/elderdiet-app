@@ -262,13 +262,13 @@ public class MealRecommendationService {
         prompt.append("\n");
 
         // 替换要求
-        if (request.getPreferredIngredient() != null) {
+        if (request.getPreferredIngredient() != null && !request.getPreferredIngredient().trim().isEmpty()) {
             prompt.append("希望包含食材：").append(request.getPreferredIngredient()).append("\n");
         }
-        if (request.getAvoidIngredient() != null) {
+        if (request.getAvoidIngredient() != null && !request.getAvoidIngredient().trim().isEmpty()) {
             prompt.append("需要避免食材：").append(request.getAvoidIngredient()).append("\n");
         }
-        if (request.getSpecialRequirement() != null) {
+        if (request.getSpecialRequirement() != null && !request.getSpecialRequirement().trim().isEmpty()) {
             prompt.append("特殊要求：").append(request.getSpecialRequirement()).append("\n");
         }
 

@@ -123,7 +123,15 @@ export default function MealPlanScreen() {
   };
 
   // 更换菜品
-  const handleDishChange = async (mealType: 'breakfast' | 'lunch' | 'dinner', dishIndex: number): Promise<void> => {
+  const handleDishChange = async (
+    mealType: 'breakfast' | 'lunch' | 'dinner', 
+    dishIndex: number,
+    preferences?: {
+      preferred_ingredient?: string;
+      avoid_ingredient?: string;
+      special_requirement?: string;
+    }
+  ): Promise<void> => {
     if (!token || !currentMealPlan) return;
 
     try {
@@ -134,6 +142,7 @@ export default function MealPlanScreen() {
         meal_plan_id: currentMealPlan.id,
         meal_type: backendMealType,
         dish_index: dishIndex,
+        ...preferences, // 传递用户偏好
       }, token);
 
       if (response.success && response.data) {

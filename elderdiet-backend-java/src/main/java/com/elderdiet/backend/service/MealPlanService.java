@@ -117,7 +117,10 @@ public class MealPlanService {
             // 9. 更新膳食计划
             mealPlan.updateMealByType(request.getMealType(), targetMeal);
 
-            // 10. 保存更新
+            // 10. 保存用户偏好到档案
+            updateUserDietaryPreferences(userProfile, request);
+
+            // 11. 保存更新
             MealPlan savedPlan = mealPlanRepository.save(mealPlan);
 
             log.info("菜品替换成功，原菜品: {}, 新菜品: {}", originalDish.getName(), newDish.getName());
@@ -289,5 +292,45 @@ public class MealPlanService {
         stats.put("liked", mealPlanRepository.countByUserIdAndLiked(userId, true));
 
         return stats;
+    }
+
+    /**
+     * 更新用户饮食偏好到档案
+     */
+    private void updateUserDietaryPreferences(Profile userProfile, DishReplaceRequest request) {
+        boolean updated = false;
+
+        // 添加偏好食材
+        if (request.getPreferredIngredient() != null && !request.getPreferredIngredient().trim().isEmpty()) {
+            String preference = "偏好：" + request.getPreferredIngredient().trim();
+            if (!userProfile.getDietaryPreferences().contains(preference)) {
+                userProfile.getDietaryPreferences().add(preference);
+                updated = true;
+            }
+        }
+
+        // 添加避免食材
+        if (request.getAvoidIngredient() != null && !request.getAvoidIngredient().trim().isEmpty()) {
+            String avoidance = "避免：" + request.getAvoidIngredient().trim();
+            if (!userProfile.getDietaryPreferences().contains(avoidance)) {
+                userProfile.getDietaryPreferences().add(avoidance);
+                updated = true;
+            }
+        }
+
+        // 添加特殊要求
+        if (request.getSpecialRequirement() != null && !request.getSpecialRequirement().trim().isEmpty()) {
+            String requirement = "要求：" + request.getSpecialRequirement().trim();
+            if (!userProfile.getDietaryPreferences().contains(requirement)) {
+                userProfile.getDietaryPreferences().add(requirement);
+                updated = true;
+            }
+        }
+
+        // 如果有更新，保存档案
+        if (updated) {
+            profileRepository.save(userProfile);
+            log.info("用户 {} 的饮食偏好已更新", userProfile.getUserId());
+        }
     }
 }
