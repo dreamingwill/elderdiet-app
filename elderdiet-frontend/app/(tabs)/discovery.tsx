@@ -495,6 +495,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   articleMeta: {
+    backgroundColor: '#F7F8FA',
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,

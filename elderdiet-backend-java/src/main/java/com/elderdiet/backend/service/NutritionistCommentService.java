@@ -88,9 +88,9 @@ public class NutritionistCommentService {
 
         if (userProfile != null) {
             prompt.append("\n【用户健康档案】\n");
-            if (userProfile.getAge() != null) {
-                prompt.append("- 年龄：").append(userProfile.getAge()).append("岁\n");
-            }
+            // if (userProfile.getAge() != null) {
+            // prompt.append("- 年龄：").append(userProfile.getAge()).append("岁\n");
+            // }
             if (userProfile.getGender() != null) {
                 prompt.append("- 性别：").append(userProfile.getGender()).append("\n");
             }
