@@ -88,4 +88,9 @@ public interface MealRecordRepository extends MongoRepository<MealRecord, String
          */
         @Query(value = "{ '$or': [ { 'userId': ?0 }, { 'userId': { '$in': ?1 }, 'visibility': 'FAMILY' } ] }", sort = "{ 'createdAt': -1 }")
         List<MealRecord> findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(String userId, List<String> otherUserIds);
+
+        /**
+         * 根据用户ID删除所有膳食记录
+         */
+        void deleteByUserId(String userId);
 }

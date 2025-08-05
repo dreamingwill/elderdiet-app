@@ -32,4 +32,14 @@ public interface FamilyLinkRepository extends MongoRepository<FamilyLink, String
      * 检查是否存在指定的家庭链接
      */
     boolean existsByParentIdAndChildId(String parentId, String childId);
+
+    /**
+     * 删除用户相关的所有家庭链接（作为父母的）
+     */
+    void deleteByParentId(String parentId);
+
+    /**
+     * 删除用户相关的所有家庭链接（作为子女的）
+     */
+    void deleteByChildId(String childId);
 }

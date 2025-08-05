@@ -171,4 +171,25 @@ public class AuthController {
                     .body(ApiResponse.error("服务器内部错误"));
         }
     }
+
+    /**
+     * 删除账号（注销账号）
+     * DELETE /api/v1/auth/delete-account
+     */
+    @PostMapping("/delete-account")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(
+            @Valid @RequestBody DeleteAccountRequest request) {
+        try {
+            authService.deleteAccount(request);
+            return ResponseEntity.ok(ApiResponse.success("账号删除成功"));
+        } catch (RuntimeException e) {
+            log.error("删除账号失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("删除账号过程中发生错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("服务器内部错误"));
+        }
+    }
 }

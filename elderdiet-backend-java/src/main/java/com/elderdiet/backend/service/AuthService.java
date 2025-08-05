@@ -2,6 +2,7 @@ package com.elderdiet.backend.service;
 
 import com.elderdiet.backend.dto.AuthResponse;
 import com.elderdiet.backend.dto.ChangePasswordRequest;
+import com.elderdiet.backend.dto.DeleteAccountRequest;
 import com.elderdiet.backend.dto.LoginRequest;
 import com.elderdiet.backend.dto.RegisterRequest;
 import com.elderdiet.backend.dto.ResetPasswordRequest;
@@ -12,11 +13,16 @@ import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.entity.UserRole;
 import com.elderdiet.backend.repository.FamilyLinkRepository;
+import com.elderdiet.backend.repository.MealRecordRepository;
+import com.elderdiet.backend.repository.MealPlanRepository;
+import com.elderdiet.backend.repository.UserDeviceRepository;
+import com.elderdiet.backend.repository.ChatMessageRepository;
 import com.elderdiet.backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 认证服务类
@@ -29,6 +35,10 @@ public class AuthService {
         private final UserService userService;
         private final ProfileService profileService;
         private final FamilyLinkRepository familyLinkRepository;
+        private final MealRecordRepository mealRecordRepository;
+        private final MealPlanRepository mealPlanRepository;
+        private final UserDeviceRepository userDeviceRepository;
+        private final ChatMessageRepository chatMessageRepository;
         private final JwtUtil jwtUtil;
 
         /**
@@ -243,6 +253,61 @@ public class AuthService {
                         return user.getPhone(); // 暂时返回手机号，后续可以优化
                 } catch (Exception e) {
                         return user.getPhone();
+                }
+        }
+
+        /**
+         * 删除账号（清理所有相关数据）
+         */
+        @Transactional
+        public void deleteAccount(DeleteAccountRequest request) {
+                log.info("开始删除账号: {}", request.getPhone());
+
+                // 查找用户
+                User user = userService.findByPhone(request.getPhone())
+                                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+                String userId = user.getId();
+
+                try {
+                        // 1. 删除聊天记录
+                        log.info("删除用户聊天记录: {}", userId);
+                        chatMessageRepository.deleteByUserId(userId);
+
+                        // 2. 删除用餐记录
+                        log.info("删除用户用餐记录: {}", userId);
+                        mealRecordRepository.deleteByUserId(userId);
+
+                        // 3. 删除用餐计划
+                        log.info("删除用户用餐计划: {}", userId);
+                        mealPlanRepository.deleteByUserId(userId);
+
+                        // 4. 删除用户设备
+                        log.info("删除用户设备记录: {}", userId);
+                        userDeviceRepository.deleteByUserId(userId);
+
+                        // 5. 删除家庭关联关系
+                        log.info("删除用户家庭关联关系: {}", userId);
+                        familyLinkRepository.deleteByParentId(userId); // 作为父母的关系
+                        familyLinkRepository.deleteByChildId(userId); // 作为子女的关系
+
+                        // 6. 删除健康档案
+                        log.info("删除用户健康档案: {}", userId);
+                        try {
+                                profileService.deleteProfile(userId);
+                        } catch (Exception e) {
+                                log.warn("删除健康档案失败，可能档案不存在: {}", e.getMessage());
+                        }
+
+                        // 7. 最后删除用户本身
+                        log.info("删除用户账号: {}", userId);
+                        userService.deleteUser(userId);
+
+                        log.info("账号删除成功: {} ({})", request.getPhone(), userId);
+
+                } catch (Exception e) {
+                        log.error("删除账号过程中发生错误: {} - {}", request.getPhone(), e.getMessage());
+                        throw new RuntimeException("删除账号失败: " + e.getMessage());
                 }
         }
 }
