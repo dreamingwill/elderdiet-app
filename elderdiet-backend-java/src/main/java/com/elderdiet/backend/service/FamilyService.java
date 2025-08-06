@@ -29,77 +29,84 @@ public class FamilyService {
     private final ProfileService profileService;
 
     /**
-     * 链接子女用户
+     * 智能链接家庭成员 - 根据目标用户的角色自动建立正确的关系
      */
-    public FamilyLink linkChild(User parent, String childPhone) {
-        log.info("老人用户 {} 尝试链接子女用户: {}", parent.getPhone(), childPhone);
+    public FamilyLink linkFamilyMember(User currentUser, String targetPhone) {
+        log.info("用户 {} (当前角色: {}) 尝试添加家庭成员: {}",
+                currentUser.getPhone(), currentUser.getRole(), targetPhone);
 
-        // 验证发起者角色必须是老人
-        if (parent.getRole() != UserRole.ELDER) {
-            throw new RuntimeException("只有老人用户可以发起链接");
+        // 查找目标用户
+        User targetUser = userService.findByPhone(targetPhone)
+                .orElseThrow(() -> new RuntimeException("目标用户不存在"));
+
+        log.info("找到目标用户 {} (角色: {})", targetUser.getPhone(), targetUser.getRole());
+
+        // 不能添加自己
+        if (currentUser.getId().equals(targetUser.getId())) {
+            throw new RuntimeException("不能添加自己");
         }
 
-        // 查找子女用户
-        User child = userService.findByPhone(childPhone)
-                .orElseThrow(() -> new RuntimeException("子女用户不存在"));
+        // 根据目标用户的角色决定关系类型
+        String parentId, childId;
+        String relationshipDesc;
 
-        // 验证被链接的用户必须是子女
-        if (child.getRole() != UserRole.CHILD) {
-            throw new RuntimeException("只能链接子女用户");
+        if (targetUser.getRole() == UserRole.ELDER) {
+            // 目标是老人，建立 targetUser(老人) -> currentUser(子女) 的关系
+            parentId = targetUser.getId();
+            childId = currentUser.getId();
+            relationshipDesc = String.format("建立关系: %s(老人) -> %s(子女)", targetUser.getPhone(), currentUser.getPhone());
+        } else {
+            // 目标是子女，建立 currentUser(老人) -> targetUser(子女) 的关系
+            parentId = currentUser.getId();
+            childId = targetUser.getId();
+            relationshipDesc = String.format("建立关系: %s(老人) -> %s(子女)", currentUser.getPhone(), targetUser.getPhone());
         }
 
-        // 检查是否已经绑定
-        if (familyLinkRepository.existsByParentIdAndChildId(parent.getId(), child.getId())) {
-            throw new RuntimeException("该子女用户已经绑定");
+        // 检查关系是否已存在
+        if (familyLinkRepository.existsByParentIdAndChildId(parentId, childId)) {
+            throw new RuntimeException("该家庭关系已经存在");
         }
 
         // 创建家庭链接
         FamilyLink familyLink = FamilyLink.builder()
-                .parentId(parent.getId())
-                .childId(child.getId())
+                .parentId(parentId)
+                .childId(childId)
                 .build();
 
         FamilyLink savedLink = familyLinkRepository.save(familyLink);
-        log.info("成功创建家庭链接: 老人 {} -> 子女 {}", parent.getPhone(), childPhone);
+        log.info("成功创建家庭链接: {}", relationshipDesc);
 
         return savedLink;
     }
 
     /**
-     * 链接老人用户
+     * 链接子女用户 - 保持向后兼容性
+     */
+    public FamilyLink linkChild(User parent, String childPhone) {
+        log.info("老人用户 {} 尝试链接子女用户: {}", parent.getPhone(), childPhone);
+
+        // 验证发起者当前角色必须是老人（基于当前激活角色）
+        if (parent.getRole() != UserRole.ELDER) {
+            throw new RuntimeException("当前角色不是老人，无法添加子女");
+        }
+
+        // 使用智能链接方法
+        return linkFamilyMember(parent, childPhone);
+    }
+
+    /**
+     * 链接老人用户 - 保持向后兼容性
      */
     public FamilyLink linkElder(User child, String elderPhone) {
         log.info("子女用户 {} 尝试链接老人用户: {}", child.getPhone(), elderPhone);
 
-        // 验证发起者角色必须是子女
+        // 验证发起者当前角色必须是子女（基于当前激活角色）
         if (child.getRole() != UserRole.CHILD) {
-            throw new RuntimeException("只有子女用户可以发起链接");
+            throw new RuntimeException("当前角色不是子女，无法添加老人");
         }
 
-        // 查找老人用户
-        User elder = userService.findByPhone(elderPhone)
-                .orElseThrow(() -> new RuntimeException("老人用户不存在"));
-
-        // 验证被链接的用户必须是老人
-        if (elder.getRole() != UserRole.ELDER) {
-            throw new RuntimeException("只能链接老人用户");
-        }
-
-        // 检查是否已经绑定
-        if (familyLinkRepository.existsByParentIdAndChildId(elder.getId(), child.getId())) {
-            throw new RuntimeException("该老人用户已经绑定");
-        }
-
-        // 创建家庭链接
-        FamilyLink familyLink = FamilyLink.builder()
-                .parentId(elder.getId())
-                .childId(child.getId())
-                .build();
-
-        FamilyLink savedLink = familyLinkRepository.save(familyLink);
-        log.info("成功创建家庭链接: 老人 {} <- 子女 {}", elderPhone, child.getPhone());
-
-        return savedLink;
+        // 使用智能链接方法
+        return linkFamilyMember(child, elderPhone);
     }
 
     /**

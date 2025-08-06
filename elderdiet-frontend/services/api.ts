@@ -365,7 +365,7 @@ export const authAPI = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        confirmationText,
+        confirmation_text:confirmationText,
       }),
     });
   },
@@ -910,6 +910,10 @@ export interface LinkElderRequest {
   elder_phone: string;
 }
 
+export interface AddFamilyMemberRequest {
+  phone: string;
+}
+
 // 分享墙分页响应数据结构
 export interface FeedResponse {
   records: MealRecordResponse[];
@@ -1038,9 +1042,23 @@ export const mealRecordsAPI = {
 
 // 家庭关系相关API
 export const familyAPI = {
-  // 链接家庭成员
+  // 通用添加家庭成员（支持双角色系统）
+  addFamilyMember: async (
+    requestData: AddFamilyMemberRequest, 
+    token: string
+  ): Promise<ApiResponse<FamilyLink>> => {
+    return request('/family/add-member', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
+  },
+
+  // 老人链接子女（保持向后兼容）
   linkFamily: async (
-    requestData: LinkFamilyRequest,
+    requestData: LinkFamilyRequest, 
     token: string
   ): Promise<ApiResponse<FamilyLink>> => {
     return request('/family/link', {
@@ -1052,9 +1070,9 @@ export const familyAPI = {
     });
   },
 
-  // 链接到老人账号
+  // 子女链接老人（保持向后兼容）
   linkToElder: async (
-    requestData: LinkElderRequest,
+    requestData: LinkElderRequest, 
     token: string
   ): Promise<ApiResponse<FamilyLink>> => {
     return request('/family/link2elder', {

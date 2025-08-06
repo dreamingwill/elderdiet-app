@@ -150,8 +150,8 @@ export default function ForgotPasswordScreen() {
           maxLength={11}
         />
         <Text style={styles.helpText}>
-          老人用户：输入子女手机号{'\n'}
-          子女用户：输入老人手机号{'\n'}
+          长者用户：输入子女手机号{'\n'}
+          子女用户：输入长者手机号{'\n'}
           如无法验证身份，请尝试联系后台人员解决
           {/* 后门权限：输入18100010001 */}
         </Text>
@@ -181,7 +181,7 @@ export default function ForgotPasswordScreen() {
     <View style={styles.form}>
       <Text style={styles.stepTitle}>设置新密码</Text>
       <Text style={styles.stepDescription}>
-        验证成功！用户：{verifyResult?.userName} ({verifyResult?.userRole === 'ELDER' ? '老人' : '子女'})
+        验证成功！用户：{verifyResult?.userName} ({verifyResult?.userRole === 'ELDER' ? '长者' : '子女'})
       </Text>
 
       {/* 新密码 */}

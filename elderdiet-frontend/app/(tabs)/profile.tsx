@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
-import { familyAPI, FamilyMember, profileAPI, authAPI } from '../../services/api';
+import { familyAPI, FamilyMember, profileAPI, authAPI, AddFamilyMemberRequest } from '../../services/api';
 
 export default function MeScreen() {
   const { phone, role, signOut, token, setUser } = useUser();
@@ -67,7 +67,7 @@ export default function MeScreen() {
 
   // 获取角色显示文本
   const getRoleText = (role: 'ELDER' | 'CHILD'): string => {
-    return role === 'ELDER' ? '老人' : '家属';
+    return role === 'ELDER' ? '长者' : '家属';
   };
 
   // 获取BMI状态文本
@@ -344,93 +344,115 @@ export default function MeScreen() {
     );
   };
 
-  // 添加子女账号
-  const handleAddChild = async () => {
-    if (!childPhone.trim()) {
-      Alert.alert('提示', '请输入子女手机号');
+  // 通用添加家庭成员（支持双角色系统）
+  const handleAddFamilyMember = async (memberPhone: string) => {
+    if (!memberPhone.trim()) {
+      Alert.alert('提示', '请输入家庭成员手机号');
       return;
     }
 
     // 简单的手机号验证
     const phoneRegex = /^1[3-9]\d{9}$/;
-    if (!phoneRegex.test(childPhone)) {
+    if (!phoneRegex.test(memberPhone)) {
       Alert.alert('提示', '请输入正确的手机号格式');
       return;
     }
 
-    if (childPhone === phone) {
+    if (memberPhone === phone) {
       Alert.alert('提示', '不能添加自己的手机号');
       return;
     }
 
-    setIsLinkingFamily(true);
+    const isAddingChild = role === 'ELDER';
+    setIsLinkingFamily(isAddingChild);
+    setIsLinkingElder(!isAddingChild);
+
     try {
-      const response = await familyAPI.linkFamily({ child_phone: childPhone }, token!);
+      const request: AddFamilyMemberRequest = { phone: memberPhone };
+      const response = await familyAPI.addFamilyMember(request, token!);
+      
       if (response.success) {
-        Alert.alert('成功', '家庭链接创建成功！', [
+        const memberType = role === 'ELDER' ? '家庭成员' : '家庭成员';
+        Alert.alert('成功', `${memberType}添加成功！系统已自动建立正确的家庭关系`, [
           {
             text: '确定',
             onPress: () => {
-              setIsAddChildModalVisible(false);
-              setChildPhone('');
+              if (isAddingChild) {
+                setIsAddChildModalVisible(false);
+                setChildPhone('');
+              } else {
+                setIsAddElderModalVisible(false);
+                setElderPhone('');
+              }
               // 刷新家庭成员列表
               loadFamilyMembers();
             },
           },
         ]);
       } else {
-        Alert.alert('失败', response.message || '链接失败，请重试');
+        Alert.alert('失败', response.message || '添加失败，请重试');
       }
     } catch (error: any) {
-      console.error('Link family error:', error);
+      console.error('Add family member error:', error);
       Alert.alert('错误', error.message || '网络错误，请重试');
     } finally {
       setIsLinkingFamily(false);
+      setIsLinkingElder(false);
     }
   };
 
-  // 添加老人账号
+  // 添加子女账号（兼容旧版本）
+  const handleAddChild = async () => {
+    await handleAddFamilyMember(childPhone);
+  };
+
+  // 添加长者账号（兼容旧版本）
   const handleAddElder = async () => {
-    if (!elderPhone.trim()) {
-      Alert.alert('提示', '请输入老人手机号');
-      return;
-    }
+    await handleAddFamilyMember(elderPhone);
+  };
 
-    // 简单的手机号验证
-    const phoneRegex = /^1[3-9]\d{9}$/;
-    if (!phoneRegex.test(elderPhone)) {
-      Alert.alert('提示', '请输入正确的手机号格式');
-      return;
+  // 获取添加按钮的文案
+  const getAddButtonText = () => {
+    if (role === 'ELDER') {
+      return '添加家庭成员';
+    } else {
+      return '添加家庭成员';
     }
+  };
 
-    if (elderPhone === phone) {
-      Alert.alert('提示', '不能添加自己的手机号');
-      return;
+  // 获取模态框标题
+  const getModalTitle = () => {
+    if (role === 'ELDER') {
+      return '添加家庭成员';
+    } else {
+      return '添加家庭成员';
     }
+  };
 
-    setIsLinkingElder(true);
-    try {
-      const response = await familyAPI.linkToElder({ elder_phone: elderPhone }, token!);
-      if (response.success) {
-        Alert.alert('成功', '家庭链接创建成功！', [
-          {
-            text: '确定',
-            onPress: () => {
-              setIsAddElderModalVisible(false);
-              setElderPhone('');
-              // 刷新家庭成员列表
-              loadFamilyMembers();
-            },
-          },
-        ]);
-      } else {
-        Alert.alert('失败', response.message || '链接失败，请重试');
-      }
-    } catch (error: any) {
-      console.error('Link to elder error:', error);
-      Alert.alert('错误', error.message || '网络错误，请重试');
-    } finally {
-      setIsLinkingElder(false);
+  // 获取输入框标签
+  const getInputLabel = () => {
+    if (role === 'ELDER') {
+      return '家庭成员手机号';
+    } else {
+      return '家庭成员手机号';
+    }
+  };
+
+  // 获取输入框提示
+  const getInputPlaceholder = () => {
+    if (role === 'ELDER') {
+      return '请输入家庭成员的手机号码';
+    } else {
+      return '请输入家庭成员的手机号码';
+    }
+  };
+
+  // 获取输入提示
+  const getInputHint = () => {
+    if (role === 'ELDER') {
+      return '系统会根据对方的当前角色自动建立正确的家庭关系';
+    } else {
+      return '系统会根据对方的当前角色自动建立正确的家庭关系';
     }
   };
 
@@ -462,17 +484,16 @@ export default function MeScreen() {
 
   // 角色切换处理
   const handleChangeRole = () => {
-    const currentRoleText = role === 'ELDER' ? '老人' : '家属';
-    const targetRoleText = role === 'ELDER' ? '家属' : '老人';
+    const currentRoleText = role === 'ELDER' ? '长者' : '家属';
+    const targetRoleText = role === 'ELDER' ? '家属' : '长者';
     
     Alert.alert(
       '角色切换确认',
-      `您当前是${currentRoleText}角色，确定要切换为${targetRoleText}角色吗？\n\n请注意：\n• 切换角色前需要解除所有家庭关系\n• 切换后将重新生成登录凭证\n• 此操作不可逆转`,
+      `您当前是${currentRoleText}角色，确定要切换为${targetRoleText}角色吗？\n\n说明：\n• 切换角色后将显示对应角色的家庭关系视图\n• ${targetRoleText}角色下可以看到不同的关系列表\n• 所有家庭关系数据都会保留\n• 可以随时切换回来`,
       [
         { text: '取消', style: 'cancel' },
         {
           text: '确定切换',
-          style: 'destructive',
           onPress: showRoleChangeConfirmation,
         },
       ]
@@ -527,7 +548,7 @@ export default function MeScreen() {
         
         Alert.alert(
           '切换成功', 
-          `您已成功切换为${response.data.role === 'ELDER' ? '老人' : '家属'}角色`,
+          `您已成功切换为${response.data.role === 'ELDER' ? '长者' : '家属'}角色`,
           [
             {
               text: '确定',
@@ -669,17 +690,19 @@ export default function MeScreen() {
         )}
       </View>
 
-      {/* 家庭管理卡片 - 老人和子女角色都显示 */}
+      {/* 家庭管理卡片 */}
       {(role === 'ELDER' || role === 'CHILD') && (
         <View style={styles.familyCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>家庭管理</Text>
+            <Text style={styles.cardTitle}>
+              家庭管理 ({role === 'ELDER' ? '长者视角' : '家属视角'})
+            </Text>
             <TouchableOpacity 
               style={styles.addButton} 
               onPress={() => role === 'ELDER' ? setIsAddChildModalVisible(true) : setIsAddElderModalVisible(true)}
             >
               <Ionicons name="add-circle-outline" size={20} color="#4CAF50" />
-              <Text style={styles.addText}>{role === 'ELDER' ? '添加子女' : '添加老人'}</Text>
+              <Text style={styles.addText}>{getAddButtonText()}</Text>
             </TouchableOpacity>
           </View>
           
@@ -730,7 +753,7 @@ export default function MeScreen() {
               <ActivityIndicator size="small" color="#FF9800" />
             ) : (
               <Text style={styles.changeRoleText}>
-                切换角色 (当前: {role === 'ELDER' ? '老人' : '家属'})
+                切换角色 (当前: {role === 'ELDER' ? '长者' : '家属'})
               </Text>
             )}
           </TouchableOpacity>
@@ -761,7 +784,7 @@ export default function MeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>添加子女账号</Text>
+              <Text style={styles.modalTitle}>{getModalTitle()}</Text>
               <TouchableOpacity 
                 onPress={() => setIsAddChildModalVisible(false)}
                 style={styles.closeButton}
@@ -771,17 +794,17 @@ export default function MeScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>子女手机号</Text>
+              <Text style={styles.inputLabel}>{getInputLabel()}</Text>
               <TextInput
                 style={styles.phoneInput}
                 value={childPhone}
                 onChangeText={setChildPhone}
-                placeholder="请输入子女的手机号码"
+                placeholder={getInputPlaceholder()}
                 keyboardType="phone-pad"
                 maxLength={11}
               />
               <Text style={styles.inputHint}>
-                请确保输入的手机号已注册为子女账号
+                {getInputHint()}
               </Text>
             </View>
             
@@ -808,7 +831,7 @@ export default function MeScreen() {
         </View>
       </Modal>
 
-      {/* 添加老人模态框 */}
+      {/* 添加长者模态框 */}
       <Modal
         visible={isAddElderModalVisible}
         transparent={true}
@@ -818,7 +841,7 @@ export default function MeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>添加老人账号</Text>
+              <Text style={styles.modalTitle}>{getModalTitle()}</Text>
               <TouchableOpacity 
                 onPress={() => setIsAddElderModalVisible(false)}
                 style={styles.closeButton}
@@ -828,17 +851,17 @@ export default function MeScreen() {
             </View>
             
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>老人手机号</Text>
+              <Text style={styles.inputLabel}>{getInputLabel()}</Text>
               <TextInput
                 style={styles.phoneInput}
                 value={elderPhone}
                 onChangeText={setElderPhone}
-                placeholder="请输入老人的手机号码"
+                placeholder={getInputPlaceholder()}
                 keyboardType="phone-pad"
                 maxLength={11}
               />
               <Text style={styles.inputHint}>
-                请确保输入的手机号已注册为老人账号
+                {getInputHint()}
               </Text>
             </View>
             

@@ -145,7 +145,7 @@ export default function RegisterScreen() {
                     selectedRole === 'ELDER' && styles.roleTextActive,
                   ]}
                 >
-                  老人
+                  长者
                 </Text>
               </TouchableOpacity>
               

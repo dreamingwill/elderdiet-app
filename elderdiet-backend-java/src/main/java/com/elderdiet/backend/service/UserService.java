@@ -165,19 +165,16 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("确认字符串不正确，请输入 'CHANGE_ROLE'");
         }
 
-        // 检查用户是否有家庭关系
-        if (hasAnyFamilyLinks(user.getId())) {
-            throw new RuntimeException("请先解除所有家庭关系后再切换角色");
-        }
-
         // 获取要切换到的角色
         UserRole newRole = getAlternateRole(user.getRole());
+        UserRole oldRole = user.getRole();
 
         // 更新用户角色
         user.setRole(newRole);
         User updatedUser = userRepository.save(user);
 
-        log.info("用户 {} 成功切换角色: {} -> {}", user.getPhone(), user.getRole(), newRole);
+        log.info("用户 {} 成功切换角色: {} -> {}，保留所有家庭关系数据",
+                user.getPhone(), oldRole, newRole);
 
         return updatedUser;
     }

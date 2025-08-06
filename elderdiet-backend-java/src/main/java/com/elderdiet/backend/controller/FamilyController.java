@@ -3,6 +3,7 @@ package com.elderdiet.backend.controller;
 import com.elderdiet.backend.dto.ApiResponse;
 import com.elderdiet.backend.dto.FamilyLinkRequest;
 import com.elderdiet.backend.dto.FamilyLinkElderRequest;
+import com.elderdiet.backend.dto.AddFamilyMemberRequest;
 import com.elderdiet.backend.dto.FamilyMemberDTO;
 import com.elderdiet.backend.entity.FamilyLink;
 import com.elderdiet.backend.entity.User;
@@ -39,7 +40,32 @@ public class FamilyController {
     }
 
     /**
-     * 链接子女用户（只有老人可以调用）
+     * 通用添加家庭成员（支持双角色系统）
+     */
+    @PostMapping("/add-member")
+    public ResponseEntity<ApiResponse<FamilyLink>> addFamilyMember(
+            @Valid @RequestBody AddFamilyMemberRequest request,
+            Authentication authentication) {
+
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 使用智能链接方法
+            FamilyLink familyLink = familyService.linkFamilyMember(currentUser, request.getPhone());
+
+            String message = String.format("成功添加家庭成员，当前以%s角色查看关系",
+                    currentUser.getRole() == com.elderdiet.backend.entity.UserRole.ELDER ? "老人" : "子女");
+
+            return ResponseEntity.ok(ApiResponse.success(message, familyLink));
+        } catch (Exception e) {
+            log.error("添加家庭成员失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * 链接子女用户（只有当前角色为老人可以调用，保持向后兼容）
      */
     @PostMapping("/link")
     @PreAuthorize("hasAuthority('ROLE_ELDER')")
@@ -62,7 +88,7 @@ public class FamilyController {
     }
 
     /**
-     * 链接老人用户（只有子女可以调用）
+     * 链接老人用户（只有当前角色为子女可以调用，保持向后兼容）
      */
     @PostMapping("/link2elder")
     @PreAuthorize("hasAuthority('ROLE_CHILD')")
