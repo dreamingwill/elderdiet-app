@@ -17,10 +17,10 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
-import { familyAPI, FamilyMember, profileAPI } from '../../services/api';
+import { familyAPI, FamilyMember, profileAPI, authAPI } from '../../services/api';
 
 export default function MeScreen() {
-  const { phone, role, signOut, token } = useUser();
+  const { phone, role, signOut, token, setUser } = useUser();
   const { profile, isLoading, error, refreshProfile } = useProfile();
   const [isAddChildModalVisible, setIsAddChildModalVisible] = useState(false);
   const [childPhone, setChildPhone] = useState('');
@@ -31,6 +31,7 @@ export default function MeScreen() {
   const [isAddElderModalVisible, setIsAddElderModalVisible] = useState(false);
   const [elderPhone, setElderPhone] = useState('');
   const [isLinkingElder, setIsLinkingElder] = useState(false);
+  const [isChangingRole, setIsChangingRole] = useState(false);
 
   // 获取家庭成员信息
   const loadFamilyMembers = async () => {
@@ -459,6 +460,95 @@ export default function MeScreen() {
     );
   };
 
+  // 角色切换处理
+  const handleChangeRole = () => {
+    const currentRoleText = role === 'ELDER' ? '老人' : '家属';
+    const targetRoleText = role === 'ELDER' ? '家属' : '老人';
+    
+    Alert.alert(
+      '角色切换确认',
+      `您当前是${currentRoleText}角色，确定要切换为${targetRoleText}角色吗？\n\n请注意：\n• 切换角色前需要解除所有家庭关系\n• 切换后将重新生成登录凭证\n• 此操作不可逆转`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定切换',
+          style: 'destructive',
+          onPress: showRoleChangeConfirmation,
+        },
+      ]
+    );
+  };
+
+  const showRoleChangeConfirmation = () => {
+    Alert.prompt(
+      '最终确认',
+      '请输入 "CHANGE_ROLE" 以确认角色切换：',
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确认',
+          onPress: (confirmationText) => {
+            if (confirmationText === 'CHANGE_ROLE') {
+              performRoleChange(confirmationText);
+            } else {
+              Alert.alert('错误', '确认文字不正确，请重新输入');
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
+  const performRoleChange = async (confirmationText: string) => {
+    if (!token) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+
+    setIsChangingRole(true);
+    try {
+      const response = await authAPI.changeRole(confirmationText, token);
+      
+      if (response.success && response.data) {
+        // 更新用户信息和token
+        await setUser({
+          phone: response.data.phone,
+          role: response.data.role,
+          uid: response.data.uid,
+          token: response.data.token,
+        });
+        
+        // 刷新个人资料
+        refreshProfile();
+        
+        // 重新加载家庭成员信息
+        loadFamilyMembers();
+        
+        Alert.alert(
+          '切换成功', 
+          `您已成功切换为${response.data.role === 'ELDER' ? '老人' : '家属'}角色`,
+          [
+            {
+              text: '确定',
+              onPress: () => {
+                // 可以选择跳转到主页或刷新当前页面
+                router.replace('/(tabs)/profile');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('切换失败', response.message || '角色切换失败，请重试');
+      }
+    } catch (error: any) {
+      console.error('Role change error:', error);
+      Alert.alert('错误', error.message || '角色切换过程中发生错误');
+    } finally {
+      setIsChangingRole(false);
+    }
+  };
+
   return (
     <ScrollView 
       style={styles.container}
@@ -628,6 +718,22 @@ export default function MeScreen() {
         
         <View style={styles.accountInfo}>
           <Text style={styles.phoneText}>手机号: {phone}</Text>
+
+          {/* 角色切换按钮 */}
+          <TouchableOpacity
+            style={[styles.changeRoleButton, isChangingRole && styles.disabledButton]}
+            onPress={handleChangeRole}
+            disabled={isChangingRole}
+          >
+            <Ionicons name="swap-horizontal-outline" size={20} color="#FF9800" />
+            {isChangingRole ? (
+              <ActivityIndicator size="small" color="#FF9800" />
+            ) : (
+              <Text style={styles.changeRoleText}>
+                切换角色 (当前: {role === 'ELDER' ? '老人' : '家属'})
+              </Text>
+            )}
+          </TouchableOpacity>
 
           {/* 修改密码按钮 */}
           <TouchableOpacity
@@ -1021,6 +1127,23 @@ const styles = StyleSheet.create({
   phoneText: {
     fontSize: 14,
     color: '#666',
+  },
+  changeRoleButton: {
+    backgroundColor: 'white',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FF9800',
+  },
+  changeRoleText: {
+    fontSize: 16,
+    color: '#FF9800',
+    fontWeight: '600',
   },
   changePasswordButton: {
     backgroundColor: 'white',

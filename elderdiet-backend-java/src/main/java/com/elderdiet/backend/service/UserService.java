@@ -3,6 +3,7 @@ package com.elderdiet.backend.service;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.entity.UserRole;
 import com.elderdiet.backend.repository.UserRepository;
+import com.elderdiet.backend.repository.FamilyLinkRepository;
 import com.elderdiet.backend.security.JwtAuthenticationToken;
 import com.elderdiet.backend.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -24,6 +26,7 @@ import java.util.Optional;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final FamilyLinkRepository familyLinkRepository;
 
     /**
      * Spring Security 用户详情加载
@@ -133,5 +136,49 @@ public class UserService implements UserDetailsService {
 
         return findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
+    }
+
+    /**
+     * 检查用户是否有家庭关系
+     */
+    public boolean hasAnyFamilyLinks(String userId) {
+        return familyLinkRepository.findByParentId(userId).size() > 0 ||
+                familyLinkRepository.findByChildId(userId).size() > 0;
+    }
+
+    /**
+     * 获取用户可以切换到的角色
+     */
+    public UserRole getAlternateRole(UserRole currentRole) {
+        return currentRole == UserRole.ELDER ? UserRole.CHILD : UserRole.ELDER;
+    }
+
+    /**
+     * 切换用户角色
+     */
+    @Transactional
+    public User changeRole(User user, String confirmationText) {
+        log.info("用户 {} 尝试切换角色，当前角色: {}", user.getPhone(), user.getRole());
+
+        // 验证确认字符串
+        if (!"CHANGE_ROLE".equals(confirmationText)) {
+            throw new RuntimeException("确认字符串不正确，请输入 'CHANGE_ROLE'");
+        }
+
+        // 检查用户是否有家庭关系
+        if (hasAnyFamilyLinks(user.getId())) {
+            throw new RuntimeException("请先解除所有家庭关系后再切换角色");
+        }
+
+        // 获取要切换到的角色
+        UserRole newRole = getAlternateRole(user.getRole());
+
+        // 更新用户角色
+        user.setRole(newRole);
+        User updatedUser = userRepository.save(user);
+
+        log.info("用户 {} 成功切换角色: {} -> {}", user.getPhone(), user.getRole(), newRole);
+
+        return updatedUser;
     }
 }

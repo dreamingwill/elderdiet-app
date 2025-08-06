@@ -4,6 +4,8 @@ import com.elderdiet.backend.dto.*;
 import com.elderdiet.backend.security.JwtAuthenticationToken;
 import com.elderdiet.backend.entity.User;
 import com.elderdiet.backend.service.AuthService;
+import com.elderdiet.backend.service.UserService;
+import com.elderdiet.backend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,8 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
+    private final JwtUtil jwtUtil;
 
     /**
      * 用户注册
@@ -188,6 +192,47 @@ public class AuthController {
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             log.error("删除账号过程中发生错误: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("服务器内部错误"));
+        }
+    }
+
+    /**
+     * 角色切换
+     * POST /api/v1/auth/change-role
+     */
+    @PostMapping("/change-role")
+    public ResponseEntity<ApiResponse<AuthResponse>> changeRole(
+            @Valid @RequestBody ChangeRoleRequest request,
+            Authentication authentication) {
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = userService.getCurrentUser(authentication);
+
+            // 执行角色切换
+            User updatedUser = userService.changeRole(currentUser, request.getConfirmationText());
+
+            // 生成新的JWT token
+            String newToken = jwtUtil.generateToken(
+                    updatedUser.getId(),
+                    updatedUser.getPhone(),
+                    updatedUser.getRole());
+
+            // 构造响应
+            AuthResponse authResponse = AuthResponse.builder()
+                    .token(newToken)
+                    .uid(updatedUser.getId())
+                    .phone(updatedUser.getPhone())
+                    .role(updatedUser.getRole().name())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("角色切换成功", authResponse));
+        } catch (RuntimeException e) {
+            log.error("角色切换失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("角色切换过程中发生错误: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("服务器内部错误"));
         }

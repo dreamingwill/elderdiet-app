@@ -144,6 +144,17 @@ export interface VerifyRelationshipResponse {
   userName: string;
 }
 
+export interface ChangeRoleRequest {
+  confirmationText: string;
+}
+
+export interface ChangeRoleResponse {
+  token: string;
+  uid: string;
+  role: 'ELDER' | 'CHILD';
+  phone: string;
+}
+
 export interface UserInfo {
   uid: string;
   phone: string;
@@ -339,6 +350,22 @@ export const authAPI = {
         user_phone: userPhone,
         related_phone: relatedPhone,
         new_password: newPassword,
+      }),
+    });
+  },
+
+  // 角色切换
+  changeRole: async (
+    confirmationText: string,
+    token: string
+  ): Promise<ApiResponse<ChangeRoleResponse>> => {
+    return request('/auth/change-role', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        confirmationText,
       }),
     });
   },

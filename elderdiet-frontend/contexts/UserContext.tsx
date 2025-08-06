@@ -24,7 +24,8 @@ interface UserContextType {
   signOut: () => Promise<void>;
   isLoading: boolean;
   handleTokenExpired: () => Promise<void>;
-  setRole: (role: UserRole | null) => void; // 新增
+  setRole: (role: UserRole | null) => void;
+  setUser: (userData: UserData) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -197,7 +198,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-
+  const setUser = async (userData: UserData) => {
+    try {
+      await saveUserData(userData);
+      setTokenState(userData.token);
+      setRoleState(userData.role);
+      setUidState(userData.uid);
+      setPhoneState(userData.phone);
+      console.log('用户数据已更新');
+    } catch (error) {
+      console.error('Failed to update user data:', error);
+      throw error;
+    }
+  };
 
   return (
     <UserContext.Provider value={{
@@ -210,7 +223,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn,
       signOut,
       isLoading,
-      setRole: setRoleState, // 新增
+      setRole: setRoleState,
+      setUser,
       handleTokenExpired,
     }}>
       {children}
