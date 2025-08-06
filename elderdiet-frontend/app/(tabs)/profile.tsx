@@ -32,6 +32,7 @@ export default function MeScreen() {
   const [elderPhone, setElderPhone] = useState('');
   const [isLinkingElder, setIsLinkingElder] = useState(false);
   const [isChangingRole, setIsChangingRole] = useState(false);
+  const [isRoleChangeConfirmModalVisible, setIsRoleChangeConfirmModalVisible] = useState(false);
 
   // 获取家庭成员信息
   const loadFamilyMembers = async () => {
@@ -333,6 +334,17 @@ export default function MeScreen() {
                 {member.relationship_type === 'child' ? '子女' : '家长'}
               </Text>
             </View>
+            
+            {/* 删除按钮 */}
+            <View style={styles.memberActions}>
+              <TouchableOpacity 
+                style={styles.memberDeleteButton}
+                onPress={() => handleRemoveFamilyMember(member)}
+              >
+                <Ionicons name="trash-outline" size={18} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
             {/* <View style={styles.memberActions}>
               <TouchableOpacity style={styles.memberActionButton}>
                 <Ionicons name="chatbubble-outline" size={20} color="#666" />
@@ -409,6 +421,52 @@ export default function MeScreen() {
   // 添加长者账号（兼容旧版本）
   const handleAddElder = async () => {
     await handleAddFamilyMember(elderPhone);
+  };
+
+  // 删除家庭成员
+  const handleRemoveFamilyMember = async (member: FamilyMember) => {
+    if (!token) {
+      Alert.alert('错误', '请先登录');
+      return;
+    }
+
+    // 获取成员类型名称用于显示
+    const memberTypeName = member.relationship_type === 'child' ? '子女' : 
+                          member.relationship_type === 'parent' ? '家长' : '家庭成员';
+
+    Alert.alert(
+      '确认删除',
+      `确定要删除家庭成员"${member.name || member.phone}"吗？\n\n删除后将无法查看其相关信息，需要重新添加才能恢复关系。`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '确定删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await familyAPI.removeFamilyMember(member.user_id, token);
+              
+              if (response.success) {
+                Alert.alert('成功', `${memberTypeName}删除成功`, [
+                  {
+                    text: '确定',
+                    onPress: () => {
+                      // 刷新家庭成员列表
+                      loadFamilyMembers();
+                    },
+                  },
+                ]);
+              } else {
+                Alert.alert('失败', response.message || '删除失败，请重试');
+              }
+            } catch (error: any) {
+              console.error('Remove family member error:', error);
+              Alert.alert('错误', error.message || '网络错误，请重试');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // 获取添加按钮的文案
@@ -501,24 +559,16 @@ export default function MeScreen() {
   };
 
   const showRoleChangeConfirmation = () => {
-    Alert.prompt(
-      '最终确认',
-      '请输入 "CHANGE_ROLE" 以确认角色切换：',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '确认',
-          onPress: (confirmationText) => {
-            if (confirmationText === 'CHANGE_ROLE') {
-              performRoleChange(confirmationText);
-            } else {
-              Alert.alert('错误', '确认文字不正确，请重新输入');
-            }
-          },
-        },
-      ],
-      'plain-text'
-    );
+    setIsRoleChangeConfirmModalVisible(true);
+  };
+
+  const handleRoleChangeConfirm = () => {
+    setIsRoleChangeConfirmModalVisible(false);
+    performRoleChange('CHANGE_ROLE'); // 直接传入确认字符串
+  };
+
+  const handleRoleChangeCancel = () => {
+    setIsRoleChangeConfirmModalVisible(false);
   };
 
   const performRoleChange = async (confirmationText: string) => {
@@ -695,7 +745,7 @@ export default function MeScreen() {
         <View style={styles.familyCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>
-              家庭管理 ({role === 'ELDER' ? '长者视角' : '家属视角'})
+              家庭管理 
             </Text>
             <TouchableOpacity 
               style={styles.addButton} 
@@ -882,6 +932,61 @@ export default function MeScreen() {
                 ) : (
                   <Text style={styles.confirmButtonText}>确认添加</Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 角色切换确认模态框 */}
+      <Modal
+        visible={isRoleChangeConfirmModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleRoleChangeCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>最终确认</Text>
+              <TouchableOpacity 
+                onPress={handleRoleChangeCancel}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.confirmationContent}>
+              <Ionicons name="swap-horizontal" size={48} color="#FF9800" />
+              <Text style={styles.confirmationTitle}>
+                确定要切换角色吗？
+              </Text>
+              <Text style={styles.confirmationText}>
+                您当前是{role === 'ELDER' ? '长者' : '家属'}角色，
+                将切换为{role === 'ELDER' ? '家属' : '长者'}角色
+              </Text>
+              <Text style={styles.confirmationDesc}>
+                • 切换后将显示对应角色的家庭关系视图
+                • 所有家庭关系数据都会保留
+                • 可以随时切换回来
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={handleRoleChangeCancel}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={handleRoleChangeConfirm}
+              >
+                <Text style={styles.confirmButtonText}>
+                  确认切换
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1384,5 +1489,35 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: '#fff',
+  },
+  memberDeleteButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#f8f9fa',
+  },
+  confirmationContent: {
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  confirmationTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  confirmationText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  confirmationDesc: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 

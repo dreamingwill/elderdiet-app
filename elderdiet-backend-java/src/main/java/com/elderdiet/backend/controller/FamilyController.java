@@ -163,6 +163,28 @@ public class FamilyController {
     }
 
     /**
+     * 通用删除家庭链接（老人和子女都可以调用）
+     */
+    @DeleteMapping("/remove-member/{targetUserId}")
+    public ResponseEntity<ApiResponse<Void>> removeFamilyMember(
+            @PathVariable String targetUserId,
+            Authentication authentication) {
+
+        try {
+            // 从认证信息中获取当前用户
+            User currentUser = getCurrentUser(authentication);
+
+            // 删除家庭链接
+            familyService.unlinkFamilyMember(currentUser.getId(), targetUserId);
+
+            return ResponseEntity.ok(ApiResponse.success("家庭成员删除成功"));
+        } catch (Exception e) {
+            log.error("删除家庭成员失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
      * 获取家庭成员列表
      */
     @GetMapping("/members")

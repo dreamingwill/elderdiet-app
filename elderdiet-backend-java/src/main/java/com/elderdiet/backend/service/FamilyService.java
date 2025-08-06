@@ -133,6 +133,32 @@ public class FamilyService {
     }
 
     /**
+     * 通用删除家庭链接方法 - 支持双向删除
+     */
+    public void unlinkFamilyMember(String currentUserId, String targetUserId) {
+        log.info("用户 {} 尝试删除与用户 {} 的家庭链接", currentUserId, targetUserId);
+
+        // 查找两用户之间的链接关系（当前用户作为父母）
+        java.util.Optional<FamilyLink> link = familyLinkRepository.findByParentIdAndChildId(currentUserId,
+                targetUserId);
+        if (link.isPresent()) {
+            familyLinkRepository.delete(link.get());
+            log.info("删除家庭链接: 老人 {} -> 子女 {}", currentUserId, targetUserId);
+            return;
+        }
+
+        // 如果没找到，尝试反向查找（当前用户作为子女）
+        link = familyLinkRepository.findByParentIdAndChildId(targetUserId, currentUserId);
+        if (link.isPresent()) {
+            familyLinkRepository.delete(link.get());
+            log.info("删除家庭链接: 老人 {} -> 子女 {}", targetUserId, currentUserId);
+            return;
+        }
+
+        throw new RuntimeException("未找到家庭关系链接，无法删除");
+    }
+
+    /**
      * 获取当前用户的所有家庭成员信息
      */
     public List<FamilyMemberDTO> getFamilyMembers(User currentUser) {

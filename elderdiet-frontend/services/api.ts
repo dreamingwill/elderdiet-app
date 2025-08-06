@@ -1093,6 +1093,19 @@ export const familyAPI = {
       },
     });
   },
+
+  // 删除家庭成员
+  removeFamilyMember: async (
+    targetUserId: string, 
+    token: string
+  ): Promise<ApiResponse<null>> => {
+    return request(`/family/remove-member/${targetUserId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
 };
 
 // 游戏化相关API
