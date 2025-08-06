@@ -795,7 +795,7 @@ export default function MeScreen() {
           {/* 角色切换按钮 */}
           <TouchableOpacity
             style={[styles.changeRoleButton, isChangingRole && styles.disabledButton]}
-            onPress={handleChangeRole}
+            onPress={showRoleChangeConfirmation}
             disabled={isChangingRole}
           >
             <Ionicons name="swap-horizontal-outline" size={20} color="#FF9800" />
