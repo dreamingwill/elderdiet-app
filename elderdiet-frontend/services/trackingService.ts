@@ -69,6 +69,10 @@ class TrackingService {
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private currentPageName: string | null = null;
   private deviceInfo: any = {};
+  // 以下变量在禁用 page_view 事件后已不再需要，但保留以避免破坏现有代码
+  // private lastPageVisitTime: Map<string, number> = new Map();
+  // private pageVisitCallStack: string[] = [];
+  // private pendingPageVisits: Set<string> = new Set();
 
   constructor() {
     console.log('🔧 TrackingService构造函数开始');
@@ -112,6 +116,7 @@ class TrackingService {
 
     this.flushTimer = setInterval(() => {
       this.flushEvents();
+      this.cleanupOldRecords(); // 清理旧记录
     }, this.config.flushInterval);
   }
 
@@ -127,6 +132,14 @@ class TrackingService {
    */
   public setEnabled(enabled: boolean) {
     this.config.enabled = enabled;
+  }
+
+  /**
+   * 清理旧的防重复记录（已简化，因为禁用了 page_view 事件）
+   */
+  private cleanupOldRecords() {
+    // 清理逻辑已简化，因为禁用了 page_view 事件相关的防重复机制
+    console.log('🧹 清理旧记录（已简化）');
   }
 
   // ========== 会话管理 ==========
@@ -145,11 +158,11 @@ class TrackingService {
       }
 
       const requestBody = {
-        deviceType: this.deviceInfo.deviceType,
-        deviceModel: this.deviceInfo.deviceModel,
-        osVersion: this.deviceInfo.osVersion,
-        appVersion: this.deviceInfo.appVersion,
-        userAgent: this.deviceInfo.userAgent,
+        device_type: this.deviceInfo.deviceType,
+        device_model: this.deviceInfo.deviceModel,
+        os_version: this.deviceInfo.osVersion,
+        app_version: this.deviceInfo.appVersion,
+        user_agent: this.deviceInfo.userAgent,
       };
 
       const apiUrl = `${this.config.apiBaseUrl}/api/tracking/session/start`;
@@ -172,8 +185,8 @@ class TrackingService {
       if (response.ok) {
         const data = JSON.parse(responseText);
         this.currentSession = {
-          sessionId: data.sessionId,
-          userId: data.userId,
+          sessionId: data.session_id || data.sessionId, // 兼容两种格式
+          userId: data.user_id || data.userId,
           startTime: new Date(),
           deviceType: this.deviceInfo.deviceType,
           isActive: true,
@@ -210,7 +223,7 @@ class TrackingService {
       if (!token) return false;
 
       const requestBody = {
-        sessionId: this.currentSession.sessionId,
+        session_id: this.currentSession.sessionId,
         reason,
       };
 
@@ -297,6 +310,12 @@ class TrackingService {
    * 追踪交互事件
    */
   public trackInteractionEvent(eventName: string, eventData?: Record<string, any>) {
+    // 🚫 禁止调用 page_view 事件
+    if (eventName === 'page_view') {
+      console.log(`🚫 page_view 事件已被禁用，跳过调用`);
+      return;
+    }
+    
     this.trackEvent('INTERACTION', eventName, eventData, 'success');
   }
 
@@ -313,7 +332,8 @@ class TrackingService {
   // ========== 页面访问追踪 ==========
 
   /**
-   * 开始页面访问
+   * 开始页面访问（仅API调用，不添加事件到队列）
+   * 注意：page_view 事件已被禁用
    */
   public async startPageVisit(pageName: string, pageTitle?: string, route?: string, referrer?: string): Promise<boolean> {
     if (!this.config.enabled) {
@@ -325,21 +345,13 @@ class TrackingService {
       console.warn('⚠️ 没有活跃会话，但仍尝试记录页面访问 (sessionId将为unknown)');
     }
 
-    console.log('🔥 startPageVisit被调用:', pageName);
+    console.log('🔥 startPageVisit被调用 (仅API模式):', pageName);
     
     // 保存之前的页面名称作为referrer
     const previousPageName = this.currentPageName;
     
-    // 先添加到事件队列（不依赖API）
-    this.trackInteractionEvent('page_view', {
-      pageName,
-      route: route || '',
-      referrer: referrer || previousPageName || '',
-      pageTitle: pageTitle || '',
-      timestamp: Date.now(),
-    });
-    
-    console.log('✅ 页面访问事件已添加到队列, 当前页面:', pageName);
+    console.log('🚫 page_view 事件已被禁用，仅执行API调用');
+    console.log('✅ 页面访问追踪（仅API调用）, 当前页面:', pageName);
 
     // 以下是可选的API调用（如果失败不影响事件追踪）
     try {
@@ -358,13 +370,13 @@ class TrackingService {
       // 更新当前页面名称
       this.currentPageName = pageName;
       
-      const requestBody: PageVisitData = {
-        pageName,
-        pageTitle,
+      const requestBody = {
+        page_name: pageName,
+        page_title: pageTitle,
         route,
         referrer: referrer || previousPageName || undefined,
-        deviceType: this.deviceInfo.deviceType,
-        sessionId: this.currentSession?.sessionId || 'unknown',
+        device_type: this.deviceInfo.deviceType,
+        session_id: this.currentSession?.sessionId || 'unknown',
       };
       
       console.log('📤 页面访问API请求体:', JSON.stringify(requestBody, null, 2));
@@ -387,7 +399,7 @@ class TrackingService {
       }
     } catch (error) {
       console.error('❌ 页面访问API调用异常:', error);
-      return true; // 仍返回true，因为事件已经被追踪
+      return true; // 返回true，因为这只是API调用失败
     }
   }
 
@@ -402,8 +414,8 @@ class TrackingService {
       if (!token) return false;
 
       const requestBody = {
-        pageName: this.currentPageName,
-        exitReason,
+        page_name: this.currentPageName,
+        exit_reason: exitReason,
       };
 
       const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/end`, {
@@ -453,10 +465,20 @@ class TrackingService {
       console.log('📦 准备发送事件数量:', eventsToSend.length);
       console.log('📝 事件详情:', eventsToSend);
 
+      // 转换事件格式为snake_case
+      const formattedEvents = eventsToSend.map(event => ({
+        event_type: event.eventType,
+        event_name: event.eventName,
+        event_data: event.eventData,
+        result: event.result,
+        device_type: event.deviceType,
+        session_id: event.sessionId,
+      }));
+
       const requestBody = {
-        events: eventsToSend,
-        sessionId: this.currentSession?.sessionId || 'unknown',
-        deviceType: this.deviceInfo.deviceType,
+        events: formattedEvents,
+        session_id: this.currentSession?.sessionId || 'unknown',
+        device_type: this.deviceInfo.deviceType,
       };
 
       console.log('📤 发送请求体:', JSON.stringify(requestBody, null, 2));
@@ -479,7 +501,7 @@ class TrackingService {
 
       if (response.ok) {
         const data = JSON.parse(responseText);
-        console.log(`✅ 批量事件发送成功: ${data.successCount}/${data.totalCount}`);
+        console.log(`✅ 批量事件发送成功: ${data.success_count || data.successCount}/${data.total_count || data.totalCount}`);
         return true;
       } else {
         // 发送失败，将事件放回队列
@@ -536,6 +558,14 @@ class TrackingService {
   public async manualFlush(): Promise<boolean> {
     console.log('🔧 手动触发事件刷新');
     return await this.flushEvents();
+  }
+
+  /**
+   * 获取最近的页面访问调用记录（调试用）
+   * 注意：已禁用 page_view 事件，此方法返回空数组
+   */
+  public getRecentPageVisitCalls(): string[] {
+    return []; // 返回空数组，因为已禁用相关功能
   }
 
   /**

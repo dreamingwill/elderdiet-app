@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity, View, Text, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { Dish } from '@/services/api';
 import DishReplaceModal from './DishReplaceModal';
+import { trackingService } from '@/services/trackingService';
 
 interface DishItemProps {
   dish: Dish;
@@ -21,11 +22,30 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
   const [showReplaceModal, setShowReplaceModal] = useState(false);
 
   const toggleExpanded = () => {
-    setIsExpanded(!isExpanded);
+    const newExpandedState = !isExpanded;
+    setIsExpanded(newExpandedState);
+    
+    // 追踪展开/收起推荐理由事件
+    trackingService.trackInteractionEvent('button_click', {
+      buttonName: 'toggle_recommendation',
+      dishName: dish.name,
+      mealType,
+      action: newExpandedState ? 'expand' : 'collapse',
+    });
   };
 
   const handleReplace = () => {
     if (isReplacing) return; // 防止重复点击
+    
+    // 追踪换菜按钮点击事件
+    trackingService.trackInteractionEvent('button_click', {
+      buttonName: 'replace_dish',
+      dishName: dish.name,
+      mealType,
+      dishIndex: index,
+      action: 'open_replace_modal',
+    });
+    
     setShowReplaceModal(true);
   };
 
@@ -35,8 +55,40 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     special_requirement?: string;
   }) => {
     setIsReplacing(true);
+    
     try {
+      // 追踪换菜确认事件（开始）
+      trackingService.trackFeatureEvent('replace_dish', {
+        dishName: dish.name,
+        mealType,
+        dishIndex: index,
+        preferences,
+        action: 'start',
+      }, 'success');
+      
       await onReplace(mealType, index, preferences);
+      
+      // 追踪换菜成功事件
+      trackingService.trackFeatureEvent('replace_dish', {
+        dishName: dish.name,
+        mealType,
+        dishIndex: index,
+        preferences,
+        action: 'completed',
+      }, 'success');
+      
+    } catch (error) {
+      // 追踪换菜失败事件
+      trackingService.trackFeatureEvent('replace_dish', {
+        dishName: dish.name,
+        mealType,
+        dishIndex: index,
+        preferences,
+        action: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      }, 'failure');
+      
+      throw error; // 重新抛出错误
     } finally {
       setIsReplacing(false);
     }

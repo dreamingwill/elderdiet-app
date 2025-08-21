@@ -385,7 +385,7 @@ export default function MealPlanScreen() {
     useCallback(() => {
       console.log('🔥 Meal-plan useFocusEffect触发, token:', !!token);
       
-      // 页面访问追踪
+      // 页面访问追踪（不依赖token）
       try {
         console.log('🔥 开始meal-plan页面访问追踪...');
         trackingService.startPageVisit('meal-plan', '今日膳食', '/(tabs)/meal-plan');
@@ -394,22 +394,33 @@ export default function MealPlanScreen() {
         console.error('❌ meal-plan页面访问追踪失败:', error);
       }
       
-      if (token) {
-        loadTreeStatus();
-        loadProfileCompleteness();
-        loadFeed();
-      }
+      // 标记页面已获得焦点
+      setIsFocused(true);
 
       return () => {
         console.log('🔥 Meal-plan页面离开，结束访问追踪');
+        
+        // 标记页面失去焦点
+        setIsFocused(false);
+        
         try {
           trackingService.endPageVisit('navigation');
         } catch (error) {
           console.error('❌ 结束meal-plan页面访问追踪失败:', error);
         }
       };
-    }, [token])
+    }, []) // 移除token依赖，避免重复触发
   );
+  
+  // 单独的useEffect处理token变化时的数据刷新（仅在获得焦点时）
+  const [isFocused, setIsFocused] = useState(false);
+  useEffect(() => {
+    if (token && isFocused) {
+      loadTreeStatus();
+      loadProfileCompleteness();
+      loadFeed();
+    }
+  }, [token, isFocused]);
 
   // 获取当前日期
   const getCurrentDate = () => {
