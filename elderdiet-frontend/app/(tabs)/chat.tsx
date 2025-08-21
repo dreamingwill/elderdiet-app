@@ -599,7 +599,7 @@ export default function ChatScreen() {
         style={styles.messagesList}
         contentContainerStyle={[
           styles.messagesContainer, 
-          { paddingBottom: pendingImages.length > 0 ? 180 : 90 }
+          { paddingBottom: pendingImages.length > 0 ? 20 : 20 }
         ]}
         ref={flatListRef}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
@@ -978,10 +978,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   inputWrapper: {
     paddingHorizontal: 16,
