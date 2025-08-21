@@ -327,23 +327,25 @@ class TrackingService {
 
     console.log('🔥 startPageVisit被调用:', pageName);
     
+    // 保存之前的页面名称作为referrer
+    const previousPageName = this.currentPageName;
+    
     // 先添加到事件队列（不依赖API）
     this.trackInteractionEvent('page_view', {
       pageName,
       route: route || '',
-      referrer: referrer || this.currentPageName || '',
+      referrer: referrer || previousPageName || '',
       pageTitle: pageTitle || '',
       timestamp: Date.now(),
     });
     
-    // 更新当前页面名称
-    this.currentPageName = pageName;
     console.log('✅ 页面访问事件已添加到队列, 当前页面:', pageName);
 
     // 以下是可选的API调用（如果失败不影响事件追踪）
     try {
       // 如果有之前的页面，先结束它
-      if (this.currentPageName && this.currentPageName !== pageName) {
+      if (previousPageName && previousPageName !== pageName) {
+        console.log('🔄 结束之前的页面访问:', previousPageName);
         await this.endPageVisit('navigation');
       }
 
@@ -353,14 +355,19 @@ class TrackingService {
         return true; // 返回true因为事件已经被追踪
       }
 
+      // 更新当前页面名称
+      this.currentPageName = pageName;
+      
       const requestBody: PageVisitData = {
         pageName,
         pageTitle,
         route,
-        referrer: referrer || this.currentPageName || undefined,
+        referrer: referrer || previousPageName || undefined,
         deviceType: this.deviceInfo.deviceType,
         sessionId: this.currentSession?.sessionId || 'unknown',
       };
+      
+      console.log('📤 页面访问API请求体:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/start`, {
         method: 'POST',

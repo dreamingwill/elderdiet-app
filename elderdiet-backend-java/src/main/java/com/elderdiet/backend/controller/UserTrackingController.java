@@ -48,15 +48,7 @@ public class UserTrackingController {
             String userId = authentication.getName();
             String ipAddress = getClientIpAddress(httpRequest);
 
-            // 手动验证关键字段
-            if (request.getDeviceType() == null || request.getDeviceType().trim().isEmpty()) {
-                log.error("⚠️ deviceType验证失败: deviceType={}", request.getDeviceType());
-                TrackingResponse.SessionResponse errorResponse = TrackingResponse.SessionResponse.builder()
-                        .status("error")
-                        .message("设备类型不能为空")
-                        .build();
-                return ResponseEntity.badRequest().body(errorResponse);
-            }
+            // @Valid注解会自动验证，不需要手动验证
 
             TrackUserSession session = trackingService.startSession(
                     userId,
@@ -251,6 +243,10 @@ public class UserTrackingController {
     public ResponseEntity<TrackingResponse.PageVisitResponse> startPageVisit(
             @Valid @RequestBody TrackingRequest.PageVisitStartRequest request,
             Authentication authentication) {
+
+        log.info("🔥 收到页面访问开始请求: pageName={}, pageTitle={}, route={}",
+                request.getPageName(), request.getPageTitle(), request.getRoute());
+        log.info("📱 完整页面访问请求对象: {}", request);
 
         try {
             String userId = authentication.getName();
