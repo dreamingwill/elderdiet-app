@@ -559,42 +559,38 @@ export default function MealPlanScreen() {
                     />
                   </View>
                   
-                  {role !== 'CHILD' && (
-                    <>
-                      <TouchableOpacity 
-                        style={styles.mealRecordButton}
-                        onPress={handlePhotoCheckIn}
-                      >
-                        <View style={styles.buttonContent}>
-                          <Ionicons name="camera" size={24} color="#fff" />
-                          <Text style={styles.mealRecordButtonText}>
-                            记录今日美食
-                            {treeStatus.today_water_count === 0 ? " • 帮小树浇水" : 
-                             treeStatus.today_water_count === 1 ? "" : ""}
-                          </Text>
-                        </View>
-                        {treeStatus.today_water_count > 0 && (
-                          <View style={styles.waterStatusBadge}>
-                            {[0, 1].map((idx) => (
-                              <Ionicons
-                                key={idx}
-                                name="water"
-                                size={16}
-                                color={treeStatus.today_water_count > idx ? '#339CFF' : '#aaaaaa'}
-                                style={{ marginRight: idx === 0 ? 2 : 0 }}
-                              />
-                            ))}
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                      {/* 浇水间隔提示 */}
-                      {treeStatus.today_water_count === 1 && (
-                        <View style={styles.wateringTipContainer}>
-                          <Ionicons name="time-outline" size={16} color="#28a745" style={{marginRight: 4}} />
-                          <Text style={styles.wateringTipText}>当天首次浇水后3小时后可再次浇水</Text>
-                        </View>
-                      )}
-                    </>
+                  <TouchableOpacity 
+                    style={styles.mealRecordButton}
+                    onPress={handlePhotoCheckIn}
+                  >
+                    <View style={styles.buttonContent}>
+                      <Ionicons name="camera" size={24} color="#fff" />
+                      <Text style={styles.mealRecordButtonText}>
+                        记录今日美食
+                        {treeStatus.today_water_count === 0 ? " • 帮小树浇水" : 
+                         treeStatus.today_water_count === 1 ? "" : ""}
+                      </Text>
+                    </View>
+                    {treeStatus.today_water_count > 0 && (
+                      <View style={styles.waterStatusBadge}>
+                        {[0, 1].map((idx) => (
+                          <Ionicons
+                            key={idx}
+                            name="water"
+                            size={16}
+                            color={treeStatus.today_water_count > idx ? '#339CFF' : '#aaaaaa'}
+                            style={{ marginRight: idx === 0 ? 2 : 0 }}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                  {/* 浇水间隔提示 */}
+                  {treeStatus.today_water_count === 1 && (
+                    <View style={styles.wateringTipContainer}>
+                      <Ionicons name="time-outline" size={16} color="#28a745" style={{marginRight: 4}} />
+                      <Text style={styles.wateringTipText}>当天首次浇水后3小时后可再次浇水</Text>
+                    </View>
                   )}
                 </>
               ) : (

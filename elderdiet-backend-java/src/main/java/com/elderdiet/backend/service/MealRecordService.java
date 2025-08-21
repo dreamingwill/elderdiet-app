@@ -89,9 +89,9 @@ public class MealRecordService {
     public MealRecord createMealRecord(User user, MealRecordRequest request, List<MultipartFile> images) {
         log.info("用户 {} 创建膳食记录", user.getPhone());
 
-        // 验证用户角色
-        if (user.getRole() != UserRole.ELDER) {
-            throw new RuntimeException("只有老人用户可以创建膳食记录");
+        // 验证用户角色 - 现在允许老人和子女都可以创建膳食记录
+        if (user.getRole() != UserRole.ELDER && user.getRole() != UserRole.CHILD) {
+            throw new RuntimeException("只有老人和子女用户可以创建膳食记录");
         }
 
         // 上传图片
@@ -183,14 +183,22 @@ public class MealRecordService {
                 break;
 
             case CHILD:
-                // 子女用户：查询绑定的老人发布的FAMILY可见的最近30条记录
+                // 子女用户：查询自己的所有记录 + 绑定的老人发布的FAMILY可见记录
                 List<FamilyLink> familyLinks = familyLinkRepository.findByChildId(user.getId());
                 if (!familyLinks.isEmpty()) {
                     List<String> parentIds = familyLinks.stream()
                             .map(FamilyLink::getParentId)
                             .collect(Collectors.toList());
-                    records = mealRecordRepository.findTop30ByUserIdInAndVisibilityOrderByCreatedAtDesc(
-                            parentIds, RecordVisibility.FAMILY);
+                    // 使用组合查询：查询自己的所有记录 + 绑定老人的FAMILY可见记录
+                    List<MealRecord> allRecords = mealRecordRepository
+                            .findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(user.getId(), parentIds);
+                    // 手动限制结果数量为30条
+                    records = allRecords.stream()
+                            .limit(30)
+                            .collect(Collectors.toList());
+                } else {
+                    // 没有绑定的老人，只显示自己的记录
+                    records = mealRecordRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId());
                 }
                 break;
 
@@ -240,19 +248,21 @@ public class MealRecordService {
                 break;
 
             case CHILD:
-                // 子女用户：查询绑定的老人发布的FAMILY可见记录
+                // 子女用户：查询自己的所有记录 + 绑定的老人发布的FAMILY可见记录
                 List<FamilyLink> familyLinks = familyLinkRepository.findByChildId(user.getId());
                 if (!familyLinks.isEmpty()) {
                     List<String> parentIds = familyLinks.stream()
                             .map(FamilyLink::getParentId)
                             .collect(Collectors.toList());
-                    recordPage = mealRecordRepository.findByUserIdInAndVisibilityOrderByCreatedAtDesc(
-                            parentIds, RecordVisibility.FAMILY, pageable);
-                    totalRecords = mealRecordRepository.countByUserIdInAndVisibility(parentIds,
-                            RecordVisibility.FAMILY);
+                    // 使用组合查询：查询自己的所有记录 + 绑定老人的FAMILY可见记录
+                    recordPage = mealRecordRepository.findOwnAndFamilyVisibleRecords(
+                            user.getId(), parentIds, pageable);
+                    totalRecords = mealRecordRepository.countOwnAndFamilyVisibleRecords(
+                            user.getId(), parentIds);
                 } else {
-                    // 没有绑定的老人，返回空结果
-                    return new FeedResponse(Collections.emptyList(), page, 0, 0, false);
+                    // 没有绑定的老人，只显示自己的记录
+                    recordPage = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+                    totalRecords = mealRecordRepository.countByUserId(user.getId());
                 }
                 break;
 

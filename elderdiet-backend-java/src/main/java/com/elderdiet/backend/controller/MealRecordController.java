@@ -35,10 +35,9 @@ public class MealRecordController {
     private final UserService userService;
 
     /**
-     * 创建膳食记录（只有老人可以调用）
+     * 创建膳食记录（老人和子女都可以调用）
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_ELDER')")
     public ResponseEntity<ApiResponse<MealRecord>> createMealRecord(
             // @Valid @RequestPart("request") MealRecordRequest request, // 替换
             @RequestPart("request") String requestJson,
@@ -164,7 +163,6 @@ public class MealRecordController {
      * 更新膳食记录可见性（只有记录创建者可以调用）
      */
     @PutMapping("/{recordId}/visibility")
-    @PreAuthorize("hasAuthority('ROLE_ELDER')")
     public ResponseEntity<ApiResponse<MealRecord>> updateRecordVisibility(
             @PathVariable String recordId,
             @Valid @RequestBody VisibilityUpdateRequest request,
@@ -188,7 +186,6 @@ public class MealRecordController {
      * 生成营养师评论（手动触发）
      */
     @PostMapping("/{recordId}/nutritionist-comment")
-    @PreAuthorize("hasAuthority('ROLE_ELDER')")
     public ResponseEntity<ApiResponse<String>> generateNutritionistComment(
             @PathVariable String recordId,
             Authentication authentication) {
