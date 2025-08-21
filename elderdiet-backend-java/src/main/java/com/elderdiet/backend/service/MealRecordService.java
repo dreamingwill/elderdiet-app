@@ -162,18 +162,21 @@ public class MealRecordService {
             case ELDER:
                 // 修改后的老人用户查询逻辑：
                 // 1. 获取关联的其他老人ID列表
-                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录
+                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录 + 自己所有子女的FAMILY可见记录
                 List<String> relatedElderIds = getRelatedElderIds(user.getId());
+                List<String> relatedChildIds = getRelatedChildIds(user.getId());
 
-                if (relatedElderIds.isEmpty()) {
-                    // 如果没有关联的老人，只显示自己的记录
+                if (relatedElderIds.isEmpty() && relatedChildIds.isEmpty()) {
+                    // 如果没有关联的老人和子女，只显示自己的记录
                     records = mealRecordRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId());
                 } else {
-                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人", user.getPhone(), relatedElderIds.size());
+                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人和 {} 个子女",
+                            user.getPhone(), relatedElderIds.size(), relatedChildIds.size());
 
-                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录
+                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录 + 子女的FAMILY可见记录
                     List<MealRecord> allRecords = mealRecordRepository
-                            .findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(user.getId(), relatedElderIds);
+                            .findOwnAndFamilyVisibleRecordsWithChildrenOrderByCreatedAtDesc(
+                                    user.getId(), relatedElderIds, relatedChildIds);
 
                     // 手动限制结果数量为30条
                     records = allRecords.stream()
@@ -229,21 +232,23 @@ public class MealRecordService {
             case ELDER:
                 // 修改后的老人用户查询逻辑：
                 // 1. 获取关联的其他老人ID列表
-                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录
+                // 2. 查询自己的所有记录 + 其他老人的FAMILY可见记录 + 自己所有子女的FAMILY可见记录
                 List<String> relatedElderIds = getRelatedElderIds(user.getId());
+                List<String> relatedChildIds = getRelatedChildIds(user.getId());
 
-                if (relatedElderIds.isEmpty()) {
-                    // 如果没有关联的老人，只显示自己的记录
+                if (relatedElderIds.isEmpty() && relatedChildIds.isEmpty()) {
+                    // 如果没有关联的老人和子女，只显示自己的记录
                     recordPage = mealRecordRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
                     totalRecords = mealRecordRepository.countByUserId(user.getId());
                 } else {
-                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人", user.getPhone(), relatedElderIds.size());
+                    log.info("用户 {} 通过家庭关系找到 {} 个关联老人和 {} 个子女",
+                            user.getPhone(), relatedElderIds.size(), relatedChildIds.size());
 
-                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录
-                    recordPage = mealRecordRepository.findOwnAndFamilyVisibleRecords(
-                            user.getId(), relatedElderIds, pageable);
-                    totalRecords = mealRecordRepository.countOwnAndFamilyVisibleRecords(
-                            user.getId(), relatedElderIds);
+                    // 使用组合查询：查询自己的所有记录 + 其他老人的FAMILY可见记录 + 子女的FAMILY可见记录
+                    recordPage = mealRecordRepository.findOwnAndFamilyVisibleRecordsWithChildren(
+                            user.getId(), relatedElderIds, relatedChildIds, pageable);
+                    totalRecords = mealRecordRepository.countOwnAndFamilyVisibleRecordsWithChildren(
+                            user.getId(), relatedElderIds, relatedChildIds);
                 }
                 break;
 
@@ -649,6 +654,23 @@ public class MealRecordService {
 
         // 去重
         return familyParentIds.stream()
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取老人用户的所有子女ID列表
+     */
+    private List<String> getRelatedChildIds(String elderId) {
+        // 查询该老人的所有子女
+        List<FamilyLink> childrenLinks = familyService.getChildrenLinks(elderId);
+        if (childrenLinks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 获取所有子女ID并去重
+        return childrenLinks.stream()
+                .map(FamilyLink::getChildId)
                 .distinct()
                 .collect(Collectors.toList());
     }

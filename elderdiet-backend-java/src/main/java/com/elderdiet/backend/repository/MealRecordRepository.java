@@ -90,6 +90,29 @@ public interface MealRecordRepository extends MongoRepository<MealRecord, String
         List<MealRecord> findOwnAndFamilyVisibleRecordsOrderByCreatedAtDesc(String userId, List<String> otherUserIds);
 
         /**
+         * 组合查询：查询用户自己的所有记录、其他老人的FAMILY可见记录以及子女的FAMILY可见记录
+         * 使用MongoDB的$or操作符来实现复合条件
+         */
+        @Query(value = "{ '$or': [ { 'userId': ?0 }, { 'userId': { '$in': ?1 }, 'visibility': 'FAMILY' }, { 'userId': { '$in': ?2 }, 'visibility': 'FAMILY' } ] }", sort = "{ 'createdAt': -1 }")
+        List<MealRecord> findOwnAndFamilyVisibleRecordsWithChildrenOrderByCreatedAtDesc(String userId,
+                        List<String> otherElderIds, List<String> childrenIds);
+
+        /**
+         * 组合查询：查询用户自己的所有记录、其他老人的FAMILY可见记录以及子女的FAMILY可见记录（分页版本）
+         * 使用MongoDB的$or操作符来实现复合条件
+         */
+        @Query("{ '$or': [ { 'userId': ?0 }, { 'userId': { '$in': ?1 }, 'visibility': 'FAMILY' }, { 'userId': { '$in': ?2 }, 'visibility': 'FAMILY' } ] }")
+        Page<MealRecord> findOwnAndFamilyVisibleRecordsWithChildren(String userId, List<String> otherElderIds,
+                        List<String> childrenIds, Pageable pageable);
+
+        /**
+         * 统计用户自己的所有记录、其他老人的FAMILY可见记录以及子女的FAMILY可见记录数量
+         */
+        @Query(value = "{ '$or': [ { 'userId': ?0 }, { 'userId': { '$in': ?1 }, 'visibility': 'FAMILY' }, { 'userId': { '$in': ?2 }, 'visibility': 'FAMILY' } ] }", count = true)
+        long countOwnAndFamilyVisibleRecordsWithChildren(String userId, List<String> otherElderIds,
+                        List<String> childrenIds);
+
+        /**
          * 根据用户ID删除所有膳食记录
          */
         void deleteByUserId(String userId);
