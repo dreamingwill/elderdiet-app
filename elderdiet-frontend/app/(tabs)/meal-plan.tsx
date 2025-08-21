@@ -10,6 +10,7 @@ import DishItem from '@/components/meal-plan/DishItem';
 import PostCard from '@/components/family-sharing/PostCard';
 import ProfileCompletenessAlert from '@/components/ProfileCompletenessAlert';
 import { router, useFocusEffect } from 'expo-router';
+import { trackingService } from '@/services/trackingService';
 
 const { width } = Dimensions.get('window');
 
@@ -110,6 +111,11 @@ export default function MealPlanScreen() {
       if (response.success && response.data) {
         setCurrentMealPlan(response.data);
         Alert.alert('成功', '今日膳食计划已生成！');
+        
+        // 追踪生成膳食计划成功事件
+        trackingService.trackFeatureEvent('generate_meal_plan', {
+          mealPlanId: response.data.id,
+        }, 'success');
       } else {
         throw new Error(response.message || '生成膳食计划失败');
       }
@@ -117,6 +123,11 @@ export default function MealPlanScreen() {
       console.error('Failed to generate today meal plan:', error);
       setError('生成膳食计划失败');
       Alert.alert('错误', '生成膳食计划失败，请重试');
+      
+      // 追踪生成膳食计划失败事件
+      trackingService.trackFeatureEvent('generate_meal_plan', {
+        error: error instanceof Error ? error.message : '未知错误',
+      }, 'failure');
     } finally {
       setIsGenerating(false);
     }
@@ -372,11 +383,18 @@ export default function MealPlanScreen() {
   // 页面重新获取焦点时刷新树状态和健康档案完整性（从拍照打卡页面或编辑档案页面返回时）
   useFocusEffect(
     useCallback(() => {
+      // 页面访问追踪
+      trackingService.startPageVisit('meal-plan', '今日膳食', '/(tabs)/meal-plan');
+      
       if (token) {
         loadTreeStatus();
         loadProfileCompleteness();
         loadFeed();
       }
+
+      return () => {
+        trackingService.endPageVisit('navigation');
+      };
     }, [token])
   );
 

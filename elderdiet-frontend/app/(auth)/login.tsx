@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { router } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { profileAPI } from '@/services/api';
+import { trackingService } from '@/services/trackingService';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
@@ -21,6 +22,15 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   
   const { signIn } = useUser();
+
+  // 页面访问追踪
+  useEffect(() => {
+    trackingService.startPageVisit('login', '登录页面', 'login');
+    
+    return () => {
+      trackingService.endPageVisit('navigation');
+    };
+  }, []);
 
   // 格式化手机号输入
   const handlePhoneChange = (text: string) => {
@@ -71,6 +81,12 @@ export default function LoginScreen() {
       // 执行登录
       await signIn(phone, password);
       
+      // 追踪登录成功事件
+      trackingService.trackAuthEvent('login', 'success');
+      
+      // 开始用户会话追踪
+      await trackingService.startSession();
+      
       // 登录成功后，检查用户是否有健康档案
       // 获取当前用户信息
       const userToken = await import('@/utils/authStorage').then(module => 
@@ -115,6 +131,10 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error('登录错误:', error);
+      
+      // 追踪登录失败事件
+      trackingService.trackAuthEvent('login', 'failure');
+      
       setErrorMessage(error instanceof Error ? error.message : '登录失败，请重试');
     } finally {
       setIsLoading(false);

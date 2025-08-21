@@ -23,6 +23,8 @@ import { Audio } from 'expo-av';
 import { chatAPI, ChatRequest, ChatResponse } from '@/services/api';
 import { authStorage } from '@/utils/authStorage';
 import { useUser } from '@/contexts/UserContext';
+import { useFocusEffect } from 'expo-router';
+import { trackingService } from '@/services/trackingService';
 
 const { width } = Dimensions.get('window');
 
@@ -122,6 +124,17 @@ export default function ChatScreen() {
       }
     };
   }, [uid, isAuthenticated]);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      trackingService.startPageVisit('chat', '聊天交流', '/(tabs)/chat');
+      
+      return () => {
+        trackingService.endPageVisit('navigation');
+      };
+    }, [])
+  );
 
   // 滚动到底部
   useEffect(() => {
@@ -297,12 +310,27 @@ export default function ChatScreen() {
         const newMessages = [...updatedMessages, aiMessage];
         setMessages(newMessages);
         await saveMessagesToLocal(newMessages, uid);
+        
+        // 追踪发送消息成功事件
+        trackingService.trackFeatureEvent('send_message', {
+          messageType: messageType,
+          hasImages: processedImageUrls.length > 0,
+          imageCount: processedImageUrls.length,
+        }, 'success');
       } else {
         Alert.alert('错误', response.message || '发送消息失败');
       }
     } catch (error) {
       console.error('发送消息失败:', error);
       Alert.alert('错误', '发送消息失败，请重试');
+      
+      // 追踪发送消息失败事件
+      trackingService.trackFeatureEvent('send_message', {
+        error: error instanceof Error ? error.message : '未知错误',
+        messageType: messageType,
+        hasImages: currentPendingImages.length > 0,
+        imageCount: currentPendingImages.length,
+      }, 'failure');
     } finally {
       setIsLoading(false);
     }
