@@ -383,8 +383,16 @@ export default function MealPlanScreen() {
   // 页面重新获取焦点时刷新树状态和健康档案完整性（从拍照打卡页面或编辑档案页面返回时）
   useFocusEffect(
     useCallback(() => {
+      console.log('🔥 Meal-plan useFocusEffect触发, token:', !!token);
+      
       // 页面访问追踪
-      trackingService.startPageVisit('meal-plan', '今日膳食', '/(tabs)/meal-plan');
+      try {
+        console.log('🔥 开始meal-plan页面访问追踪...');
+        trackingService.startPageVisit('meal-plan', '今日膳食', '/(tabs)/meal-plan');
+        console.log('✅ meal-plan页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ meal-plan页面访问追踪失败:', error);
+      }
       
       if (token) {
         loadTreeStatus();
@@ -393,7 +401,12 @@ export default function MealPlanScreen() {
       }
 
       return () => {
-        trackingService.endPageVisit('navigation');
+        console.log('🔥 Meal-plan页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束meal-plan页面访问追踪失败:', error);
+        }
       };
     }, [token])
   );

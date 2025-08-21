@@ -13,8 +13,9 @@ import {
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import Carousel from 'react-native-reanimated-carousel';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { healthArticlesAPI, HealthArticle } from '@/services/api';
+import { trackingService } from '@/services/trackingService';
 
 const { width } = Dimensions.get('window');
 
@@ -118,6 +119,29 @@ export default function DiscoveryScreen() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔥 Discovery useFocusEffect触发');
+      try {
+        console.log('🔥 开始discovery页面访问追踪...');
+        trackingService.startPageVisit('discovery', '发现', '/(tabs)/discovery');
+        console.log('✅ discovery页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ discovery页面访问追踪失败:', error);
+      }
+      
+      return () => {
+        console.log('🔥 Discovery页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束discovery页面访问追踪失败:', error);
+        }
+      };
+    }, [])
+  );
 
   const toggleFavorite = (id: string) => {
     if (favorites.includes(id)) {

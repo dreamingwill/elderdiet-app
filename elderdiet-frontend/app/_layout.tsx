@@ -182,6 +182,26 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
             },
           }}
         />
+        <Stack.Screen
+          name="debug-tracking"
+          options={{
+            headerShown: true,
+            title: '追踪调试',
+            headerTitleStyle: {
+              fontSize: 20,
+            },
+          }}
+        />
+        <Stack.Screen
+          name="tracking-test"
+          options={{
+            headerShown: true,
+            title: '追踪测试',
+            headerTitleStyle: {
+              fontSize: 20,
+            },
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );

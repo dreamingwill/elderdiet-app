@@ -128,10 +128,22 @@ export default function ChatScreen() {
   // 页面访问追踪
   useFocusEffect(
     React.useCallback(() => {
-      trackingService.startPageVisit('chat', '聊天交流', '/(tabs)/chat');
+      console.log('🔥 Chat useFocusEffect触发');
+      try {
+        console.log('🔥 开始chat页面访问追踪...');
+        trackingService.startPageVisit('chat', '聊天交流', '/(tabs)/chat');
+        console.log('✅ chat页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ chat页面访问追踪失败:', error);
+      }
       
       return () => {
-        trackingService.endPageVisit('navigation');
+        console.log('🔥 Chat页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束chat页面访问追踪失败:', error);
+        }
       };
     }, [])
   );

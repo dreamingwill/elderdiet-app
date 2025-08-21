@@ -3,14 +3,26 @@ import { authStorage } from '@/utils/authStorage';
 
 // 简化的设备信息获取（避免依赖react-native-device-info）
 const getDeviceInfo = () => {
-  return {
-    deviceType: Platform.OS,
-    platform: Platform.OS,
-    deviceModel: Platform.OS === 'ios' ? 'iPhone' : 'Android',
-    osVersion: Platform.Version.toString(),
-    appVersion: '1.0.0',
-    userAgent: `ElderDiet-App/${Platform.OS}`,
-  };
+  try {
+    return {
+      deviceType: Platform.OS,
+      platform: Platform.OS,
+      deviceModel: Platform.OS === 'ios' ? 'iPhone' : 'Android',
+      osVersion: String(Platform.Version),
+      appVersion: '1.0.0',
+      userAgent: `ElderDiet-App/${Platform.OS}`,
+    };
+  } catch (error) {
+    console.warn('获取设备信息失败:', error);
+    return {
+      deviceType: 'unknown',
+      platform: 'unknown',
+      deviceModel: 'unknown',
+      osVersion: 'unknown',
+      appVersion: '1.0.0',
+      userAgent: 'ElderDiet-App/unknown',
+    };
+  }
 };
 
 interface TrackingConfig {
@@ -59,15 +71,28 @@ class TrackingService {
   private deviceInfo: any = {};
 
   constructor() {
+    console.log('🔧 TrackingService构造函数开始');
+    
     this.config = {
       apiBaseUrl: 'https://api06.dxdu.cn', // 使用实际的API地址
       enabled: true,
-      batchSize: 10,
-      flushInterval: 30000, // 30秒
+      batchSize: 3, // 进一步减小批次便于测试
+      flushInterval: 5000, // 进一步缩短到5秒
     };
 
-    this.initializeDeviceInfo();
-    this.startFlushTimer();
+    console.log('⚙️ 配置初始化完成:', this.config);
+
+    try {
+      this.initializeDeviceInfo();
+      console.log('📱 设备信息初始化完成:', this.deviceInfo);
+
+      this.startFlushTimer();
+      console.log('⏰ 定时器启动完成');
+      
+      console.log('✅ TrackingService构造函数完成');
+    } catch (error) {
+      console.error('❌ TrackingService构造函数失败:', error);
+    }
   }
 
   /**
@@ -127,7 +152,11 @@ class TrackingService {
         userAgent: this.deviceInfo.userAgent,
       };
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/session/start`, {
+      const apiUrl = `${this.config.apiBaseUrl}/api/tracking/session/start`;
+      console.log('🚀 发起会话请求:', apiUrl);
+      console.log('📱 请求数据:', requestBody);
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,8 +165,12 @@ class TrackingService {
         body: JSON.stringify(requestBody),
       });
 
+      console.log('📡 响应状态:', response.status);
+      const responseText = await response.text();
+      console.log('📄 响应内容:', responseText);
+
       if (response.ok) {
-        const data = await response.json();
+        const data = JSON.parse(responseText);
         this.currentSession = {
           sessionId: data.sessionId,
           userId: data.userId,
@@ -146,10 +179,10 @@ class TrackingService {
           isActive: true,
         };
 
-        console.log('会话追踪开始成功:', this.currentSession.sessionId);
+        console.log('✅ 会话追踪开始成功:', this.currentSession.sessionId);
         return true;
       } else {
-        console.error('开始会话追踪失败:', response.status);
+        console.error('❌ 开始会话追踪失败:', response.status, responseText);
         return false;
       }
     } catch (error) {
@@ -218,7 +251,10 @@ class TrackingService {
    * 追踪事件
    */
   public trackEvent(eventType: string, eventName: string, eventData?: Record<string, any>, result: string = 'success') {
-    if (!this.config.enabled) return;
+    if (!this.config.enabled) {
+      console.log('⏸️ 追踪已禁用，跳过事件:', eventName);
+      return;
+    }
 
     const event: EventData = {
       eventType,
@@ -229,11 +265,16 @@ class TrackingService {
       sessionId: this.currentSession?.sessionId,
     };
 
+    console.log('📝 添加事件到队列:', event);
+
     // 添加到队列
     this.eventQueue.push(event);
 
+    console.log(`📊 当前队列长度: ${this.eventQueue.length}/${this.config.batchSize}`);
+
     // 如果队列达到批量大小，立即刷新
     if (this.eventQueue.length >= this.config.batchSize) {
+      console.log('🚀 队列已满，触发批量发送');
       this.flushEvents();
     }
   }
@@ -275,16 +316,42 @@ class TrackingService {
    * 开始页面访问
    */
   public async startPageVisit(pageName: string, pageTitle?: string, route?: string, referrer?: string): Promise<boolean> {
-    if (!this.config.enabled || !this.currentSession) return false;
+    if (!this.config.enabled) {
+      console.log('⏸️ 页面访问追踪已禁用');
+      return false;
+    }
 
+    if (!this.currentSession) {
+      console.warn('⚠️ 没有活跃会话，但仍尝试记录页面访问 (sessionId将为unknown)');
+    }
+
+    console.log('🔥 startPageVisit被调用:', pageName);
+    
+    // 先添加到事件队列（不依赖API）
+    this.trackInteractionEvent('page_view', {
+      pageName,
+      route: route || '',
+      referrer: referrer || this.currentPageName || '',
+      pageTitle: pageTitle || '',
+      timestamp: Date.now(),
+    });
+    
+    // 更新当前页面名称
+    this.currentPageName = pageName;
+    console.log('✅ 页面访问事件已添加到队列, 当前页面:', pageName);
+
+    // 以下是可选的API调用（如果失败不影响事件追踪）
     try {
-      // 如果有当前页面，先结束它
+      // 如果有之前的页面，先结束它
       if (this.currentPageName && this.currentPageName !== pageName) {
         await this.endPageVisit('navigation');
       }
 
       const token = await authStorage.getItem('userToken');
-      if (!token) return false;
+      if (!token) {
+        console.warn('⚠️ 无token，跳过页面访问API调用');
+        return true; // 返回true因为事件已经被追踪
+      }
 
       const requestBody: PageVisitData = {
         pageName,
@@ -292,7 +359,7 @@ class TrackingService {
         route,
         referrer: referrer || this.currentPageName || undefined,
         deviceType: this.deviceInfo.deviceType,
-        sessionId: this.currentSession.sessionId,
+        sessionId: this.currentSession?.sessionId || 'unknown',
       };
 
       const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/start`, {
@@ -305,16 +372,15 @@ class TrackingService {
       });
 
       if (response.ok) {
-        this.currentPageName = pageName;
-        console.log('页面访问开始:', pageName);
+        console.log('✅ 页面访问API调用成功:', pageName);
         return true;
       } else {
-        console.error('开始页面访问失败:', response.status);
-        return false;
+        console.error('❌ 页面访问API失败:', response.status);
+        return true; // 仍返回true，因为事件已经被追踪
       }
     } catch (error) {
-      console.error('开始页面访问异常:', error);
-      return false;
+      console.error('❌ 页面访问API调用异常:', error);
+      return true; // 仍返回true，因为事件已经被追踪
     }
   }
 
@@ -362,22 +428,36 @@ class TrackingService {
    * 刷新事件队列
    */
   private async flushEvents(): Promise<boolean> {
-    if (!this.config.enabled || this.eventQueue.length === 0) return false;
+    if (!this.config.enabled || this.eventQueue.length === 0) {
+      console.log('🔄 跳过事件刷新: enabled=' + this.config.enabled + ', 队列长度=' + this.eventQueue.length);
+      return false;
+    }
 
     try {
       const token = await authStorage.getItem('userToken');
-      if (!token) return false;
+      if (!token) {
+        console.warn('⚠️ 无token，跳过事件发送');
+        return false;
+      }
 
       const eventsToSend = [...this.eventQueue];
       this.eventQueue = []; // 清空队列
 
+      console.log('📦 准备发送事件数量:', eventsToSend.length);
+      console.log('📝 事件详情:', eventsToSend);
+
       const requestBody = {
         events: eventsToSend,
-        sessionId: this.currentSession?.sessionId,
+        sessionId: this.currentSession?.sessionId || 'unknown',
         deviceType: this.deviceInfo.deviceType,
       };
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/events/batch`, {
+      console.log('📤 发送请求体:', JSON.stringify(requestBody, null, 2));
+
+      const apiUrl = `${this.config.apiBaseUrl}/api/tracking/events/batch`;
+      console.log('🎯 批量API地址:', apiUrl);
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -386,18 +466,22 @@ class TrackingService {
         body: JSON.stringify(requestBody),
       });
 
+      console.log('📡 批量响应状态:', response.status);
+      const responseText = await response.text();
+      console.log('📄 批量响应内容:', responseText);
+
       if (response.ok) {
-        const data = await response.json();
-        console.log(`批量事件发送成功: ${data.successCount}/${data.totalCount}`);
+        const data = JSON.parse(responseText);
+        console.log(`✅ 批量事件发送成功: ${data.successCount}/${data.totalCount}`);
         return true;
       } else {
         // 发送失败，将事件放回队列
         this.eventQueue.unshift(...eventsToSend);
-        console.error('批量事件发送失败:', response.status);
+        console.error('❌ 批量事件发送失败:', response.status, responseText);
         return false;
       }
     } catch (error) {
-      console.error('批量事件发送异常:', error);
+      console.error('💥 批量事件发送异常:', error);
       return false;
     }
   }
@@ -416,6 +500,35 @@ class TrackingService {
    */
   public hasActiveSession(): boolean {
     return this.currentSession !== null && this.currentSession.isActive;
+  }
+
+  /**
+   * 获取当前事件队列长度（调试用）
+   */
+  public getQueueLength(): number {
+    return this.eventQueue.length;
+  }
+
+  /**
+   * 获取当前配置（调试用）
+   */
+  public getConfig(): TrackingConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * 获取设备信息（调试用）
+   */
+  public getDeviceInfo(): any {
+    return { ...this.deviceInfo };
+  }
+
+  /**
+   * 手动触发事件刷新（调试用）
+   */
+  public async manualFlush(): Promise<boolean> {
+    console.log('🔧 手动触发事件刷新');
+    return await this.flushEvents();
   }
 
   /**

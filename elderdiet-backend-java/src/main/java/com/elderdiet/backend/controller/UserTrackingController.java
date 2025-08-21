@@ -40,9 +40,23 @@ public class UserTrackingController {
             Authentication authentication,
             HttpServletRequest httpRequest) {
 
+        log.info("🚀 收到开始会话请求: userId={}, deviceType={}, requestURI={}",
+                authentication.getName(), request.getDeviceType(), httpRequest.getRequestURI());
+        log.info("📱 完整请求对象: {}", request);
+
         try {
             String userId = authentication.getName();
             String ipAddress = getClientIpAddress(httpRequest);
+
+            // 手动验证关键字段
+            if (request.getDeviceType() == null || request.getDeviceType().trim().isEmpty()) {
+                log.error("⚠️ deviceType验证失败: deviceType={}", request.getDeviceType());
+                TrackingResponse.SessionResponse errorResponse = TrackingResponse.SessionResponse.builder()
+                        .status("error")
+                        .message("设备类型不能为空")
+                        .build();
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
 
             TrackUserSession session = trackingService.startSession(
                     userId,
@@ -67,6 +81,8 @@ public class UserTrackingController {
 
         } catch (Exception e) {
             log.error("开始会话失败", e);
+            log.error("请求对象详情: deviceType={}, deviceModel={}, osVersion={}, appVersion={}",
+                    request.getDeviceType(), request.getDeviceModel(), request.getOsVersion(), request.getAppVersion());
             TrackingResponse.SessionResponse response = TrackingResponse.SessionResponse.builder()
                     .status("error")
                     .message("开始会话失败: " + e.getMessage())
@@ -296,6 +312,9 @@ public class UserTrackingController {
     public ResponseEntity<TrackingResponse.BatchResponse> batchTrackEvents(
             @Valid @RequestBody TrackingRequest.BatchEventRequest request,
             Authentication authentication) {
+
+        log.info("📦 收到批量事件请求: userId={}, eventCount={}, sessionId={}",
+                authentication.getName(), request.getEvents().size(), request.getSessionId());
 
         try {
             String userId = authentication.getName();

@@ -13,11 +13,12 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '../../contexts/UserContext';
 import { useProfile } from '../../hooks/useProfile';
 import { familyAPI, FamilyMember, profileAPI, authAPI, AddFamilyMemberRequest } from '../../services/api';
+import { trackingService } from '@/services/trackingService';
 
 export default function MeScreen() {
   const { phone, role, signOut, token, setUser } = useUser();
@@ -55,6 +56,29 @@ export default function MeScreen() {
   useEffect(() => {
     loadFamilyMembers();
   }, [token, role]);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔥 Profile useFocusEffect触发');
+      try {
+        console.log('🔥 开始profile页面访问追踪...');
+        trackingService.startPageVisit('profile', '我的', '/(tabs)/profile');
+        console.log('✅ profile页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ profile页面访问追踪失败:', error);
+      }
+      
+      return () => {
+        console.log('🔥 Profile页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束profile页面访问追踪失败:', error);
+        }
+      };
+    }, [])
+  );
 
   // 获取性别显示文本
   const getGenderText = (gender?: string): string => {
