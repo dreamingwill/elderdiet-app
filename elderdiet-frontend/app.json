@@ -2,7 +2,7 @@
   "expo": {
     "name": "ElderDiet",
     "slug": "ElderDiet",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/my-icon.png",
     "scheme": "elderdiet",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zeroh12.ElderDiet",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSUserTrackingUsageDescription": "This app uses tracking to provide personalized content.",

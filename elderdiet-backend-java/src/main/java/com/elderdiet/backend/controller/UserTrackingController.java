@@ -23,7 +23,7 @@ import java.util.Optional;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/tracking")
+@RequestMapping("/api/v1/tracking")
 @RequiredArgsConstructor
 public class UserTrackingController {
 

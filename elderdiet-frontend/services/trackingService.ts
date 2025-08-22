@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { authStorage } from '@/utils/authStorage';
+import { getCurrentConfig } from '@/config/api.config';
 
 // 简化的设备信息获取（避免依赖react-native-device-info）
 const getDeviceInfo = () => {
@@ -84,15 +85,20 @@ class TrackingService {
   constructor() {
     console.log('🔧 TrackingService构造函数开始');
     
+    // 获取API配置
+    const apiConfig = getCurrentConfig();
+    const isDev = __DEV__;
+    
     this.config = {
-      apiBaseUrl: 'https://api06.dxdu.cn', // 使用实际的API地址
+      apiBaseUrl: apiConfig.baseURL, // 直接使用api.config中的baseURL，现在tracking也使用/api/v1路径
       enabled: true,
-      batchSize: 10, // 
-      flushInterval: 15000, // 进一步缩短到秒
-      sessionTimeoutMinutes: 30, // 默认30分钟超时
+      batchSize: isDev ? 3 : 7, // 开发环境小批次便于调试，生产环境大批次提高效率
+      flushInterval: isDev ? 10000 : 15000, // 开发环境10秒，生产环境15秒
+      sessionTimeoutMinutes: isDev ? 15 : 30, // 开发环境15分钟，生产环境30分钟
     };
 
     console.log('⚙️ 配置初始化完成:', this.config);
+    console.log('🌍 当前环境:', isDev ? 'development' : 'production');
 
     try {
       this.initializeDeviceInfo();
@@ -273,7 +279,7 @@ class TrackingService {
         user_agent: this.deviceInfo.userAgent,
       };
 
-      const apiUrl = `${this.config.apiBaseUrl}/api/tracking/session/start`;
+      const apiUrl = `${this.config.apiBaseUrl}/tracking/session/start`;
       console.log('🚀 发起会话请求:', apiUrl);
       console.log('📱 请求数据:', requestBody);
 
@@ -346,7 +352,7 @@ class TrackingService {
         reason,
       };
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/session/end`, {
+      const response = await fetch(`${this.config.apiBaseUrl}/tracking/session/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -571,7 +577,7 @@ class TrackingService {
       
       // console.log('📤 页面访问API请求体:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/start`, {
+      const response = await fetch(`${this.config.apiBaseUrl}/tracking/page/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -626,7 +632,7 @@ class TrackingService {
 
       console.log('📤 结束页面访问请求:', pageToEnd, 'reason:', exitReason);
 
-      const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/end`, {
+      const response = await fetch(`${this.config.apiBaseUrl}/tracking/page/end`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -694,7 +700,7 @@ class TrackingService {
 
       // console.log('📤 发送请求体:', JSON.stringify(requestBody, null, 2));
 
-      const apiUrl = `${this.config.apiBaseUrl}/api/tracking/events/batch`;
+      const apiUrl = `${this.config.apiBaseUrl}/tracking/events/batch`;
       console.log('🎯 批量API地址:', apiUrl);
 
       const response = await fetch(apiUrl, {
