@@ -30,6 +30,7 @@ interface TrackingConfig {
   enabled: boolean;
   batchSize: number;
   flushInterval: number; // 毫秒
+  sessionTimeoutMinutes: number; // 新增：Session超时时间（分钟）
 }
 
 interface SessionInfo {
@@ -69,6 +70,7 @@ class TrackingService {
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private currentPageName: string | null = null;
   private deviceInfo: any = {};
+  private lastActivityTime: Date | null = null; // 新增：最后活动时间
   // 以下变量在禁用 page_view 事件后已不再需要，但保留以避免破坏现有代码
   // private lastPageVisitTime: Map<string, number> = new Map();
   // private pageVisitCallStack: string[] = [];
@@ -80,8 +82,9 @@ class TrackingService {
     this.config = {
       apiBaseUrl: 'https://api06.dxdu.cn', // 使用实际的API地址
       enabled: true,
-      batchSize: 3, // 进一步减小批次便于测试
-      flushInterval: 5000, // 进一步缩短到5秒
+      batchSize: 10, // 
+      flushInterval: 15000, // 进一步缩短到秒
+      sessionTimeoutMinutes: 30, // 默认30分钟超时
     };
 
     console.log('⚙️ 配置初始化完成:', this.config);
@@ -117,6 +120,7 @@ class TrackingService {
     this.flushTimer = setInterval(() => {
       this.flushEvents();
       this.cleanupOldRecords(); // 清理旧记录
+      this.checkSessionTimeout(); // 新增：检查Session超时
     }, this.config.flushInterval);
   }
 
@@ -142,7 +146,76 @@ class TrackingService {
     console.log('🧹 清理旧记录（已简化）');
   }
 
+  /**
+   * 检查Session超时
+   */
+  private checkSessionTimeout() {
+    if (!this.currentSession || !this.lastActivityTime) return;
+
+    const now = new Date();
+    const timeSinceLastActivity = now.getTime() - this.lastActivityTime.getTime();
+    const timeoutMs = this.config.sessionTimeoutMinutes * 60 * 1000;
+
+    if (timeSinceLastActivity > timeoutMs) {
+      console.log('⏰ Session超时，自动结束会话');
+      this.endSession('timeout');
+    }
+  }
+
+  /**
+   * 更新最后活动时间
+   */
+  private updateLastActivity() {
+    this.lastActivityTime = new Date();
+  }
+
   // ========== 会话管理 ==========
+
+  /**
+   * 开始App生命周期会话（App打开时调用）
+   * 每次App打开都创建全新的Session
+   */
+  public async startAppSession(): Promise<boolean> {
+    if (!this.config.enabled) return false;
+
+    try {
+      console.log('🚀 startAppSession被调用');
+      console.log('📊 当前状态检查:');
+      console.log('  - currentSession:', this.currentSession ? `存在(${this.currentSession.sessionId})` : '不存在');
+      console.log('  - lastActivityTime:', this.lastActivityTime ? this.lastActivityTime.toISOString() : '不存在');
+      
+      // 如果有现有会话，先结束它
+      if (this.currentSession) {
+        console.log('🔄 检测到现有会话，先结束再开始新会话');
+        const endSuccess = await this.endSession('app_reopen');
+        console.log('🔄 结束现有会话结果:', endSuccess);
+      }
+
+      console.log('🔄 准备开始全新会话');
+      // 尝试获取token，如果有则开始认证会话
+      const token = await authStorage.getItem('userToken');
+      if (token) {
+        console.log('🔐 检测到用户token，开始认证会话');
+        return await this.startSession();
+      } else {
+        console.log('👤 未检测到token，开始匿名会话追踪');
+        // 对于匿名用户，我们仍然可以追踪一些基本信息
+        this.currentSession = {
+          sessionId: `anonymous_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          userId: 'anonymous',
+          startTime: new Date(),
+          deviceType: this.deviceInfo.deviceType,
+          isActive: true,
+        };
+        this.updateLastActivity();
+        console.log('✅ 匿名会话开始:', this.currentSession.sessionId);
+        return true;
+      }
+    } catch (error) {
+      console.error('开始App会话异常:', error);
+      return false;
+    }
+  }
 
   /**
    * 开始用户会话（通常在登录后调用）
@@ -192,6 +265,7 @@ class TrackingService {
           isActive: true,
         };
 
+        this.updateLastActivity(); // 新增：更新活动时间
         console.log('✅ 会话追踪开始成功:', this.currentSession.sessionId);
         return true;
       } else {
@@ -208,22 +282,32 @@ class TrackingService {
    * 结束用户会话（通常在登出时调用）
    */
   public async endSession(reason: string = 'logout'): Promise<boolean> {
-    if (!this.config.enabled || !this.currentSession) return false;
+    if (!this.config.enabled || !this.currentSession) {
+      console.log('⏸️ 跳过endSession: enabled=' + this.config.enabled + ', currentSession=' + (this.currentSession ? '存在' : '不存在'));
+      return false;
+    }
 
     try {
+      // 保存当前会话信息，防止并发调用时被清空
+      const sessionToEnd = this.currentSession;
+      console.log('🔄 准备结束会话:', sessionToEnd.sessionId, 'reason:', reason);
+
+      // 立即清空当前会话，防止重复调用
+      this.currentSession = null;
+      this.currentPageName = null;
+      this.lastActivityTime = null;
+
       // 先刷新所有待发送的事件
       await this.flushEvents();
 
-      // 结束当前页面访问
-      if (this.currentPageName) {
-        await this.endPageVisit('session_end');
+      const token = await authStorage.getItem('userToken');
+      if (!token) {
+        console.log('⚠️ 无token，跳过后端Session结束调用');
+        return true; // 本地状态已清理，返回true
       }
 
-      const token = await authStorage.getItem('userToken');
-      if (!token) return false;
-
       const requestBody = {
-        session_id: this.currentSession.sessionId,
+        session_id: sessionToEnd.sessionId, // 使用保存的会话信息
         reason,
       };
 
@@ -238,8 +322,6 @@ class TrackingService {
 
       if (response.ok) {
         console.log('会话追踪结束成功');
-        this.currentSession = null;
-        this.currentPageName = null;
         return true;
       } else {
         console.error('结束会话追踪失败:', response.status);
@@ -268,6 +350,9 @@ class TrackingService {
       console.log('⏸️ 追踪已禁用，跳过事件:', eventName);
       return;
     }
+
+    // 更新最后活动时间
+    this.updateLastActivity();
 
     const event: EventData = {
       eventType,

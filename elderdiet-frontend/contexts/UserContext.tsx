@@ -177,6 +177,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // 结束追踪会话
+      try {
+        const { trackingService } = await import('@/services/trackingService');
+        await trackingService.endSession('logout');
+        console.log('✅ 追踪会话已结束');
+      } catch (trackingError) {
+        console.error('❌ 结束追踪会话失败:', trackingError);
+        // 不阻断登出流程
+      }
+
       // 如果有token，调用后端注销接口
       if (token) {
         try {

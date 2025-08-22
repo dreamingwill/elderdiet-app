@@ -3,10 +3,11 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { useColorScheme, ColorSchemeName } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus, ColorSchemeName, useColorScheme } from 'react-native';
 import { UserProvider, useUser } from '@/contexts/UserContext';
 import { pushService } from '@/services/pushService';
+import { trackingService } from '@/services/trackingService';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -54,6 +55,59 @@ function AuthenticatedApp({ colorScheme }: { colorScheme: ColorSchemeName }) {
   const { isAuthenticated, isLoading } = useUser();
   const router = useRouter();
   const segments = useSegments();
+  const appState = useRef(AppState.currentState);
+
+  // App生命周期追踪
+  useEffect(() => {
+    console.log('🔧 设置App生命周期监听器');
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // 仅在App首次启动时开始Session
+    console.log('🚀 App首次启动，开始初始Session');
+    trackingService.startAppSession().then(success => {
+      console.log('📱 App首次启动Session结果:', success);
+    }).catch(error => {
+      console.error('❌ App首次启动Session失败:', error);
+    });
+
+    return () => {
+      console.log('🧹 清理App生命周期监听器');
+      subscription.remove();
+    };
+  }, []);
+
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    console.log('📱 App状态变化:', appState.current, '->', nextAppState);
+
+    // 防止相同状态的重复触发
+    if (appState.current === nextAppState) {
+      console.log('⚠️ 相同状态重复触发，跳过处理');
+      return;
+    }
+
+    const previousState = appState.current;
+    appState.current = nextAppState;
+
+    // App从后台回到前台
+    if (
+      previousState.match(/inactive|background/) &&
+      nextAppState === 'active'
+    ) {
+      console.log('📱 App回到前台，开始新Session');
+      const success = await trackingService.startAppSession();
+      console.log('📱 前台Session开始结果:', success);
+    }
+
+    // App进入后台
+    if (
+      previousState === 'active' &&
+      nextAppState.match(/inactive|background/)
+    ) {
+      console.log('📱 App进入后台，结束Session');
+      const success = await trackingService.endSession('background');
+      console.log('📱 后台Session结束结果:', success);
+    }
+  };
 
   useEffect(() => {
     if (isLoading) return; // 等待认证状态加载完成
