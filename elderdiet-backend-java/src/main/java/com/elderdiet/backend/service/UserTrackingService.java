@@ -184,13 +184,6 @@ public class UserTrackingService {
 
             TrackPageVisit savedPageVisit = pageVisitRepository.save(pageVisit);
 
-            // 记录页面访问事件
-            Map<String, Object> eventData = Map.of(
-                    "pageName", pageName,
-                    "route", route != null ? route : "",
-                    "referrer", referrer != null ? referrer : "");
-            trackInteractionEvent(userId, sessionId, TrackUserEvent.InteractionEvent.PAGE_VIEW, eventData, deviceType);
-
             log.debug("页面访问开始: userId={}, pageName={}", userId, pageName);
             return savedPageVisit;
 
