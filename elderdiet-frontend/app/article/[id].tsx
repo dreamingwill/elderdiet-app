@@ -9,9 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { healthArticlesAPI, HealthArticle } from '@/services/api';
+import { trackingService } from '@/services/trackingService';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +49,29 @@ export default function ArticleDetailScreen() {
   useEffect(() => {
     fetchArticle();
   }, [id]);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔥 ArticleDetail useFocusEffect触发');
+      try {
+        console.log('🔥 开始文章详情页面访问追踪...');
+        trackingService.startPageVisit('article-detail', '文章详情', `/article/${id}`);
+        console.log('✅ 文章详情页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ 文章详情页面访问追踪失败:', error);
+      }
+      
+      return () => {
+        console.log('🔥 文章详情页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束文章详情页面访问追踪失败:', error);
+        }
+      };
+    }, [id])
+  );
 
   const toggleFavorite = () => {
     setIsFavorite(!isFavorite);

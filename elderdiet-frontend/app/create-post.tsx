@@ -2,12 +2,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput, Switch, Dimensions, Linking } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { mealRecordsAPI, CreateMealRecordRequest } from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image } from 'react-native';
+import { trackingService } from '@/services/trackingService';
 
 const { width } = Dimensions.get('window');
 
@@ -53,6 +54,29 @@ export default function CreatePostScreen() {
       }
     })();
   }, []);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔥 CreatePost useFocusEffect触发');
+      try {
+        console.log('🔥 开始创建帖子页面访问追踪...');
+        trackingService.startPageVisit('create-post', '创建帖子', '/create-post');
+        console.log('✅ 创建帖子页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ 创建帖子页面访问追踪失败:', error);
+      }
+      
+      return () => {
+        console.log('🔥 创建帖子页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束创建帖子页面访问追踪失败:', error);
+        }
+      };
+    }, [])
+  );
 
   // 压缩图片函数
   const compressImage = useCallback(async (uri: string): Promise<string> => {

@@ -11,10 +11,11 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
 import { useProfile } from '../hooks/useProfile';
 import { ProfileData, ChronicConditionOption } from '../services/api';
+import { trackingService } from '@/services/trackingService';
 
 // 慢性疾病分类映射
 const CHRONIC_CONDITION_CATEGORIES = {
@@ -120,6 +121,29 @@ export default function EditProfileScreen() {
       });
     }
   }, [profile]);
+
+  // 页面访问追踪
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔥 EditProfile useFocusEffect触发');
+      try {
+        console.log('🔥 开始编辑档案页面访问追踪...');
+        trackingService.startPageVisit('edit-profile', '编辑档案', '/edit-profile');
+        console.log('✅ 编辑档案页面访问追踪调用完成');
+      } catch (error) {
+        console.error('❌ 编辑档案页面访问追踪失败:', error);
+      }
+      
+      return () => {
+        console.log('🔥 编辑档案页面离开，结束访问追踪');
+        try {
+          trackingService.endPageVisit('navigation');
+        } catch (error) {
+          console.error('❌ 结束编辑档案页面访问追踪失败:', error);
+        }
+      };
+    }, [])
+  );
 
   // 表单验证
   const validateForm = (): boolean => {

@@ -70,7 +70,12 @@ class TrackingService {
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private currentPageName: string | null = null;
   private deviceInfo: any = {};
-  private lastActivityTime: Date | null = null; // 新增：最后活动时间
+  private lastActivityTime: Date | null = null;
+  
+  // 新增：防重复调用的状态管理
+  private pendingPageVisits: Map<string, Promise<boolean>> = new Map();
+  private lastPageVisitCall: Map<string, number> = new Map();
+  private readonly DUPLICATE_CALL_THRESHOLD = 500; // 500ms内的重复调用被视为重复
   // 以下变量在禁用 page_view 事件后已不再需要，但保留以避免破坏现有代码
   // private lastPageVisitTime: Map<string, number> = new Map();
   // private pageVisitCallStack: string[] = [];
@@ -139,11 +144,41 @@ class TrackingService {
   }
 
   /**
-   * 清理旧的防重复记录（已简化，因为禁用了 page_view 事件）
+   * 清理旧的防重复记录
    */
   private cleanupOldRecords() {
-    // 清理逻辑已简化，因为禁用了 page_view 事件相关的防重复机制
-    console.log('🧹 清理旧记录（已简化）');
+    const now = Date.now();
+    const cleanupThreshold = 5 * 60 * 1000; // 5分钟前的记录可以清理
+    
+    let cleanedCount = 0;
+    
+    // 清理过期的页面访问调用记录
+    for (const [key, timestamp] of this.lastPageVisitCall.entries()) {
+      if (now - timestamp > cleanupThreshold) {
+        this.lastPageVisitCall.delete(key);
+        cleanedCount++;
+      }
+    }
+    
+    // 清理可能泄漏的pending请求（理论上不应该存在，但作为安全措施）
+    for (const [key, promise] of this.pendingPageVisits.entries()) {
+      // 检查Promise是否已经settled（这是一个简单的检查）
+      promise.then(() => {
+        // Promise已resolved，如果还在Map中则清理
+        if (this.pendingPageVisits.get(key) === promise) {
+          this.pendingPageVisits.delete(key);
+        }
+      }).catch(() => {
+        // Promise已rejected，如果还在Map中则清理
+        if (this.pendingPageVisits.get(key) === promise) {
+          this.pendingPageVisits.delete(key);
+        }
+      });
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 清理了 ${cleanedCount} 个过期的防重复记录`);
+    }
   }
 
   /**
@@ -426,12 +461,56 @@ class TrackingService {
       return false;
     }
 
+    // 防重复调用检查
+    const now = Date.now();
+    const lastCallTime = this.lastPageVisitCall.get(pageName) || 0;
+    const timeSinceLastCall = now - lastCallTime;
+
+    if (timeSinceLastCall < this.DUPLICATE_CALL_THRESHOLD) {
+      console.log(`🚫 防重复：页面 ${pageName} 在 ${timeSinceLastCall}ms 前刚被调用，跳过重复请求`);
+      // 如果有正在进行的请求，返回该请求的Promise
+      const pendingRequest = this.pendingPageVisits.get(pageName);
+      if (pendingRequest) {
+        console.log(`🔄 返回正在进行的页面访问请求: ${pageName}`);
+        return pendingRequest;
+      }
+      return true; // 如果没有正在进行的请求，直接返回成功
+    }
+
+    // 记录调用时间
+    this.lastPageVisitCall.set(pageName, now);
+
+    // 如果已经有相同页面的请求在进行，返回该请求
+    const existingRequest = this.pendingPageVisits.get(pageName);
+    if (existingRequest) {
+      console.log(`🔄 页面 ${pageName} 已有请求在进行中，返回现有请求`);
+      return existingRequest;
+    }
+
     if (!this.currentSession) {
       console.warn('⚠️ 没有活跃会话，但仍尝试记录页面访问 (sessionId将为unknown)');
     }
 
     console.log('🔥 startPageVisit被调用 (仅API模式):', pageName);
     
+    // 创建页面访问请求Promise
+    const pageVisitPromise = this.performPageVisit(pageName, pageTitle, route, referrer);
+    
+    // 存储正在进行的请求
+    this.pendingPageVisits.set(pageName, pageVisitPromise);
+    
+    // 请求完成后清理
+    pageVisitPromise.finally(() => {
+      this.pendingPageVisits.delete(pageName);
+    });
+
+    return pageVisitPromise;
+  }
+
+  /**
+   * 执行实际的页面访问请求
+   */
+  private async performPageVisit(pageName: string, pageTitle?: string, route?: string, referrer?: string): Promise<boolean> {
     // 保存之前的页面名称作为referrer
     const previousPageName = this.currentPageName;
     
@@ -464,7 +543,7 @@ class TrackingService {
         session_id: this.currentSession?.sessionId || 'unknown',
       };
       
-      console.log('📤 页面访问API请求体:', JSON.stringify(requestBody, null, 2));
+      // console.log('📤 页面访问API请求体:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/start`, {
         method: 'POST',
@@ -480,11 +559,11 @@ class TrackingService {
         return true;
       } else {
         console.error('❌ 页面访问API失败:', response.status);
-        return true; // 仍返回true，因为事件已经被追踪
+        return false; // 修改：API失败时返回false
       }
     } catch (error) {
       console.error('❌ 页面访问API调用异常:', error);
-      return true; // 返回true，因为这只是API调用失败
+      return false; // 修改：异常时返回false
     }
   }
 
@@ -494,14 +573,32 @@ class TrackingService {
   public async endPageVisit(exitReason: string = 'navigation'): Promise<boolean> {
     if (!this.config.enabled || !this.currentPageName) return false;
 
+    const pageToEnd = this.currentPageName;
+    
+    // 防重复调用检查 - 使用特殊的key来标识结束请求
+    const endKey = `end_${pageToEnd}`;
+    const now = Date.now();
+    const lastCallTime = this.lastPageVisitCall.get(endKey) || 0;
+    const timeSinceLastCall = now - lastCallTime;
+
+    if (timeSinceLastCall < this.DUPLICATE_CALL_THRESHOLD) {
+      console.log(`🚫 防重复：页面结束 ${pageToEnd} 在 ${timeSinceLastCall}ms 前刚被调用，跳过重复请求`);
+      return true;
+    }
+
+    // 记录调用时间
+    this.lastPageVisitCall.set(endKey, now);
+
     try {
       const token = await authStorage.getItem('userToken');
       if (!token) return false;
 
       const requestBody = {
-        page_name: this.currentPageName,
+        page_name: pageToEnd,
         exit_reason: exitReason,
       };
+
+      console.log('📤 结束页面访问请求:', pageToEnd, 'reason:', exitReason);
 
       const response = await fetch(`${this.config.apiBaseUrl}/api/tracking/page/end`, {
         method: 'POST',
@@ -513,15 +610,18 @@ class TrackingService {
       });
 
       if (response.ok) {
-        console.log('页面访问结束:', this.currentPageName);
-        this.currentPageName = null;
+        console.log('✅ 页面访问结束成功:', pageToEnd);
+        // 只有在成功时才清空当前页面名称
+        if (this.currentPageName === pageToEnd) {
+          this.currentPageName = null;
+        }
         return true;
       } else {
-        console.error('结束页面访问失败:', response.status);
+        console.error('❌ 结束页面访问失败:', response.status);
         return false;
       }
     } catch (error) {
-      console.error('结束页面访问异常:', error);
+      console.error('❌ 结束页面访问异常:', error);
       return false;
     }
   }
@@ -647,10 +747,21 @@ class TrackingService {
 
   /**
    * 获取最近的页面访问调用记录（调试用）
-   * 注意：已禁用 page_view 事件，此方法返回空数组
    */
-  public getRecentPageVisitCalls(): string[] {
-    return []; // 返回空数组，因为已禁用相关功能
+  public getRecentPageVisitCalls(): Array<{key: string, timestamp: number, timeAgo: number}> {
+    const now = Date.now();
+    return Array.from(this.lastPageVisitCall.entries()).map(([key, timestamp]) => ({
+      key,
+      timestamp,
+      timeAgo: now - timestamp
+    }));
+  }
+
+  /**
+   * 获取当前正在进行的页面访问请求（调试用）
+   */
+  public getPendingPageVisits(): string[] {
+    return Array.from(this.pendingPageVisits.keys());
   }
 
   /**
@@ -669,6 +780,11 @@ class TrackingService {
     if (this.currentSession) {
       this.endSession('cleanup');
     }
+
+    // 清理防重复状态
+    this.pendingPageVisits.clear();
+    this.lastPageVisitCall.clear();
+    console.log('🧹 清理了所有防重复状态');
   }
 }
 
