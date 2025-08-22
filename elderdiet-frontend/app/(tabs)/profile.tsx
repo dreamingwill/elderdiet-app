@@ -295,8 +295,20 @@ export default function MeScreen() {
           if (response.success && response.data) {
             // 更新个人资料（包括新头像URL）
             refreshProfile();
+            
+            // 追踪头像上传成功事件
+            trackingService.trackInteractionEvent('avatar_upload', {
+              result: 'success',
+            });
+            
             Alert.alert('成功', '头像上传成功');
           } else {
+            // 追踪头像上传失败事件
+            trackingService.trackInteractionEvent('avatar_upload', {
+              result: 'failure',
+              error: response.message || '头像上传失败',
+            });
+            
             Alert.alert('失败', response.message || '头像上传失败');
           }
         } catch (error: any) {
@@ -408,6 +420,12 @@ export default function MeScreen() {
       const response = await familyAPI.addFamilyMember(request, token!);
       
       if (response.success) {
+        // 追踪添加家庭成员成功事件
+        trackingService.trackInteractionEvent('family_add_member', {
+          memberType: role === 'ELDER' ? 'child' : 'parent',
+          result: 'success',
+        });
+        
         const memberType = role === 'ELDER' ? '家庭成员' : '家庭成员';
         Alert.alert('成功', `${memberType}添加成功！系统已自动建立正确的家庭关系`, [
           {
@@ -426,6 +444,13 @@ export default function MeScreen() {
           },
         ]);
       } else {
+        // 追踪添加家庭成员失败事件
+        trackingService.trackInteractionEvent('family_add_member', {
+          memberType: role === 'ELDER' ? 'child' : 'parent',
+          result: 'failure',
+          error: response.message || '添加失败',
+        });
+        
         Alert.alert('失败', response.message || '添加失败，请重试');
       }
     } catch (error: any) {
@@ -471,6 +496,12 @@ export default function MeScreen() {
               const response = await familyAPI.removeFamilyMember(member.user_id, token);
               
               if (response.success) {
+                // 追踪删除家庭成员成功事件
+                trackingService.trackInteractionEvent('family_remove_member', {
+                  memberType: member.relationship_type,
+                  result: 'success',
+                });
+                
                 Alert.alert('成功', `${memberTypeName}删除成功`, [
                   {
                     text: '确定',
@@ -481,6 +512,13 @@ export default function MeScreen() {
                   },
                 ]);
               } else {
+                // 追踪删除家庭成员失败事件
+                trackingService.trackInteractionEvent('family_remove_member', {
+                  memberType: member.relationship_type,
+                  result: 'failure',
+                  error: response.message || '删除失败',
+                });
+                
                 Alert.alert('失败', response.message || '删除失败，请重试');
               }
             } catch (error: any) {
@@ -606,6 +644,13 @@ export default function MeScreen() {
       const response = await authAPI.changeRole(confirmationText, token);
       
       if (response.success && response.data) {
+        // 追踪角色切换成功事件
+        trackingService.trackInteractionEvent('role_switch', {
+          fromRole: role,
+          toRole: response.data.role,
+          result: 'success',
+        });
+        
         // 更新用户信息和token
         await setUser({
           phone: response.data.phone,
@@ -634,6 +679,14 @@ export default function MeScreen() {
           ]
         );
       } else {
+        // 追踪角色切换失败事件
+        trackingService.trackInteractionEvent('role_switch', {
+          fromRole: role,
+          toRole: role === 'ELDER' ? 'CHILD' : 'ELDER',
+          result: 'failure',
+          error: response.message || '角色切换失败',
+        });
+        
         Alert.alert('切换失败', response.message || '角色切换失败，请重试');
       }
     } catch (error: any) {

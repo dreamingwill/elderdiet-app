@@ -628,7 +628,15 @@ export default function ChatScreen() {
           </View> */}
           <Text style={styles.headerTitle}>营养师小助手</Text>
         </View>
-        <TouchableOpacity style={styles.clearButton} onPress={clearChat}>
+        <TouchableOpacity 
+          style={styles.clearButton} 
+          onPress={() => {
+            clearChat();
+            trackingService.trackInteractionEvent('chat_clear', {
+              messageCount: messages.length,
+            });
+          }}
+        >
           <Ionicons name="refresh-outline" size={24} color="#666" />
         </TouchableOpacity>
       </View>

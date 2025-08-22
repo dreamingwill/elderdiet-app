@@ -206,7 +206,13 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
                 marginRight: index < 2 ? spacing : 0,
               }
             ]}
-            onPress={() => handleImagePress(index)}
+            onPress={() => {
+              handleImagePress(index);
+              trackingService.trackInteractionEvent('image_preview', {
+                imageIndex: index,
+                totalImages: localRecord.image_urls?.length || 0,
+              });
+            }}
           >
             <Image 
               source={{ uri: imageUrl }} 

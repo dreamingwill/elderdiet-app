@@ -55,12 +55,7 @@ const DishReplaceModal: React.FC<DishReplaceModalProps> = ({
   };
 
   const handleClose = () => {
-    // 追踪模态框关闭事件
-    trackingService.trackInteractionEvent('button_click', {
-      buttonName: 'close_replace_modal',
-      dishName,
-      action: 'cancel',
-    });
+
     
     setPreferredIngredient('');
     setAvoidIngredient('');
@@ -70,12 +65,7 @@ const DishReplaceModal: React.FC<DishReplaceModalProps> = ({
   };
 
   const handleSkip = async () => {
-    // 追踪跳过偏好设置事件
-    trackingService.trackInteractionEvent('button_click', {
-      buttonName: 'skip_preferences',
-      dishName,
-      action: 'skip_and_replace',
-    });
+
     
     setIsSubmitting(true);
     try {

@@ -5,6 +5,7 @@ import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { recipes } from '@/data/recipes';
 import { storage } from '@/utils/storage';
+import { trackingService } from '@/services/trackingService';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams();
@@ -26,9 +27,21 @@ export default function RecipeScreen() {
       if (isFavorite) {
         await storage.removeFavoriteRecipe(id as string);
         setIsFavorite(false);
+        
+        // 追踪食谱收藏事件
+        trackingService.trackInteractionEvent('recipe_bookmark', {
+          action: 'remove',
+          recipeId: id as string,
+        });
       } else {
         await storage.saveFavoriteRecipe(id as string);
         setIsFavorite(true);
+        
+        // 追踪食谱收藏事件
+        trackingService.trackInteractionEvent('recipe_bookmark', {
+          action: 'add',
+          recipeId: id as string,
+        });
       }
     } catch (error) {
       Alert.alert('操作失败', '请重试');

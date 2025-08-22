@@ -500,21 +500,30 @@ export default function MealPlanScreen() {
           <View style={styles.mealTabs}>
             <TouchableOpacity 
               style={[styles.mealTab, selectedMealType === 'breakfast' && styles.activeTab]} 
-              onPress={() => setSelectedMealType('breakfast')}
+              onPress={() => {
+                setSelectedMealType('breakfast');
+                trackingService.trackInteractionEvent('meal_tab_switch', { mealType: 'breakfast' });
+              }}
             >
               <Text style={[styles.mealTabText, selectedMealType === 'breakfast' && styles.activeTabText]}>早餐</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.mealTab, selectedMealType === 'lunch' && styles.activeTab]} 
-              onPress={() => setSelectedMealType('lunch')}
+              onPress={() => {
+                setSelectedMealType('lunch');
+                trackingService.trackInteractionEvent('meal_tab_switch', { mealType: 'lunch' });
+              }}
             >
               <Text style={[styles.mealTabText, selectedMealType === 'lunch' && styles.activeTabText]}>午餐</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={[styles.mealTab, selectedMealType === 'dinner' && styles.activeTab]} 
-              onPress={() => setSelectedMealType('dinner')}
+              onPress={() => {
+                setSelectedMealType('dinner');
+                trackingService.trackInteractionEvent('meal_tab_switch', { mealType: 'dinner' });
+              }}
             >
               <Text style={[styles.mealTabText, selectedMealType === 'dinner' && styles.activeTabText]}>晚餐</Text>
             </TouchableOpacity>

@@ -144,11 +144,19 @@ export default function DiscoveryScreen() {
   );
 
   const toggleFavorite = (id: string) => {
-    if (favorites.includes(id)) {
+    const wasFavorite = favorites.includes(id);
+    
+    if (wasFavorite) {
       setFavorites(favorites.filter(item => item !== id));
     } else {
       setFavorites([...favorites, id]);
     }
+    
+    // 追踪文章收藏事件
+    trackingService.trackInteractionEvent('article_bookmark', {
+      action: wasFavorite ? 'remove' : 'add',
+      articleId: id,
+    });
   };
 
   const toggleArticleExpansion = (id: string) => {
@@ -258,7 +266,12 @@ export default function DiscoveryScreen() {
             style={styles.expandButton}
             onPress={(e) => {
               e.stopPropagation();
+              const wasExpanded = expandedArticles.includes(item.id);
               toggleArticleExpansion(item.id);
+              trackingService.trackInteractionEvent('expand_article', {
+                action: wasExpanded ? 'collapse' : 'expand',
+                articleId: item.id,
+              });
             }}
           >
             <Text style={styles.expandButtonText}>

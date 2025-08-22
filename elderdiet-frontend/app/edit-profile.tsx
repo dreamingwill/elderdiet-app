@@ -205,11 +205,29 @@ export default function EditProfileScreen() {
 
       if (isFirstTime) {
         await createProfile(profileData);
+        
+        // 追踪健康档案创建事件
+        trackingService.trackInteractionEvent('profile_create', {
+          hasChronicConditions: (profileData.chronic_conditions || []).length > 0,
+          chronicConditionCount: (profileData.chronic_conditions || []).length,
+          hasDietaryPreferences: (profileData.dietary_preferences || []).length > 0,
+          dietaryPreferenceCount: (profileData.dietary_preferences || []).length,
+        });
+        
         Alert.alert('成功', '健康档案创建成功！', [
           { text: '确定', onPress: () => router.replace('/(tabs)/meal-plan') }
         ]);
       } else {
         await updateProfile(profileData);
+        
+        // 追踪健康档案更新事件
+        trackingService.trackInteractionEvent('profile_update', {
+          hasChronicConditions: (profileData.chronic_conditions || []).length > 0,
+          chronicConditionCount: (profileData.chronic_conditions || []).length,
+          hasDietaryPreferences: (profileData.dietary_preferences || []).length > 0,
+          dietaryPreferenceCount: (profileData.dietary_preferences || []).length,
+        });
+        
         Alert.alert('成功', '健康档案更新成功！', [
           { text: '确定', onPress: () => router.back() }
         ]);

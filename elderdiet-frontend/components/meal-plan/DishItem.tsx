@@ -26,11 +26,9 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     setIsExpanded(newExpandedState);
     
     // 追踪展开/收起推荐理由事件
-    trackingService.trackInteractionEvent('button_click', {
-      buttonName: 'toggle_recommendation',
-      dishName: dish.name,
-      mealType,
+    trackingService.trackInteractionEvent('expand_recommendation', {
       action: newExpandedState ? 'expand' : 'collapse',
+      mealType,
     });
   };
 
@@ -38,11 +36,10 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     if (isReplacing) return; // 防止重复点击
     
     // 追踪换菜按钮点击事件
-    trackingService.trackInteractionEvent('button_click', {
-      buttonName: 'replace_dish',
+    trackingService.trackInteractionEvent('replace_dish', {
+
       dishName: dish.name,
       mealType,
-      dishIndex: index,
       action: 'open_replace_modal',
     });
     

@@ -74,7 +74,15 @@ export default function ArticleDetailScreen() {
   );
 
   const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
+    const newFavoriteState = !isFavorite;
+    setIsFavorite(newFavoriteState);
+    
+    // 追踪文章收藏事件
+    trackingService.trackInteractionEvent('article_bookmark', {
+      action: newFavoriteState ? 'add' : 'remove',
+      articleId: id,
+    });
+    
     // TODO: 实现收藏功能的API调用
   };
 

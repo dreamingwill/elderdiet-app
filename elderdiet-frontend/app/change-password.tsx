@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { authAPI } from '@/services/api';
+import { trackingService } from '@/services/trackingService';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -69,6 +70,12 @@ export default function ChangePasswordScreen() {
 
     try {
       await authAPI.changePassword(currentPassword, newPassword, token);
+      
+      // 追踪修改密码成功事件
+      trackingService.trackInteractionEvent('password_change', {
+        result: 'success',
+      });
+      
       Alert.alert('成功', '密码修改成功', [
         {
           text: '确定',
@@ -78,6 +85,13 @@ export default function ChangePasswordScreen() {
     } catch (error) {
       console.error('Change password error:', error);
       const errorMessage = error instanceof Error ? error.message : '修改密码失败，请重试';
+      
+      // 追踪修改密码失败事件
+      trackingService.trackInteractionEvent('password_change', {
+        result: 'failure',
+        error: errorMessage,
+      });
+      
       Alert.alert('修改失败', errorMessage);
     } finally {
       setIsLoading(false);

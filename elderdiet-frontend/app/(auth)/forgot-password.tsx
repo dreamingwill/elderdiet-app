@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { authAPI, VerifyRelationshipResponse } from '@/services/api';
+import { trackingService } from '@/services/trackingService';
 
 export default function ForgotPasswordScreen() {
   const [step, setStep] = useState<'verify' | 'reset'>('verify');
@@ -56,8 +57,21 @@ export default function ForgotPasswordScreen() {
       if (response.success && response.data) {
         setVerifyResult(response.data);
         setStep('reset');
+        
+        // 追踪关系验证成功事件
+        trackingService.trackInteractionEvent('forgot_password_verify', {
+          result: 'success',
+          relationshipType: response.data.relationshipType,
+        });
+        
         Alert.alert('验证成功', `找到${response.data.relationshipType === 'backdoor' ? '后门权限' : '家庭关联关系'}，请设置新密码`);
       } else {
+        // 追踪关系验证失败事件
+        trackingService.trackInteractionEvent('forgot_password_verify', {
+          result: 'failure',
+          error: '验证失败，请检查输入信息',
+        });
+        
         setErrorMessage('验证失败，请检查输入信息');
       }
     } catch (error) {
@@ -86,6 +100,11 @@ export default function ForgotPasswordScreen() {
     try {
       const response = await authAPI.resetPassword(userPhone, relatedPhone, newPassword);
       if (response.success) {
+        // 追踪密码重置成功事件
+        trackingService.trackInteractionEvent('forgot_password_reset', {
+          result: 'success',
+        });
+        
         Alert.alert('重置成功', '密码已重置，请使用新密码登录', [
           {
             text: '确定',
@@ -93,6 +112,12 @@ export default function ForgotPasswordScreen() {
           }
         ]);
       } else {
+        // 追踪密码重置失败事件
+        trackingService.trackInteractionEvent('forgot_password_reset', {
+          result: 'failure',
+          error: '重置失败，请重试',
+        });
+        
         setErrorMessage('重置失败，请重试');
       }
     } catch (error) {
