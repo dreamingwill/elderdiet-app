@@ -113,9 +113,13 @@ export default function MealPlanScreen() {
         Alert.alert('成功', '今日膳食计划已生成！');
         
         // 追踪生成膳食计划成功事件
-        trackingService.trackFeatureEvent('generate_meal_plan', {
+        trackingService.trackFeatureSuccess('generate_meal_plan', {
           mealPlanId: response.data.id,
-        }, 'success');
+          hasBreakfast: response.data.breakfast && response.data.breakfast.dishes.length > 0,
+          hasLunch: response.data.lunch && response.data.lunch.dishes.length > 0,
+          hasDinner: response.data.dinner && response.data.dinner.dishes.length > 0,
+          totalDishes: response.data.breakfast.dish_count + response.data.lunch.dish_count + response.data.dinner.dish_count,
+        });
       } else {
         throw new Error(response.message || '生成膳食计划失败');
       }
@@ -125,9 +129,7 @@ export default function MealPlanScreen() {
       Alert.alert('错误', '生成膳食计划失败，请重试');
       
       // 追踪生成膳食计划失败事件
-      trackingService.trackFeatureEvent('generate_meal_plan', {
-        error: error instanceof Error ? error.message : '未知错误',
-      }, 'failure');
+      trackingService.trackFeatureFailure('generate_meal_plan', error instanceof Error ? error : '未知错误');
     } finally {
       setIsGenerating(false);
     }

@@ -324,11 +324,12 @@ export default function ChatScreen() {
         await saveMessagesToLocal(newMessages, uid);
         
         // 追踪发送消息成功事件
-        trackingService.trackFeatureEvent('send_message', {
+        trackingService.trackFeatureSuccess('send_message', {
           messageType: messageType,
           hasImages: processedImageUrls.length > 0,
           imageCount: processedImageUrls.length,
-        }, 'success');
+          messageLength: messageContent.length,
+        });
       } else {
         Alert.alert('错误', response.message || '发送消息失败');
       }
@@ -337,12 +338,12 @@ export default function ChatScreen() {
       Alert.alert('错误', '发送消息失败，请重试');
       
       // 追踪发送消息失败事件
-      trackingService.trackFeatureEvent('send_message', {
-        error: error instanceof Error ? error.message : '未知错误',
+      trackingService.trackFeatureFailure('send_message', error instanceof Error ? error : '未知错误', {
         messageType: messageType,
         hasImages: currentPendingImages.length > 0,
         imageCount: currentPendingImages.length,
-      }, 'failure');
+        messageLength: messageContent.length,
+      });
     } finally {
       setIsLoading(false);
     }

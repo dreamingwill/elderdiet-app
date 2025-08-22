@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import CommentModal from './CommentModal';
 import UserAvatar from './UserAvatar';
 import ImageViewer from './ImageViewer';
+import { trackingService } from '@/services/trackingService';
 
 // Local comment interface to match API structure
 interface CommentInfo {
@@ -89,12 +90,33 @@ export default function PostCard({ record, onLikeToggle, onCommentAdded, onVisib
   const handleLike = async () => {
     if (!token || isLiking) return;
     
+    const wasLiked = localRecord.liked_by_current_user;
+    const action = wasLiked ? 'unlike' : 'like';
+    
     setIsLiking(true);
     try {
       await mealRecordsAPI.toggleLike(localRecord.id, token);
       onLikeToggle(localRecord.id);
+      
+      // 追踪点赞成功事件
+      trackingService.trackFeatureSuccess('toggle_like', {
+        recordId: localRecord.id,
+        action,
+        previousLikeCount: localRecord.likes_count,
+        hasImages: localRecord.image_urls && localRecord.image_urls.length > 0,
+        imageCount: localRecord.image_urls?.length || 0,
+        hasCaption: !!localRecord.caption && localRecord.caption.trim().length > 0,
+      });
     } catch (error) {
       console.error('点赞失败:', error);
+      
+      // 追踪点赞失败事件
+      trackingService.trackFeatureFailure('toggle_like', error instanceof Error ? error : '点赞失败', {
+        recordId: localRecord.id,
+        action,
+        previousLikeCount: localRecord.likes_count,
+      });
+      
       Alert.alert('错误', '点赞失败，请重试');
     } finally {
       setIsLiking(false);

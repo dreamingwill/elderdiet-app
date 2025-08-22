@@ -57,36 +57,30 @@ const DishItem: React.FC<DishItemProps> = ({ dish, index, mealType, onReplace })
     setIsReplacing(true);
     
     try {
-      // 追踪换菜确认事件（开始）
-      trackingService.trackFeatureEvent('replace_dish', {
-        dishName: dish.name,
-        mealType,
-        dishIndex: index,
-        preferences,
-        action: 'start',
-      }, 'success');
-      
       await onReplace(mealType, index, preferences);
       
       // 追踪换菜成功事件
-      trackingService.trackFeatureEvent('replace_dish', {
+      trackingService.trackFeatureSuccess('replace_dish', {
         dishName: dish.name,
         mealType,
         dishIndex: index,
         preferences,
-        action: 'completed',
-      }, 'success');
+        hasPreferredIngredient: !!preferences.preferred_ingredient,
+        hasAvoidIngredient: !!preferences.avoid_ingredient,
+        hasSpecialRequirement: !!preferences.special_requirement,
+      });
       
     } catch (error) {
       // 追踪换菜失败事件
-      trackingService.trackFeatureEvent('replace_dish', {
+      trackingService.trackFeatureFailure('replace_dish', error instanceof Error ? error : String(error), {
         dishName: dish.name,
         mealType,
         dishIndex: index,
         preferences,
-        action: 'failed',
-        error: error instanceof Error ? error.message : String(error),
-      }, 'failure');
+        hasPreferredIngredient: !!preferences.preferred_ingredient,
+        hasAvoidIngredient: !!preferences.avoid_ingredient,
+        hasSpecialRequirement: !!preferences.special_requirement,
+      });
       
       throw error; // 重新抛出错误
     } finally {

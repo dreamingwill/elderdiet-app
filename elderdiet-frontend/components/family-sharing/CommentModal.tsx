@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { mealRecordsAPI } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import UserAvatar from './UserAvatar';
+import { trackingService } from '@/services/trackingService';
 
 const { height } = Dimensions.get('window');
 
@@ -73,11 +74,13 @@ export default function CommentModal({
   const handleSubmitComment = useCallback(async () => {
     if (!token || !commentText.trim()) return;
     
+    const trimmedText = commentText.trim();
+    
     setIsSubmitting(true);
     try {
       const response = await mealRecordsAPI.addComment(
         recordId, 
-        { text: commentText.trim() }, 
+        { text: trimmedText }, 
         token
       );
       
@@ -96,15 +99,31 @@ export default function CommentModal({
         setComments(prev => [newComment, ...prev]);
         setCommentText('');
         onCommentAdded(newComment);
+        
+        // 追踪评论成功事件
+        trackingService.trackFeatureSuccess('add_comment', {
+          recordId,
+          commentLength: trimmedText.length,
+          previousCommentCount: comments.length,
+        });
+        
         Alert.alert('成功', '评论发表成功！');
       }
     } catch (error) {
       console.error('发表评论失败:', error);
+      
+      // 追踪评论失败事件
+      trackingService.trackFeatureFailure('add_comment', error instanceof Error ? error : '发表评论失败', {
+        recordId,
+        commentLength: trimmedText.length,
+        previousCommentCount: comments.length,
+      });
+      
       Alert.alert('错误', '发表评论失败，请重试');
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, recordId, commentText, onCommentAdded]);
+  }, [token, recordId, commentText, onCommentAdded, comments.length]);
 
   // 当模态框打开时加载评论
   useEffect(() => {

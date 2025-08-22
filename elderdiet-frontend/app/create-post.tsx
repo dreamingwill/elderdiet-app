@@ -291,6 +291,15 @@ export default function CreatePostScreen() {
           ? '分享发布成功！营养师正在为您生成评论，请稍后查看分享墙'
           : '分享发布成功！';
 
+        // 追踪发布分享成功事件
+        trackingService.trackFeatureSuccess('share_post', {
+          imageCount: images.length,
+          hasCaption: caption.trim().length > 0,
+          captionLength: caption.trim().length,
+          visibility: isPrivate ? 'PRIVATE' : 'FAMILY',
+          shareWithNutritionist,
+        });
+
         Alert.alert('成功', successMessage, [
           {
             text: '确定',
@@ -312,6 +321,15 @@ export default function CreatePostScreen() {
       } else if (error.message?.includes('格式') || error.message?.includes('format')) {
         errorMessage = '图片格式不支持，请选择JPG、PNG格式的图片';
       }
+
+      // 追踪发布分享失败事件
+      trackingService.trackFeatureFailure('share_post', error instanceof Error ? error : errorMessage, {
+        imageCount: images.length,
+        hasCaption: caption.trim().length > 0,
+        captionLength: caption.trim().length,
+        visibility: isPrivate ? 'PRIVATE' : 'FAMILY',
+        shareWithNutritionist,
+      });
 
       Alert.alert('错误', errorMessage);
     } finally {

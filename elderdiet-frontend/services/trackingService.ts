@@ -421,9 +421,35 @@ class TrackingService {
 
   /**
    * 追踪功能使用事件
+   * 简化版本：只记录成功和失败，不记录开始状态
    */
-  public trackFeatureEvent(featureName: string, featureData?: Record<string, any>, result: string = 'success') {
-    this.trackEvent('FEATURE_USE', featureName, featureData, result);
+  public trackFeatureEvent(featureName: string, featureData?: Record<string, any>, result: 'success' | 'failure' = 'success') {
+    // 添加通用的功能事件元数据
+    const enrichedData = {
+      ...featureData,
+      timestamp: new Date().toISOString(),
+      feature_name: featureName,
+    };
+    
+    this.trackEvent('FEATURE_USE', featureName, enrichedData, result);
+  }
+
+  /**
+   * 追踪功能成功事件的便捷方法
+   */
+  public trackFeatureSuccess(featureName: string, featureData?: Record<string, any>) {
+    this.trackFeatureEvent(featureName, featureData, 'success');
+  }
+
+  /**
+   * 追踪功能失败事件的便捷方法
+   */
+  public trackFeatureFailure(featureName: string, error: string | Error, featureData?: Record<string, any>) {
+    const errorMessage = error instanceof Error ? error.message : error;
+    this.trackFeatureEvent(featureName, {
+      ...featureData,
+      error: errorMessage,
+    }, 'failure');
   }
 
   /**
@@ -666,7 +692,7 @@ class TrackingService {
         device_type: this.deviceInfo.deviceType,
       };
 
-      console.log('📤 发送请求体:', JSON.stringify(requestBody, null, 2));
+      // console.log('📤 发送请求体:', JSON.stringify(requestBody, null, 2));
 
       const apiUrl = `${this.config.apiBaseUrl}/api/tracking/events/batch`;
       console.log('🎯 批量API地址:', apiUrl);
